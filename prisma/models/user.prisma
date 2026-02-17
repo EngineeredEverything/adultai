@@ -1,0 +1,126 @@
+// models
+model User {
+  id                    String                 @id @default(auto()) @map("_id") @db.ObjectId
+  name                  String?
+  email                 String                 @unique
+  emailVerified         DateTime?
+  images                UserImage[]
+  password              String?
+  accounts              Account?
+  isTwoFactorEnabled    Boolean                @default(false)
+  twoFactorConfirmation TwoFactorConfirmation?
+  preferences           UserPreferences?
+  role                  Role                   @default(USER)
+  system                Boolean                @default(false)
+  sessions              Session[]
+  loginAttempts         LoginAttempt[]
+  createdAt             DateTime               @default(now())
+  updatedAt             DateTime               @updatedAt
+  nuts                  Int                    @default(200)
+
+  subscription Subscription?
+  usageRecord  UsageRecord?
+
+  imagesPerDay        Int                   @default(0)
+  imagesPerGeneration Int                   @default(1)
+  features            String[]              @default(["basic"])
+  lastImageReset      DateTime              @default(now())
+  generatedImages     GeneratedImage[]
+  imageComments       ImageComment[]
+  nutsPurchases       NutsPurchase[]
+  subscriptionHistory SubscriptionHistory[]
+
+  // Suspension & Ban status
+  isSuspended         Boolean          @default(false)
+  suspendedAt         DateTime?
+  suspensionReason    String?
+  suspensionExpiresAt DateTime?
+  isBanned            Boolean          @default(false)
+  bannedAt            DateTime?
+  banReason           String?
+  bannedBy            String?
+  ImageVote           ImageVote[]
+  GeneratedVideo      GeneratedVideo[]
+  VideoComment        VideoComment[]
+  VideoVote           VideoVote[]
+  characters          Character[]
+}
+
+model Subscription {
+  id              String             @id @default(auto()) @map("_id") @db.ObjectId
+  user            User               @relation(fields: [userId], references: [id])
+  userId          String             @unique @db.ObjectId
+  plan            Plan               @relation(fields: [planId], references: [id])
+  planId          String             @db.ObjectId
+  status          SubscriptionStatus @default(ACTIVE)
+  billingCycle    BillingCycle
+  startDate       DateTime
+  endDate         DateTime?
+  nextBillingDate DateTime?
+  createdAt       DateTime           @default(now())
+  updatedAt       DateTime           @updatedAt
+}
+
+model Plan {
+  id                  String              @id @default(auto()) @map("_id") @db.ObjectId
+  name                String              @unique
+  description         String?
+  nutsPerMonth        Int // -1 for unlimited
+  imagesPerDay        Int // -1 for unlimited  
+  imagesPerGeneration Int
+  planFeatures        PlanToPlanFeature[]
+  monthlyPrice        Int // cent    
+  yearlyPrice         Int // cent
+  isActive            Boolean             @default(true)
+  createdAt           DateTime            @default(now())
+  updatedAt           DateTime            @updatedAt
+  subscriptions       Subscription[]
+}
+
+model PlanFeature {
+  id           String              @id @default(auto()) @map("_id") @db.ObjectId
+  name         String              @unique
+  description  String?
+  isEnabled    Boolean             @default(true)
+  createdAt    DateTime            @default(now())
+  updatedAt    DateTime            @updatedAt
+  planFeatures PlanToPlanFeature[]
+}
+
+model PlanToPlanFeature {
+  id            String      @id @default(auto()) @map("_id") @db.ObjectId
+  plan          Plan        @relation(fields: [planId], references: [id])
+  planId        String      @db.ObjectId
+  planFeature   PlanFeature @relation(fields: [planFeatureId], references: [id])
+  planFeatureId String      @db.ObjectId
+
+  @@unique([planId, planFeatureId])
+}
+
+model UsageRecord {
+  id              String    @id @default(auto()) @map("_id") @db.ObjectId
+  user            User      @relation(fields: [userId], references: [id])
+  userId          String    @unique @db.ObjectId
+  nutsUsed        Int       @default(0)
+  imagesGenerated Int       @default(0)
+  dailyImageCount Int       @default(0)
+  lastImageDate   DateTime?
+  periodStart     DateTime
+  periodEnd       DateTime
+  createdAt       DateTime  @default(now())
+  updatedAt       DateTime  @updatedAt
+}
+
+model UserImage {
+  id        String    @id @default(auto()) @map("_id") @db.ObjectId
+  user      User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  userId    String    @db.ObjectId
+  name      String?
+  path      String    @unique
+  private   Boolean   @default(false)
+  verified  DateTime? @default(now())
+  createdAt DateTime  @default(now())
+  updatedAt DateTime  @updatedAt
+
+  @@index([userId])
+}

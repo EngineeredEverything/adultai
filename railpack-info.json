@@ -1,0 +1,36 @@
+{
+  "railpackVersion": "0.2.2",
+  "resolvedPackages": {
+    "node": {
+      "name": "node",
+      "requestedVersion": "22",
+      "resolvedVersion": "22.21.1",
+      "source": "railpack default"
+    },
+    "pnpm": {
+      "name": "pnpm",
+      "requestedVersion": "9",
+      "resolvedVersion": "9.15.9",
+      "source": "railpack default"
+    }
+  },
+  "metadata": {
+    "nodePackageManager": "pnpm",
+    "nodeRuntime": "next",
+    "providers": "node"
+  },
+  "detectedProviders": [
+    "node"
+  ],
+  "logs": [
+    {
+      "Level": "info",
+      "Msg": "Detected Node"
+    },
+    {
+      "Level": "info",
+      "Msg": "Using pnpm package manager"
+    }
+  ],
+  "success": true
+}

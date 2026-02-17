@@ -1,0 +1,11 @@
+model UserPreferences {
+  id            String   @id @default(auto()) @map("_id") @db.ObjectId
+  userId        String   @unique @db.ObjectId
+  user          User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  language      String?  @default("en")
+  currency      String?  @default("USD")
+  communication String[] @default(["email"])
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+  theme         String   @default("light")
+}
