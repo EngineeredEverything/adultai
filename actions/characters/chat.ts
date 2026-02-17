@@ -202,19 +202,23 @@ async function generateTTS(text: string, voiceId?: string | null): Promise<strin
 }
 
 async function uploadAudioToStorage(buffer: Buffer): Promise<string> {
-  // For now, save to public directory and serve directly
-  // TODO: Upload to Bunny CDN or S3
-  const filename = `tts_${Date.now()}_${Math.random().toString(36).slice(2, 8)}.mp3`
-
-  // Use GPU API's storage endpoint or local storage
-  // For MVP, we'll use a simple file upload approach
-  const fs = await import("fs/promises")
-  const path = await import("path")
-  const uploadDir = path.join(process.cwd(), "public", "audio")
-  await fs.mkdir(uploadDir, { recursive: true })
-  await fs.writeFile(path.join(uploadDir, filename), buffer)
-
-  return `/audio/${filename}`
+  // Upload to Bunny CDN for production use
+  try {
+    const { uploadAudio } = await import("@/lib/bunny-cdn")
+    const cdnUrl = await uploadAudio(buffer, "mp3")
+    return cdnUrl
+  } catch (err: any) {
+    logger.error("Failed to upload to Bunny CDN, falling back to local storage", { error: err.message })
+    
+    // Fallback: save to public directory
+    const filename = `tts_${Date.now()}_${Math.random().toString(36).slice(2, 8)}.mp3`
+    const fs = await import("fs/promises")
+    const path = await import("path")
+    const uploadDir = path.join(process.cwd(), "public", "audio")
+    await fs.mkdir(uploadDir, { recursive: true })
+    await fs.writeFile(path.join(uploadDir, filename), buffer)
+    return `/audio/${filename}`
+  }
 }
 
 async function generateTalkingVideo(portraitUrl: string, audioUrl: string): Promise<string | null> {
@@ -224,9 +228,8 @@ async function generateTalkingVideo(portraitUrl: string, audioUrl: string): Prom
   }
 
   try {
-    // Call the GPU API's talking avatar endpoint
-    // This will need to be implemented on the GPU server (Wav2Lip or SadTalker)
-    const res = await fetch(`${GPU_API_URL}/talking-avatar`, {
+    // Call the GPU API's talking avatar endpoint (Wav2Lip)
+    const res = await fetch(`${GPU_API_URL}/api/v1/talking-avatar/generate`, {
       method: "POST",
       headers: {
         "Content-Type": "application/json",
@@ -235,6 +238,8 @@ async function generateTalkingVideo(portraitUrl: string, audioUrl: string): Prom
       body: JSON.stringify({
         portrait_url: portraitUrl,
         audio_url: audioUrl,
+        fps: 25,
+        static: true,
       }),
     })
 
