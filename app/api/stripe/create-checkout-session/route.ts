@@ -4,11 +4,18 @@ import { currentUser } from "@/utils/auth"
 import { db } from "@/lib/db"
 import { logger } from "@/lib/logger"
 
-const stripe = new Stripe(process.env.STRIPE_SECRET_KEY!, {
-  apiVersion: "2024-12-18.acacia",
-})
+// Lazy-initialize Stripe to avoid build-time errors
+function getStripe() {
+  if (!process.env.STRIPE_SECRET_KEY) {
+    throw new Error("STRIPE_SECRET_KEY not configured")
+  }
+  return new Stripe(process.env.STRIPE_SECRET_KEY, {
+    apiVersion: "2024-12-18.acacia",
+  })
+}
 
 export async function POST(req: NextRequest) {
+  const stripe = getStripe()
   try {
     const user = await currentUser()
     if (!user) {
