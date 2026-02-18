@@ -26,6 +26,7 @@ import { ImageDialog } from "./ImageDialog";
 import { toast } from "sonner";
 import InputSection from "../GenerationForm/destop";
 import { GeneratedImagePreview } from "../GeneratedImagePreview";
+import { CompanionFeatureBanner } from "../CompanionFeatureBanner";
 
 const ITEMS_PER_PAGE = 20;
 const SKELETON_COUNT = 12;
@@ -429,6 +430,9 @@ export default function GalleryPage(props: GalleryPageProps) {
               />
             )}
           </div>
+
+          {/* COMPANION FEATURE BANNER - Only in normal mode */}
+          <CompanionFeatureBanner />
 
           {/* GENERATED IMAGES PREVIEW - Only in normal mode */}
           <GeneratedImagePreview
