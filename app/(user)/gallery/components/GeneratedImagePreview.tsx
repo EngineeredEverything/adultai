@@ -3,7 +3,7 @@
 import { useState } from "react"
 import { motion, AnimatePresence } from "framer-motion"
 import { Button } from "@/components/ui/button"
-import { updateImage } from "@/actions/images/update"
+import { updateImageInfo } from "@/actions/images/update"
 import { toast } from "sonner"
 import { Loader2, Globe, Lock, Download, Trash2 } from "lucide-react"
 import type { SearchImagesResponseSuccessType } from "@/types/images"
@@ -30,9 +30,9 @@ export function GeneratedImagePreview({
     setPublishingIds((prev) => new Set(prev).add(imageId))
     
     try {
-      const result = await updateImage({
+      const result = await updateImageInfo({
         imageId,
-        data: { isPublic: true },
+        isPublic: true,
       })
 
       if ("error" in result) {
@@ -213,7 +213,7 @@ export function GeneratedImagePreview({
       <div className="text-center py-2">
         <p className="text-sm text-gray-400">
           <Lock className="w-4 h-4 inline mr-1" />
-          These images are private and only visible to you. Click "Publish" to add them to the public gallery.
+          These images are private and only visible to you. Click &quot;Publish&quot; to add them to the public gallery.
         </p>
       </div>
     </motion.div>
