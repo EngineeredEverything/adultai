@@ -29,13 +29,15 @@ jobs:
             pnpm build
             
             echo "📦 Deploying to container..."
-            CONTAINER=$(docker ps | grep "website-adultai-pbaavf" | grep "Running" | awk '{print $NF}' | head -1)
+            # Get the first running container (by ID, not name)
+            CONTAINER=$(docker ps | grep "website-adultai-pbaavf" | grep "Up" | head -1 | awk '{print $1}')
             if [ -z "$CONTAINER" ]; then
               echo "❌ No running container found!"
+              docker ps | grep "website-adultai"
               exit 1
             fi
             
-            echo "📦 Copying build to $CONTAINER..."
+            echo "📦 Copying build to container $CONTAINER..."
             docker cp .next $CONTAINER:/app/
             
             echo "♻️  Restarting service..."
