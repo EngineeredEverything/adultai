@@ -2,6 +2,7 @@ import type { NextConfig } from "next";
 
 const nextConfig: NextConfig = {
   /* config options here */
+  output: 'standalone', // For Docker deployments
   env: {
     PORT: process.env.PORT || "3569",
     NEXTAUTH_URL: new URL(
