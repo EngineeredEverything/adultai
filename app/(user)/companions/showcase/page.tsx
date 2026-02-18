@@ -144,7 +144,7 @@ export default async function ShowcasePage() {
         <div className="mt-16 text-center bg-gradient-to-r from-purple-500/10 to-pink-500/10 border border-purple-500/20 rounded-2xl p-8">
           <h2 className="text-2xl font-bold mb-3">Ready to create your perfect companion?</h2>
           <p className="text-gray-400 mb-6 max-w-2xl mx-auto">
-            Mix and match personalities, customize their appearance, and build the companion that's uniquely yours.
+            Mix and match personalities, customize their appearance, and build the companion that&apos;s uniquely yours.
           </p>
           <div className="flex gap-4 justify-center flex-wrap">
             <Link
