@@ -1,0 +1,37 @@
+model Character {
+  id              String   @id @default(auto()) @map("_id") @db.ObjectId
+  userId          String   @db.ObjectId
+  user            User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  name            String
+  personality     String   // archetype: playful, romantic, mysterious, confident
+  appearance      String   // style: realistic, artistic, anime
+  description     String?  // custom description
+  systemPrompt    String?  // AI personality prompt
+  portraitUrl     String?  // canonical portrait image URL
+  portraitSeed    Int?     // seed for consistent generation
+  voiceId         String?  // ElevenLabs voice ID
+  isActive        Boolean  @default(true)
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+
+  messages        ChatMessage[]
+
+  @@index([userId])
+  @@index([userId, isActive])
+}
+
+model ChatMessage {
+  id            String    @id @default(auto()) @map("_id") @db.ObjectId
+  characterId   String    @db.ObjectId
+  character     Character @relation(fields: [characterId], references: [id], onDelete: Cascade)
+  userId        String    @db.ObjectId
+  role          String    // "user" or "assistant"
+  content       String    // text content
+  audioUrl      String?   // TTS audio URL (assistant messages)
+  videoUrl      String?   // talking avatar video URL (assistant messages)
+  createdAt     DateTime  @default(now())
+
+  @@index([characterId])
+  @@index([characterId, createdAt])
+  @@index([userId])
+}

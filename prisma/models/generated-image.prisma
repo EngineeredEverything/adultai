@@ -1,0 +1,91 @@
+
+model GeneratedImage {
+  id             String         @id @default(auto()) @map("_id") @db.ObjectId
+  userId         String         @db.ObjectId
+  user           User           @relation(fields: [userId], references: [id], onDelete: Cascade)
+  prompt         String
+  negativePrompt String?
+  imageUrl       String?
+  seed           Int?
+  modelId        String?
+  steps          Int?
+  cfg            Float?
+  sampler        String?
+  costNuts       Int            @default(50)
+  createdAt      DateTime       @default(now())
+  updatedAt      DateTime       @updatedAt
+  isPublic       Boolean        @default(true)
+  comments       ImageComment[]
+
+  // If "verified" should be set only when image is verified, keep it optional and DO NOT set default(now()).
+  verified       DateTime?
+
+  width          Int?
+  height         Int?
+  path           String?        @unique
+  status         String         @default("processing")
+  taskId         String?
+  eta            Float?
+  progress       Float?         @default(0)
+
+  upvotes        Int            @default(0)
+  downvotes      Int            @default(0)
+  voteScore      Int            @default(0) // upvotes - downvotes
+
+  futureLinks    String[]
+
+  // Many-to-many style association: store category IDs (ObjectId strings).
+  // Note: we DO NOT use @relation(...) here because Prisma/MongoDB doesn't support scalar list fields as relation "fields" like that.
+  categoryIds    String[]       @default([]) @db.ObjectId
+
+  // If you want to load Category objects, query Category where id in categoryIds manually in your code.
+
+  ImageVote      ImageVote[]
+
+  @@index([userId])
+  @@index([status])
+  @@index([taskId])
+  @@index([isPublic])
+  @@index([verified])
+  @@index([voteScore])
+  @@index([createdAt])
+  @@index([categoryIds])
+  @@index([userId, createdAt])
+  @@index([isPublic, verified, voteScore])
+}
+
+model ImageComment {
+  id        String         @id @default(auto()) @map("_id") @db.ObjectId
+  userId    String         @db.ObjectId
+  user      User           @relation(fields: [userId], references: [id], onDelete: Cascade)
+  imageId   String         @db.ObjectId
+  image     GeneratedImage @relation(fields: [imageId], references: [id], onDelete: Cascade)
+  comment   String
+  createdAt DateTime       @default(now())
+
+  @@index([userId])
+  @@index([imageId])
+  @@index([imageId, createdAt])
+}
+
+model ImageVote {
+  id        String         @id @default(auto()) @map("_id") @db.ObjectId
+  userId    String         @db.ObjectId
+  user      User           @relation(fields: [userId], references: [id], onDelete: Cascade)
+  imageId   String         @db.ObjectId
+  image     GeneratedImage @relation(fields: [imageId], references: [id], onDelete: Cascade)
+  voteType  VoteType
+  createdAt DateTime       @default(now())
+  updatedAt DateTime       @updatedAt
+
+  @@unique([userId, imageId])
+  @@index([userId])
+  @@index([imageId])
+  @@index([voteType])
+  @@index([imageId, voteType])
+}
+
+enum VoteType {
+  UPVOTE
+  DOWNVOTE
+}

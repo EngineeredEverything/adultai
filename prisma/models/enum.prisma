@@ -1,0 +1,19 @@
+// enums
+enum Role {
+  USER
+  ADMIN
+  MODERATOR
+  BOT
+}
+
+enum SubscriptionStatus {
+  ACTIVE
+  INACTIVE
+  CANCELLED
+  EXPIRED
+}
+
+enum BillingCycle {
+  MONTHLY
+  YEARLY
+}

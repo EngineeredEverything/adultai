@@ -1,0 +1,9 @@
+// Main configuration file (schema.prisma)
+datasource db {
+  provider = "mongodb"
+  url      = env("DATABASE_URL")
+}
+
+generator client {
+  provider        = "prisma-client-js"
+}

@@ -1,0 +1,86 @@
+model GeneratedVideo {
+  id             String         @id @default(auto()) @map("_id") @db.ObjectId
+  userId         String         @db.ObjectId
+  user           User           @relation(fields: [userId], references: [id], onDelete: Cascade)
+  prompt         String
+  negativePrompt String?
+  videoUrl       String?
+  seed           Int?
+  modelId        String?
+  steps          Int?
+  cfg            Float?
+  fps            Int?           @default(24)
+  numFrames      Int?           @default(81)
+  costNuts       Int            @default(100)
+  createdAt      DateTime       @default(now())
+  updatedAt      DateTime       @updatedAt
+  isPublic       Boolean        @default(true)
+  comments       VideoComment[]
+
+  // If "verified" should be set only when a video is verified, keep it optional and DO NOT set default(now()).
+  verified       DateTime?
+
+  width          Int?
+  height         Int?
+  path           String?        @unique
+  status         String         @default("processing")
+  taskId         String?
+  eta            Float?
+  progress       Float?         @default(0)
+  duration       Float?         // Video duration in seconds
+
+  upvotes   Int @default(0)
+  downvotes Int @default(0)
+  voteScore Int @default(0) // upvotes - downvotes
+
+  futureLinks String[]
+
+  // Many-to-many style reference: store category IDs (ObjectId strings).
+  // Do NOT use @relation(...) here — Prisma + MongoDB doesn't support list scalar fields as relation anchors.
+  categoryIds String[]    @default([]) @db.ObjectId
+
+  VideoVote   VideoVote[]
+
+  @@index([userId])
+  @@index([status])
+  @@index([taskId])
+  @@index([isPublic])
+  @@index([verified])
+  @@index([voteScore])
+  @@index([createdAt])
+  @@index([categoryIds])
+  @@index([userId, createdAt])
+  @@index([isPublic, verified, voteScore])
+}
+
+
+model VideoComment {
+  id        String         @id @default(auto()) @map("_id") @db.ObjectId
+  userId    String         @db.ObjectId
+  user      User           @relation(fields: [userId], references: [id], onDelete: Cascade)
+  videoId   String         @db.ObjectId
+  video     GeneratedVideo @relation(fields: [videoId], references: [id], onDelete: Cascade)
+  comment   String
+  createdAt DateTime       @default(now())
+
+  @@index([userId])
+  @@index([videoId]) // NEW: Critical for counting comments per video
+  @@index([videoId, createdAt]) // NEW: Compound index for video comments sorted by date
+}
+
+model VideoVote {
+  id        String         @id @default(auto()) @map("_id") @db.ObjectId
+  userId    String         @db.ObjectId
+  user      User           @relation(fields: [userId], references: [id], onDelete: Cascade)
+  videoId   String         @db.ObjectId
+  video     GeneratedVideo @relation(fields: [videoId], references: [id], onDelete: Cascade)
+  voteType  VoteType // "UPVOTE" or "DOWNVOTE"
+  createdAt DateTime       @default(now())
+  updatedAt DateTime       @updatedAt
+
+  @@unique([userId, videoId])
+  @@index([userId])
+  @@index([videoId])
+  @@index([voteType])
+  @@index([videoId, voteType]) // NEW: Count votes by type per video
+}

@@ -1,0 +1,21 @@
+model Category {
+  id                String   @id @default(auto()) @map("_id") @db.ObjectId
+  name              String
+  keywords          String[]
+  createdAt         DateTime @default(now())
+  updatedAt         DateTime @updatedAt
+
+  // Keep only the scalar lists for cross-references.
+  imageIds          String[] @db.ObjectId
+  generatedVideoIds String[] @db.ObjectId
+
+  // NOTE: If you need actual GeneratedImage[] or GeneratedVideo[] relations in Prisma,
+  // you must model them differently (see notes below). For MongoDB it's common to store
+  // scalar ID arrays and query by them.
+
+  @@index([name])
+  @@index([imageIds])
+  @@index([generatedVideoIds])
+  @@map("Category")
+}
+
