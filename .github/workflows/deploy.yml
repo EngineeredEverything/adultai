@@ -40,7 +40,10 @@ jobs:
             echo "📦 Copying build to container $CONTAINER..."
             docker cp .next $CONTAINER:/app/
             
-            echo "♻️  Restarting service..."
-            docker service update --force website-adultai-pbaavf
+            echo "♻️  Restarting container..."
+            docker restart $CONTAINER
+            
+            echo "⏳ Waiting for container to be healthy..."
+            sleep 10
             
             echo "✅ Deployment complete!"
