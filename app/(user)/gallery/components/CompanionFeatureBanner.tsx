@@ -4,6 +4,7 @@ import Link from "next/link"
 import { Sparkles, Users, Zap } from "lucide-react"
 
 export function CompanionFeatureBanner() {
+  console.log("[CompanionFeatureBanner] Rendering banner")
   return (
     <div className="mb-8 bg-gradient-to-r from-purple-500/10 to-pink-500/10 border border-purple-500/20 rounded-2xl p-6 backdrop-blur-sm">
       <div className="flex flex-col md:flex-row items-center gap-6">

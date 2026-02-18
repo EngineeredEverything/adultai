@@ -27,6 +27,7 @@ import { toast } from "sonner";
 import InputSection from "../GenerationForm/destop";
 import { GeneratedImagePreview } from "../GeneratedImagePreview";
 import { CompanionFeatureBanner } from "../CompanionFeatureBanner";
+import { GallerySortMenu, type SortOption } from "../GallerySortMenu";
 
 const ITEMS_PER_PAGE = 20;
 const SKELETON_COUNT = 12;
@@ -74,10 +75,37 @@ export default function GalleryPage(props: GalleryPageProps) {
     SearchImagesResponseSuccessType["images"][number] | null
   >(null);
   const [showMobileSheet, setShowMobileSheet] = useState(false);
+  const [sortBy, setSortBy] = useState<SortOption>("newest");
 
   const searchParams = useSearchParams();
   const router = useRouter();
   const isScrolled = false;
+
+  // Sort images based on selected option
+  const sortImages = useCallback((images: SearchImagesResponseSuccessType["images"], sortOption: SortOption) => {
+    const sorted = [...images]
+    
+    switch (sortOption) {
+      case "newest":
+        return sorted.sort((a, b) => 
+          new Date(b.image.createdAt).getTime() - new Date(a.image.createdAt).getTime()
+        )
+      
+      case "popular-week":
+      case "popular-month":
+      case "popular-year":
+      case "popular-all":
+        // Sort by vote score (upvotes - downvotes)
+        return sorted.sort((a, b) => {
+          const scoreA = (a.votes?.upvotes || 0) - (a.votes?.downvotes || 0)
+          const scoreB = (b.votes?.upvotes || 0) - (b.votes?.downvotes || 0)
+          return scoreB - scoreA
+        })
+      
+      default:
+        return sorted
+    }
+  }, [])
 
   // Refs for tracking fetch state
   const isMountedRef = useRef(true);
@@ -287,7 +315,7 @@ export default function GalleryPage(props: GalleryPageProps) {
 
   // Use image loading hook for infinite scroll
   const {
-    images: paginatedImages,
+    images: unsortedPaginatedImages,
     setImages: setPaginatedImages,
     error: paginationError,
     isLoading: isPaginating,
@@ -296,6 +324,12 @@ export default function GalleryPage(props: GalleryPageProps) {
     hasMore,
     ref: infiniteScrollRef,
   } = useImageLoading(loadingParams);
+
+  // Apply sorting to paginated images
+  const paginatedImages = useMemo(
+    () => sortImages(unsortedPaginatedImages, sortBy),
+    [unsortedPaginatedImages, sortBy, sortImages]
+  );
 
   // Memoize generation hook parameters (only in normal mode)
   const generationParams = useMemo(
@@ -475,6 +509,20 @@ export default function GalleryPage(props: GalleryPageProps) {
             isLoading={isLoadingCategories}
           />
         </>
+      )}
+
+      {/* SORT MENU */}
+      {paginatedImages.length > 0 && (
+        <div className="flex justify-between items-center mb-6">
+          <h2 className="text-xl font-semibold">
+            {isUserMode
+              ? "Your Images"
+              : isCategoryMode
+              ? "Category Images"
+              : "Public Gallery"}
+          </h2>
+          <GallerySortMenu currentSort={sortBy} onSortChange={setSortBy} />
+        </div>
       )}
 
       {/* PAGINATION ERROR */}
