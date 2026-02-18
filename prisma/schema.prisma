@@ -7,3 +7,25 @@ datasource db {
 generator client {
   provider        = "prisma-client-js"
 }
+
+model Companion {
+  id             String   @id @default(auto()) @map("_id") @db.ObjectId
+  name           String
+  slug           String   @unique
+  imageUrl       String
+  category       String   // "fantasy" or "realistic" or "custom"
+  archetype      String
+  personality    String
+  traits         String[]
+  description    String
+  characteristics Json    // Flexible object for appearance details
+  featured       Boolean  @default(false)
+  customizable   Boolean  @default(true)
+  userId         String?  // Optional - for custom user-created companions
+  createdAt      DateTime @default(now())
+  updatedAt      DateTime @updatedAt
+
+  @@index([category])
+  @@index([featured])
+  @@index([userId])
+}
