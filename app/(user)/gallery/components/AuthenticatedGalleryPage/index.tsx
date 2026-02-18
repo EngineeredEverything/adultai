@@ -25,6 +25,8 @@ import { ImageGrid } from "./ImageGrid";
 import { ImageDialog } from "./ImageDialog";
 import { toast } from "sonner";
 import InputSection from "../GenerationForm/destop";
+import { GeneratedImagePreview } from "../GeneratedImagePreview";
+import { deleteImageAction } from "@/actions/images/delete";
 
 const ITEMS_PER_PAGE = 20;
 const SKELETON_COUNT = 12;
@@ -47,6 +49,9 @@ export default function GalleryPage(props: GalleryPageProps) {
   // Data states
   const [user, setUser] = useState<GetCurrentUserInfoSuccessType | undefined>();
   const [images, setImages] = useState<
+    SearchImagesResponseSuccessType["images"]
+  >([]);
+  const [generatedImages, setGeneratedImages] = useState<
     SearchImagesResponseSuccessType["images"]
   >([]);
   const [totalCount, setTotalCount] = useState(0);
@@ -295,14 +300,14 @@ export default function GalleryPage(props: GalleryPageProps) {
   // Memoize generation hook parameters (only in normal mode)
   const generationParams = useMemo(
     () => ({
-      initialImages: images,
+      initialImages: generatedImages,
       searchQuery,
       userMode: isUserMode,
       category_id,
       user,
-      setImages: setPaginatedImages,
+      setImages: setGeneratedImages, // Use separate state for generated images
     }),
-    [images, searchQuery, isUserMode, category_id, user, setPaginatedImages]
+    [generatedImages, searchQuery, isUserMode, category_id, user, setGeneratedImages]
   );
 
   // Use image generation hook (only in normal mode)
@@ -425,6 +430,41 @@ export default function GalleryPage(props: GalleryPageProps) {
               />
             )}
           </div>
+
+          {/* GENERATED IMAGES PREVIEW - Only in normal mode */}
+          <GeneratedImagePreview
+            images={generatedImages}
+            onPublish={(imageId) => {
+              // Move image from generated to public gallery
+              const publishedImage = generatedImages.find(
+                (img) => img.image.id === imageId
+              );
+              if (publishedImage) {
+                setImages((prev) => [publishedImage, ...prev]);
+                setPaginatedImages((prev) => [publishedImage, ...prev]);
+                setGeneratedImages((prev) =>
+                  prev.filter((img) => img.image.id !== imageId)
+                );
+              }
+            }}
+            onDelete={async (imageId) => {
+              // Remove from generated images
+              setGeneratedImages((prev) =>
+                prev.filter((img) => img.image.id !== imageId)
+              );
+              // Also delete from database
+              try {
+                await deleteImageAction(imageId);
+                toast.success("Image deleted");
+              } catch (error) {
+                console.error("Error deleting image:", error);
+                toast.error("Failed to delete image");
+              }
+            }}
+            onClear={() => {
+              setGeneratedImages([]);
+            }}
+          />
 
           {/* CATEGORIES - Only in normal mode */}
           <Categories

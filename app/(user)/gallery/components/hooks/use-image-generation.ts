@@ -40,7 +40,7 @@ export function useImageGeneration(params: UseImageGenerationParams) {
     prompt: "",
     isGenerating: false,
     ratio: { width: 896, height: 1120 },
-    isPublic: true,
+    isPublic: false, // Default to private - users must explicitly publish
     count: 1,
     showSignInDialog: false,
   })
