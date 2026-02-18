@@ -28,22 +28,13 @@ jobs:
             echo "🏗️  Building..."
             pnpm build
             
-            echo "📦 Deploying to container..."
-            # Get the first running container (by ID, not name)
-            CONTAINER=$(docker ps | grep "website-adultai-pbaavf" | grep "Up" | head -1 | awk '{print $1}')
-            if [ -z "$CONTAINER" ]; then
-              echo "❌ No running container found!"
-              docker ps | grep "website-adultai"
-              exit 1
-            fi
+            echo "🐳 Rebuilding Docker image..."
+            docker build -t website-adultai-pbaavf:latest .
             
-            echo "📦 Copying build to container $CONTAINER..."
-            docker cp .next $CONTAINER:/app/
+            echo "♻️  Updating service with new image..."
+            docker service update --image website-adultai-pbaavf:latest website-adultai-pbaavf
             
-            echo "♻️  Restarting container..."
-            docker restart $CONTAINER
-            
-            echo "⏳ Waiting for container to be healthy..."
-            sleep 10
+            echo "⏳ Waiting for service to update..."
+            sleep 30
             
             echo "✅ Deployment complete!"
