@@ -28,13 +28,13 @@ jobs:
             echo "🏗️  Building..."
             pnpm build
             
-            echo "🐳 Rebuilding Docker image..."
-            docker build -t website-adultai-pbaavf:latest .
+            echo "♻️  Restarting app with PM2..."
+            pm2 restart adultai || pm2 start ecosystem.config.cjs
             
-            echo "♻️  Updating service with new image..."
-            docker service update --image website-adultai-pbaavf:latest website-adultai-pbaavf
+            echo "⏳ Waiting for app to start..."
+            sleep 5
             
-            echo "⏳ Waiting for service to update..."
-            sleep 30
+            echo "📊 PM2 status..."
+            pm2 status
             
             echo "✅ Deployment complete!"
