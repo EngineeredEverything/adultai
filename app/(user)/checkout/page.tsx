@@ -1,42 +1,36 @@
-import { currentUser } from "@/utils/auth";
-import StripeCheckout from "./StripeCheckout";
-import { getPlanInfo } from "@/actions/subscriptions/info";
-import { isGetPlanInfoSuccess } from "@/types/subscriptions";
-import { redirect } from "next/navigation";
+import { Metadata } from "next"
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 
-export default async function page({
-  searchParams,
-}: {
-  searchParams: Promise<{ plan: string; billing: string }>;
-}) {
-  const params = await searchParams;
-  const user = await currentUser();
-  
-  if (!user) {
-    redirect(`/auth/login?callbackUrl=/checkout?plan=${params.plan}&billing=${params.billing}`);
-  }
+export const metadata: Metadata = {
+  title: "Checkout - AdultAI",
+  description: "Subscribe to AdultAI",
+}
 
-  if (!params.plan || !params.billing) {
-    redirect("/subscription");
-  }
-
-  const plan = await getPlanInfo({ planId: params.plan });
-
-  if (!isGetPlanInfoSuccess(plan)) {
-    return <div className="min-h-screen bg-gray-950 text-white flex items-center justify-center">
-      <div className="text-center">
-        <h2 className="text-2xl font-bold mb-2">Error</h2>
-        <p className="text-gray-400">{plan.error}</p>
-      </div>
-    </div>;
-  }
-  
+export default function CheckoutPage() {
   return (
-    <StripeCheckout 
-      user={user} 
-      plan={plan} 
-      planId={params.plan}
-      billing={params.billing as "monthly" | "yearly"}
-    />
-  );
+    <div className="container mx-auto px-4 py-8">
+      <Card className="max-w-2xl mx-auto">
+        <CardHeader>
+          <CardTitle>Payment Integration Coming Soon</CardTitle>
+          <CardDescription>
+            We&apos;re setting up adult-friendly payment processing
+          </CardDescription>
+        </CardHeader>
+        <CardContent>
+          <p className="text-gray-400 mb-4">
+            Payment processing will be available soon via an adult-friendly provider.
+          </p>
+          <div className="bg-gray-800/50 border border-gray-700 rounded-lg p-4">
+            <h3 className="font-semibold mb-2">Supported Providers:</h3>
+            <ul className="list-disc list-inside text-sm text-gray-400 space-y-1">
+              <li>CCBill (industry standard)</li>
+              <li>Segpay</li>
+              <li>Epoch</li>
+              <li>Cryptocurrency (TEMPT token integration planned)</li>
+            </ul>
+          </div>
+        </CardContent>
+      </Card>
+    </div>
+  )
 }
