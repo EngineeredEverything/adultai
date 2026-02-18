@@ -73,6 +73,7 @@ function CompanionCard({ companion }: { companion: any }) {
           alt={companion.name}
           fill
           className="object-cover"
+          unoptimized
         />
         <div className="absolute top-2 right-2">
           <span className="bg-purple-600/90 px-3 py-1 rounded-full text-xs font-semibold">
