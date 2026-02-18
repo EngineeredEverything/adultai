@@ -17,6 +17,8 @@ import {
 import { getUserActivePlan } from "@/actions/subscriptions/info"
 import { checkAndUpdateUsage } from "../usage/update"
 import { getOrCreateUsageRecord } from "../usage/info"
+import { checkGenerationLimit, recordGeneration } from "@/lib/rate-limit"
+import { headers } from "next/headers"
 
 const provider = getImageProvider("CUSTOM")
 type ModelConfig = typeof provider.types.ModelConfig
@@ -83,6 +85,31 @@ export const createGeneratedImagesRAW = async (user: User, data: z.infer<typeof 
     }
   }
 
+  // Get client IP for rate limiting and abuse prevention
+  const headersList = headers()
+  const clientIP =
+    headersList.get("x-forwarded-for")?.split(",")[0] ||
+    headersList.get("x-real-ip") ||
+    "unknown"
+
+  logger.debug("Client IP detected", { userId: user.id, clientIP })
+
+  // Check rate limit and free tier limits
+  const rateLimitCheck = await checkGenerationLimit(user.id, clientIP)
+  if (!rateLimitCheck.allowed) {
+    logger.warn("Generation blocked by rate limit", {
+      userId: user.id,
+      reason: rateLimitCheck.reason,
+      clientIP,
+    })
+    throw new Error(rateLimitCheck.reason || "Generation limit exceeded")
+  }
+
+  logger.debug("Rate limit check passed", {
+    userId: user.id,
+    remainingCredits: rateLimitCheck.remainingCredits,
+  })
+
   // Get plan and usage
   const { plan } = await getUserActivePlan(user.id)
   if (!plan) {
@@ -124,11 +151,15 @@ export const createGeneratedImagesRAW = async (user: User, data: z.infer<typeof 
     response.futureLinks || [],
   )
 
+  // Record this generation for rate limiting tracking
+  await recordGeneration(user.id, clientIP)
+
   logger.info("Image generation initiated successfully", {
     userId: user.id,
     taskId: response.taskId,
     imageCount: pendingImages.length,
     totalCost,
+    remainingFreeCredits: rateLimitCheck.remainingCredits,
   })
 
   return {
@@ -137,6 +168,7 @@ export const createGeneratedImagesRAW = async (user: User, data: z.infer<typeof 
     taskId: response.taskId,
     eta: response.eta,
     nutsUsed: totalCost,
+    remainingFreeCredits: rateLimitCheck.remainingCredits,
   }
 }
 
