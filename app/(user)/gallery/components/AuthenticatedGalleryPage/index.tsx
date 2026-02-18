@@ -26,7 +26,6 @@ import { ImageDialog } from "./ImageDialog";
 import { toast } from "sonner";
 import InputSection from "../GenerationForm/destop";
 import { GeneratedImagePreview } from "../GeneratedImagePreview";
-import { deleteImageAction } from "@/actions/images/delete";
 
 const ITEMS_PER_PAGE = 20;
 const SKELETON_COUNT = 12;
