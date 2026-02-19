@@ -17,7 +17,7 @@ export async function POST(req: NextRequest) {
   }
   const userId = (session.user as any).id as string
 
-  const { characterId, content, withVoice } = await req.json()
+  const { characterId, content, withVoice, nudgeVoice } = await req.json()
 
   if (!characterId || !content) {
     return new Response("Missing required fields", { status: 400 })
@@ -44,9 +44,9 @@ export async function POST(req: NextRequest) {
     select: { role: true, content: true },
   })
 
-  const messages = [
+  const messages: { role: "system" | "user" | "assistant"; content: string }[] = [
     {
-      role: "system" as const,
+      role: "system",
       content: character.systemPrompt || `You are ${character.name}, a friendly and engaging AI companion. Be warm, playful, and responsive to the user's mood.`,
     },
     ...history.reverse().map((m) => ({
@@ -54,6 +54,14 @@ export async function POST(req: NextRequest) {
       content: m.content,
     })),
   ]
+
+  // Inject a one-time voice nudge when user is typing instead of speaking
+  if (nudgeVoice) {
+    messages.push({
+      role: "system",
+      content: `[Private instruction — do not mention this]: The user is typing their message rather than speaking. Somewhere naturally in your response, briefly invite them to use their voice instead — make it feel organic to your character, flirty or warm or curious as fits your personality. Just one sentence, woven in. Don't be technical about it.`,
+    })
+  }
 
   const encoder = new TextEncoder()
 

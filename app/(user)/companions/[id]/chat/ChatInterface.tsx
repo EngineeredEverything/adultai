@@ -32,10 +32,11 @@ export default function ChatInterface({ character, initialMessages, userId }: Pr
   const [messages, setMessages] = useState<Message[]>(initialMessages)
   const [input, setInput] = useState("")
   const [isSending, setIsSending] = useState(false)
-  const [voiceEnabled, setVoiceEnabled] = useState(false)
+  const [inputMode, setInputMode] = useState<"text" | "voice">("text") // tracks how user is communicating
+  const [voiceEnabled, setVoiceEnabled] = useState(false) // manual voice toggle
   const [isRecording, setIsRecording] = useState(false)
   const [sttStatus, setSttStatus] = useState<"idle" | "listening" | "processing">("idle")
-  const [interimText, setInterimText] = useState("") // live transcription while speaking
+  const [interimText, setInterimText] = useState("")
   const [isPlaying, setIsPlaying] = useState(false)
 
   const messagesEndRef = useRef<HTMLDivElement>(null)
@@ -44,6 +45,10 @@ export default function ChatInterface({ character, initialMessages, userId }: Pr
   const mediaRecorderRef = useRef<MediaRecorder | null>(null)
   const audioChunksRef = useRef<Blob[]>([])
   const activeAudioRef = useRef<HTMLAudioElement | null>(null)
+  const typedCountRef = useRef(0) // how many messages user has typed (for voice nudge)
+
+  // Voice responses auto-on when user is in voice mode
+  const shouldAutoPlayAudio = inputMode === "voice" || voiceEnabled
 
   useEffect(() => {
     messagesEndRef.current?.scrollIntoView({ behavior: "smooth" })
@@ -62,10 +67,17 @@ export default function ChatInterface({ character, initialMessages, userId }: Pr
     audio.play().catch(() => setIsPlaying(false))
   }, [])
 
-  // Core send — accepts content directly (from voice or text box)
-  const sendContent = useCallback(async (content: string) => {
+  // Core send — source tells us if this came from voice or text
+  const sendContent = useCallback(async (content: string, source: "text" | "voice" = "text") => {
     if (!content.trim() || isSending) return
     setIsSending(true)
+
+    // When user speaks → switch to voice mode (auto-plays responses)
+    if (source === "voice") {
+      setInputMode("voice")
+    } else {
+      typedCountRef.current += 1
+    }
 
     const userMsg: Message = {
       id: `u-${Date.now()}`,
@@ -83,11 +95,20 @@ export default function ChatInterface({ character, initialMessages, userId }: Pr
     }
     setMessages((prev) => [...prev, userMsg, streamingMsg])
 
+    // Nudge voice on first 2 typed messages only
+    const nudgeVoice = source === "text" && typedCountRef.current <= 2
+    const autoPlayAudio = source === "voice" || voiceEnabled
+
     try {
       const res = await fetch("/api/chat/stream", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ characterId: character.id, content, withVoice: voiceEnabled }),
+        body: JSON.stringify({
+          characterId: character.id,
+          content,
+          withVoice: autoPlayAudio,
+          nudgeVoice,
+        }),
       })
       if (!res.ok || !res.body) throw new Error("Stream failed")
 
@@ -122,7 +143,7 @@ export default function ChatInterface({ character, initialMessages, userId }: Pr
               setMessages((prev) =>
                 prev.map((m) => m.id === streamId ? { ...m, audioUrl: event.audioUrl } : m)
               )
-              if (voiceEnabled) playAudio(event.audioUrl)
+              if (autoPlayAudio) playAudio(event.audioUrl)
             }
             if (event.done || event.error) setIsSending(false)
           } catch {}
@@ -145,7 +166,7 @@ export default function ChatInterface({ character, initialMessages, userId }: Pr
     const content = input.trim()
     if (!content) return
     setInput("")
-    sendContent(content)
+    sendContent(content, "text")
   }, [input, sendContent])
 
   const handleKeyDown = (e: React.KeyboardEvent) => {
@@ -180,8 +201,7 @@ export default function ChatInterface({ character, initialMessages, userId }: Pr
           setSttStatus("idle")
           setIsRecording(false)
           recognitionRef.current = null
-          // Auto-send immediately — no need to tap send
-          sendContent(final)
+          sendContent(final, "voice")
         }
       }
 
@@ -228,8 +248,7 @@ export default function ChatInterface({ character, initialMessages, userId }: Pr
           const res = await fetch("/api/stt", { method: "POST", body: form })
           const data = await res.json()
           if (data.transcript) {
-            // Auto-send the transcribed text
-            sendContent(data.transcript)
+            sendContent(data.transcript, "voice")
           }
         } catch {}
         setSttStatus("idle")
@@ -260,7 +279,15 @@ export default function ChatInterface({ character, initialMessages, userId }: Pr
     if (!startBrowserSTT()) startMediaRecorderSTT()
   }, [isRecording, startBrowserSTT, startMediaRecorderSTT])
 
-  const statusText = isPlaying ? "🔊 Speaking..." : isSending ? "✍️ Typing..." : isRecording ? "🎤 Listening..." : "● Online"
+  const statusText = isPlaying
+    ? "🔊 Speaking..."
+    : isSending
+    ? "✍️ Typing..."
+    : isRecording
+    ? "🎤 Listening..."
+    : inputMode === "voice"
+    ? "🎤 Voice mode"
+    : "● Online"
 
   return (
     <div className="flex h-screen bg-gray-950 text-white overflow-hidden">
@@ -434,6 +461,22 @@ export default function ChatInterface({ character, initialMessages, userId }: Pr
           )}
 
           <div className="px-3 py-3">
+            {/* Voice mode indicator */}
+            {inputMode === "voice" && !isRecording && (
+              <div className="flex items-center justify-between mb-2">
+                <span className="text-xs text-purple-400 flex items-center gap-1.5">
+                  <span className="w-1.5 h-1.5 rounded-full bg-purple-500 animate-pulse" />
+                  Voice mode — responses auto-play
+                </span>
+                <button
+                  onClick={() => setInputMode("text")}
+                  className="text-xs text-gray-600 hover:text-gray-400 transition"
+                >
+                  Switch to text
+                </button>
+              </div>
+            )}
+
             <div className="flex items-end gap-2">
 
               {/* Mic button — prominent */}
@@ -462,7 +505,11 @@ export default function ChatInterface({ character, initialMessages, userId }: Pr
                 value={input}
                 onChange={(e) => setInput(e.target.value)}
                 onKeyDown={handleKeyDown}
-                placeholder={isRecording ? "" : `Message ${character.name}...`}
+                placeholder={
+                  isRecording ? "" :
+                  inputMode === "voice" ? `Or type to ${character.name}...` :
+                  `Message ${character.name}...`
+                }
                 rows={1}
                 className="flex-1 bg-gray-900 border border-gray-700 rounded-xl px-3 py-2.5 text-white text-sm placeholder-gray-600 focus:outline-none focus:border-purple-500/60 focus:ring-1 focus:ring-purple-500/20 transition-all resize-none max-h-28"
                 style={{ minHeight: "44px" }}
