@@ -416,7 +416,7 @@ export default function ChatInterface({ character, initialMessages, userId }: Pr
                 </div>
                 <div className="flex-1 min-w-0">
                   {interimText ? (
-                    <p className="text-sm text-white truncate">"{interimText}"</p>
+                    <p className="text-sm text-white truncate">&ldquo;{interimText}&rdquo;</p>
                   ) : (
                     <p className="text-sm text-red-300">
                       {sttStatus === "processing" ? "Processing your voice..." : `Listening — speak to ${character.name}`}

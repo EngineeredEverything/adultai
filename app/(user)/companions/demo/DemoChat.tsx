@@ -272,7 +272,7 @@ export default function DemoChat({ companion }: Props) {
                   ))}
                 </div>
                 <p className="flex-1 text-sm text-white truncate min-w-0">
-                  {interimText ? `"${interimText}"` : `Listening — speak to ${char.name}`}
+                  {interimText ? <>&ldquo;{interimText}&rdquo;</> : `Listening — speak to ${char.name}`}
                 </p>
                 <button onClick={handleMicClick} className="flex-shrink-0 px-3 py-1.5 bg-red-500/20 text-red-300 text-xs rounded-lg">
                   Stop
