@@ -1,6 +1,6 @@
 "use client"
 
-import { useState, useRef, useEffect } from "react"
+import { useState, useRef, useEffect, useCallback } from "react"
 import Link from "next/link"
 
 interface DemoCompanion {
@@ -42,37 +42,27 @@ const DEMO_RESPONSES = [
 export default function DemoChat({ companion }: Props) {
   const char = companion || DEFAULT_COMPANION
   const [messages, setMessages] = useState<Message[]>([
-    {
-      id: "1",
-      role: "assistant",
-      content: DEMO_RESPONSES[0],
-      timestamp: new Date(),
-    },
+    { id: "1", role: "assistant", content: DEMO_RESPONSES[0], timestamp: new Date() },
   ])
   const [input, setInput] = useState("")
   const [messageCount, setMessageCount] = useState(0)
   const [isTyping, setIsTyping] = useState(false)
+  const [isRecording, setIsRecording] = useState(false)
+  const [interimText, setInterimText] = useState("")
   const messagesEndRef = useRef<HTMLDivElement>(null)
+  const recognitionRef = useRef<any>(null)
 
   useEffect(() => {
     messagesEndRef.current?.scrollIntoView({ behavior: "smooth" })
   }, [messages, isTyping])
 
-  const handleSend = () => {
-    const content = input.trim()
-    if (!content || messageCount >= 3) return
-
-    const userMsg: Message = {
-      id: `user-${Date.now()}`,
-      role: "user",
-      content,
-      timestamp: new Date(),
-    }
+  const sendContent = useCallback((content: string) => {
+    if (!content.trim() || messageCount >= 3) return
+    const userMsg: Message = { id: `user-${Date.now()}`, role: "user", content, timestamp: new Date() }
     setMessages((prev) => [...prev, userMsg])
     setInput("")
     setMessageCount((prev) => prev + 1)
     setIsTyping(true)
-
     setTimeout(() => {
       const idx = Math.min(messageCount + 1, DEMO_RESPONSES.length - 1)
       setMessages((prev) => [
@@ -81,14 +71,49 @@ export default function DemoChat({ companion }: Props) {
       ])
       setIsTyping(false)
     }, 1200)
-  }
+  }, [messageCount])
+
+  const handleSend = () => sendContent(input.trim())
 
   const handleKeyDown = (e: React.KeyboardEvent) => {
-    if (e.key === "Enter" && !e.shiftKey) {
-      e.preventDefault()
-      handleSend()
-    }
+    if (e.key === "Enter" && !e.shiftKey) { e.preventDefault(); handleSend() }
   }
+
+  const handleMicClick = useCallback(() => {
+    if (isRecording) {
+      recognitionRef.current?.stop()
+      recognitionRef.current = null
+      setIsRecording(false)
+      setInterimText("")
+      return
+    }
+    const SR = (window as any).SpeechRecognition || (window as any).webkitSpeechRecognition
+    if (!SR) { alert("Voice not supported in this browser. Try Chrome."); return }
+    const r = new SR()
+    recognitionRef.current = r
+    r.continuous = false
+    r.interimResults = true
+    r.lang = "en-US"
+    r.onresult = (e: any) => {
+      let interim = "", final = ""
+      for (let i = e.resultIndex; i < e.results.length; i++) {
+        const t = e.results[i][0].transcript
+        if (e.results[i].isFinal) final += t
+        else interim += t
+      }
+      if (interim) setInterimText(interim)
+      if (final) {
+        setInterimText("")
+        setIsRecording(false)
+        recognitionRef.current = null
+        sendContent(final)
+      }
+    }
+    r.onerror = () => { setIsRecording(false); setInterimText("") }
+    r.onend = () => { if (recognitionRef.current === r) { setIsRecording(false); setInterimText(""); recognitionRef.current = null } }
+    r.start()
+    setIsRecording(true)
+  }, [isRecording, sendContent])
 
   const isLimitReached = messageCount >= 3
 
@@ -235,34 +260,73 @@ export default function DemoChat({ companion }: Props) {
         </div>
 
         {/* Input */}
-        <div className="border-t border-gray-800/50 px-3 py-3 bg-gray-950/90 backdrop-blur-sm">
-          <div className="flex items-end gap-2">
-            <textarea
-              value={input}
-              onChange={(e) => setInput(e.target.value)}
-              onKeyDown={handleKeyDown}
-              placeholder={isLimitReached ? "Sign up to continue..." : `Message ${char.name}...`}
-              rows={1}
-              className="flex-1 bg-gray-900 border border-gray-700 rounded-xl px-3 py-2.5 text-white text-sm placeholder-gray-600 focus:outline-none focus:border-purple-500/60 focus:ring-1 focus:ring-purple-500/20 transition-all resize-none max-h-28 disabled:opacity-50"
-              style={{ minHeight: "44px" }}
-              disabled={isLimitReached}
-            />
-            <button
-              onClick={handleSend}
-              disabled={!input.trim() || isLimitReached}
-              className="bg-gradient-to-r from-purple-600 to-pink-600 p-2.5 rounded-xl transition-all disabled:opacity-40 flex-shrink-0"
-            >
-              <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 19l9 2-9-18-9 18 9-2zm0 0v-8" />
-              </svg>
-            </button>
+        <div className="border-t border-gray-800/50 bg-gray-950/90 backdrop-blur-sm">
+          {/* Recording overlay */}
+          {isRecording && (
+            <div className="px-4 pt-3 pb-2">
+              <div className="flex items-center gap-3 bg-red-500/10 border border-red-500/30 rounded-xl px-4 py-3">
+                <div className="flex items-center gap-0.5 flex-shrink-0">
+                  {[...Array(5)].map((_, i) => (
+                    <div key={i} className="w-0.5 bg-red-400 rounded-full animate-pulse"
+                      style={{ height: `${12 + Math.sin(i * 1.5) * 8}px`, animationDelay: `${i * 120}ms` }} />
+                  ))}
+                </div>
+                <p className="flex-1 text-sm text-white truncate min-w-0">
+                  {interimText ? `"${interimText}"` : `Listening — speak to ${char.name}`}
+                </p>
+                <button onClick={handleMicClick} className="flex-shrink-0 px-3 py-1.5 bg-red-500/20 text-red-300 text-xs rounded-lg">
+                  Stop
+                </button>
+              </div>
+            </div>
+          )}
+
+          <div className="px-3 py-3">
+            <div className="flex items-end gap-2">
+              {/* Mic button */}
+              {!isLimitReached && (
+                <button
+                  onClick={handleMicClick}
+                  disabled={isLimitReached}
+                  className={`flex flex-col items-center gap-0.5 flex-shrink-0 transition-all ${isRecording ? "opacity-0 pointer-events-none" : ""}`}
+                  title="Tap to speak"
+                >
+                  <div className="p-2.5 rounded-xl border bg-gray-900 border-gray-600 text-gray-300 hover:bg-purple-900/30 hover:border-purple-500/60 hover:text-purple-300 active:scale-95 transition-all">
+                    <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 11a7 7 0 01-7 7m0 0a7 7 0 01-7-7m7 7v4m0 0H8m4 0h4m-4-8a3 3 0 01-3-3V5a3 3 0 116 0v6a3 3 0 01-3 3z" />
+                    </svg>
+                  </div>
+                  <span className="text-[10px] text-gray-600">Speak</span>
+                </button>
+              )}
+
+              <textarea
+                value={input}
+                onChange={(e) => setInput(e.target.value)}
+                onKeyDown={handleKeyDown}
+                placeholder={isLimitReached ? "Sign up to continue..." : `Message ${char.name}...`}
+                rows={1}
+                className="flex-1 bg-gray-900 border border-gray-700 rounded-xl px-3 py-2.5 text-white text-sm placeholder-gray-600 focus:outline-none focus:border-purple-500/60 focus:ring-1 focus:ring-purple-500/20 transition-all resize-none max-h-28 disabled:opacity-50"
+                style={{ minHeight: "44px" }}
+                disabled={isLimitReached || isRecording}
+              />
+              <button
+                onClick={handleSend}
+                disabled={!input.trim() || isLimitReached}
+                className="bg-gradient-to-r from-purple-600 to-pink-600 p-2.5 rounded-xl transition-all disabled:opacity-40 flex-shrink-0 mb-5"
+              >
+                <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 19l9 2-9-18-9 18 9-2zm0 0v-8" />
+                </svg>
+              </button>
+            </div>
+            <p className="text-xs text-gray-600 text-center mt-1">
+              {isLimitReached
+                ? <Link href="/auth/register" className="text-purple-400 hover:text-purple-300">Sign up to continue →</Link>
+                : `${3 - messageCount} demo messages left · type or speak`
+              }
+            </p>
           </div>
-          <p className="text-xs text-gray-600 text-center mt-2">
-            {isLimitReached
-              ? <Link href="/auth/register" className="text-purple-400 hover:text-purple-300">Sign up to continue →</Link>
-              : `${3 - messageCount} demo messages left`
-            }
-          </p>
         </div>
       </div>
     </div>
