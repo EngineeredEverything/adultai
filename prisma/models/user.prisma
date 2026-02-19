@@ -30,6 +30,12 @@ model User {
   nutsPurchases       NutsPurchase[]
   subscriptionHistory SubscriptionHistory[]
 
+  // Free tier & abuse prevention
+  freeGenerationsUsed  Int      @default(0)
+  freeGenerationsLimit Int      @default(10)
+  lastGenerationAt     DateTime?
+  generationIPs        String[] @default([])
+
   // Suspension & Ban status
   isSuspended         Boolean          @default(false)
   suspendedAt         DateTime?
