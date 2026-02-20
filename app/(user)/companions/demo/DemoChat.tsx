@@ -202,24 +202,34 @@ export default function DemoChat({ companion }: Props) {
     <div className="h-dvh w-full relative overflow-hidden bg-black">
 
       {/* ── Background: Portrait / Intro Video ── */}
-      <div className="absolute inset-0">
+      <div className="absolute inset-0 bg-black">
         {char.imageUrl ? (
-          showIntroVideo && char.introVideoUrl ? (
-            <video
-              key={char.introVideoUrl}
-              src={char.introVideoUrl}
-              autoPlay
-              playsInline
-              onEnded={() => setShowIntroVideo(false)}
-              className="w-full h-full object-cover object-top"
-            />
-          ) : (
+          <>
+            {/* Blurred background fill (covers letterbox areas) */}
             <img
               src={char.imageUrl}
-              alt={char.name}
-              className="w-full h-full object-cover object-top"
+              alt=""
+              aria-hidden="true"
+              className="absolute inset-0 w-full h-full object-cover scale-110 blur-2xl opacity-50"
             />
-          )
+            {/* Full-body portrait or intro video */}
+            {showIntroVideo && char.introVideoUrl ? (
+              <video
+                key={char.introVideoUrl}
+                src={char.introVideoUrl}
+                autoPlay
+                playsInline
+                onEnded={() => setShowIntroVideo(false)}
+                className="absolute inset-0 w-full h-full object-contain"
+              />
+            ) : (
+              <img
+                src={char.imageUrl}
+                alt={char.name}
+                className="absolute inset-0 w-full h-full object-contain"
+              />
+            )}
+          </>
         ) : (
           <div className="w-full h-full bg-gradient-to-br from-purple-950 via-pink-950 to-black" />
         )}

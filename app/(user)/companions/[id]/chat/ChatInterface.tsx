@@ -288,24 +288,34 @@ export default function ChatInterface({ character, initialMessages, userId }: Pr
     <div className="h-dvh w-full relative overflow-hidden bg-black">
 
       {/* ── Background: Portrait or Talking Avatar Video ── */}
-      <div className="absolute inset-0">
+      <div className="absolute inset-0 bg-black">
         {character.portraitUrl ? (
-          currentVideoUrl ? (
-            <video
-              key={currentVideoUrl}
-              src={currentVideoUrl}
-              autoPlay
-              playsInline
-              onEnded={() => setCurrentVideoUrl(null)}
-              className="w-full h-full object-cover object-top"
-            />
-          ) : (
+          <>
+            {/* Blurred background fill (covers letterbox areas) */}
             <img
               src={character.portraitUrl}
-              alt={character.name}
-              className="w-full h-full object-cover object-top"
+              alt=""
+              aria-hidden="true"
+              className="absolute inset-0 w-full h-full object-cover scale-110 blur-2xl opacity-50"
             />
-          )
+            {/* Full-body portrait or talking avatar */}
+            {currentVideoUrl ? (
+              <video
+                key={currentVideoUrl}
+                src={currentVideoUrl}
+                autoPlay
+                playsInline
+                onEnded={() => setCurrentVideoUrl(null)}
+                className="absolute inset-0 w-full h-full object-contain"
+              />
+            ) : (
+              <img
+                src={character.portraitUrl}
+                alt={character.name}
+                className="absolute inset-0 w-full h-full object-contain"
+              />
+            )}
+          </>
         ) : (
           <div className="w-full h-full bg-gradient-to-br from-purple-950 via-pink-950 to-black" />
         )}
