@@ -56,37 +56,18 @@ export default function DemoChat({ companion }: Props) {
   const [isRecording, setIsRecording] = useState(false)
   const [interimText, setInterimText] = useState("")
   const messagesEndRef = useRef<HTMLDivElement>(null)
+
+  // Mic state refs (not state to avoid stale closures)
   const recognitionRef = useRef<any>(null)
   const mediaRecorderRef = useRef<MediaRecorder | null>(null)
   const audioChunksRef = useRef<Blob[]>([])
   const audioRef = useRef<HTMLAudioElement | null>(null)
-  const isRecordingRef = useRef(false)
+  const isHoldingRef = useRef(false)       // true while finger/mouse is down
+  const accumulatedRef = useRef("")         // text built up across recognition restarts
 
   useEffect(() => {
     messagesEndRef.current?.scrollIntoView({ behavior: "smooth" })
   }, [messages, isTyping])
-
-  // Document-level pointerup so releasing anywhere stops recording
-  // (button becomes invisible while recording, so its onPointerUp won't fire)
-  useEffect(() => {
-    if (!isRecording) return
-    const stopRecording = () => {
-      if (recognitionRef.current) {
-        recognitionRef.current.stop()
-        recognitionRef.current = null
-        return
-      }
-      if (mediaRecorderRef.current && mediaRecorderRef.current.state !== "inactive") {
-        mediaRecorderRef.current.stop()
-      }
-    }
-    document.addEventListener("pointerup", stopRecording)
-    document.addEventListener("touchend", stopRecording)
-    return () => {
-      document.removeEventListener("pointerup", stopRecording)
-      document.removeEventListener("touchend", stopRecording)
-    }
-  }, [isRecording])
 
   const sendContent = useCallback(async (content: string) => {
     if (!content.trim() || messageCount >= 3) return
@@ -111,10 +92,7 @@ export default function DemoChat({ companion }: Props) {
       })
       const data = await res.json()
       const reply = data.content || FOLLOWUP_RESPONSES[Math.min(messageCount, FOLLOWUP_RESPONSES.length - 1)]
-      setMessages((prev) => [
-        ...prev,
-        { id: `ai-${Date.now()}`, role: "assistant", content: reply, timestamp: new Date() },
-      ])
+      setMessages((prev) => [...prev, { id: `ai-${Date.now()}`, role: "assistant", content: reply, timestamp: new Date() }])
       if (data.audioUrl) {
         if (audioRef.current) { audioRef.current.pause(); audioRef.current = null }
         const audio = new Audio(data.audioUrl)
@@ -123,111 +101,155 @@ export default function DemoChat({ companion }: Props) {
       }
     } catch {
       const idx = Math.min(messageCount, FOLLOWUP_RESPONSES.length - 1)
-      setMessages((prev) => [
-        ...prev,
-        { id: `ai-${Date.now()}`, role: "assistant", content: FOLLOWUP_RESPONSES[idx], timestamp: new Date() },
-      ])
+      setMessages((prev) => [...prev, { id: `ai-${Date.now()}`, role: "assistant", content: FOLLOWUP_RESPONSES[idx], timestamp: new Date() }])
     } finally {
       setIsTyping(false)
     }
   }, [messageCount, messages, char])
 
-  const handleSend = () => sendContent(input.trim())
-
-  const handleKeyDown = (e: React.KeyboardEvent) => {
-    if (e.key === "Enter" && !e.shiftKey) { e.preventDefault(); handleSend() }
-  }
-
-  const isLimitReached = messageCount >= 3
-
-  const startRecording = useCallback(async () => {
-    if (isRecordingRef.current || isLimitReached) return
-    isRecordingRef.current = true
-    setIsRecording(true)
-
+  // ── Web Speech API mic (Chrome/Edge) ──────────────────────────────────────
+  // Key insight: SpeechRecognition auto-stops after ~1s silence.
+  // Fix: restart it in onend as long as isHoldingRef is still true.
+  const startWebSpeech = useCallback(() => {
     const SR = (window as any).SpeechRecognition || (window as any).webkitSpeechRecognition
-    if (SR) {
-      let accumulated = ""
+    if (!SR) return false
+
+    const launchSession = () => {
+      if (!isHoldingRef.current) return  // user already released
+
       const r = new SR()
       recognitionRef.current = r
       r.continuous = true
       r.interimResults = true
       r.lang = "en-US"
+
       r.onresult = (e: any) => {
         let interim = ""
         for (let i = e.resultIndex; i < e.results.length; i++) {
           const t = e.results[i][0].transcript
-          if (e.results[i].isFinal) accumulated += t
+          if (e.results[i].isFinal) accumulatedRef.current += t + " "
           else interim += t
         }
-        setInterimText(accumulated + interim)
+        setInterimText((accumulatedRef.current + interim).trim())
       }
+
+      r.onerror = (e: any) => {
+        // "no-speech" just means silence — restart if still holding
+        if (e.error === "no-speech" && isHoldingRef.current) {
+          recognitionRef.current = null
+          launchSession()
+          return
+        }
+        // Real error — stop
+        recognitionRef.current = null
+      }
+
       r.onend = () => {
         recognitionRef.current = null
-        isRecordingRef.current = false
-        setIsRecording(false)
-        setInterimText("")
-        if (accumulated.trim()) sendContent(accumulated.trim())
-      }
-      r.onerror = () => {
-        recognitionRef.current = null
-        isRecordingRef.current = false
-        setIsRecording(false)
-        setInterimText("")
-      }
-      r.start()
-    } else {
-      try {
-        const stream = await navigator.mediaDevices.getUserMedia({ audio: true })
-        const mr = new MediaRecorder(stream)
-        mediaRecorderRef.current = mr
-        audioChunksRef.current = []
-        mr.ondataavailable = (ev) => { if (ev.data.size > 0) audioChunksRef.current.push(ev.data) }
-        mr.onstop = async () => {
-          stream.getTracks().forEach((t) => t.stop())
-          const blob = new Blob(audioChunksRef.current, { type: "audio/webm" })
-          if (blob.size < 500) { isRecordingRef.current = false; setIsRecording(false); setInterimText(""); return }
-          setInterimText("Transcribing...")
-          try {
-            const form = new FormData()
-            form.append("audio", blob, "recording.webm")
-            const res = await fetch("/api/stt", { method: "POST", body: form })
-            const data = await res.json()
-            if (data.text?.trim()) sendContent(data.text.trim())
-          } catch { }
-          isRecordingRef.current = false
+        if (isHoldingRef.current) {
+          // Auto-stopped due to silence — restart immediately
+          launchSession()
+        } else {
+          // User released — finalize
+          const text = accumulatedRef.current.trim()
+          accumulatedRef.current = ""
           setIsRecording(false)
           setInterimText("")
-          mediaRecorderRef.current = null
+          if (text) sendContent(text)
         }
-        mr.start()
-      } catch {
-        isRecordingRef.current = false
+      }
+
+      try { r.start() } catch { /* already started */ }
+    }
+
+    launchSession()
+    return true
+  }, [sendContent])
+
+  // ── MediaRecorder fallback (Firefox/Safari) ────────────────────────────────
+  const startMediaRecorder = useCallback(async () => {
+    try {
+      const stream = await navigator.mediaDevices.getUserMedia({ audio: true })
+      const mr = new MediaRecorder(stream)
+      mediaRecorderRef.current = mr
+      audioChunksRef.current = []
+      mr.ondataavailable = (ev) => { if (ev.data.size > 0) audioChunksRef.current.push(ev.data) }
+      mr.onstop = async () => {
+        stream.getTracks().forEach((t) => t.stop())
+        const blob = new Blob(audioChunksRef.current, { type: "audio/webm" })
+        setIsRecording(false)
+        setInterimText("")
+        mediaRecorderRef.current = null
+        if (blob.size < 500) return
+        setInterimText("Transcribing...")
+        try {
+          const form = new FormData()
+          form.append("audio", blob, "recording.webm")
+          const res = await fetch("/api/stt", { method: "POST", body: form })
+          const data = await res.json()
+          if (data.text?.trim()) sendContent(data.text.trim())
+        } catch {}
+        setInterimText("")
+      }
+      mr.start(100)  // collect chunks every 100ms
+      return true
+    } catch {
+      return false
+    }
+  }, [sendContent])
+
+  // ── Start recording (called on pointer down) ───────────────────────────────
+  const startRecording = useCallback(async () => {
+    if (isHoldingRef.current || messageCount >= 3) return
+    isHoldingRef.current = true
+    accumulatedRef.current = ""
+    setIsRecording(true)
+    setInterimText("")
+
+    const usedWebSpeech = startWebSpeech()
+    if (!usedWebSpeech) {
+      const ok = await startMediaRecorder()
+      if (!ok) {
+        isHoldingRef.current = false
         setIsRecording(false)
       }
     }
-  }, [isLimitReached, sendContent])
+  }, [messageCount, startWebSpeech, startMediaRecorder])
 
+  // ── Stop recording (called on pointer up / release button) ─────────────────
   const stopRecording = useCallback(() => {
+    isHoldingRef.current = false  // signals onend to finalize instead of restart
+
+    // Stop Web Speech API — onend will fire and finalize
     if (recognitionRef.current) {
-      recognitionRef.current.stop()
-      recognitionRef.current = null
+      try { recognitionRef.current.stop() } catch {}
+      // onend will handle state cleanup
       return
     }
+
+    // Stop MediaRecorder
     if (mediaRecorderRef.current && mediaRecorderRef.current.state !== "inactive") {
       mediaRecorderRef.current.stop()
     }
   }, [])
 
-  const handleMicPointerDown = useCallback((e: React.PointerEvent) => {
-    e.preventDefault()
-    startRecording()
-  }, [startRecording])
+  // Document-level pointerup so releasing anywhere stops recording
+  useEffect(() => {
+    if (!isRecording) return
+    const onRelease = () => stopRecording()
+    document.addEventListener("pointerup", onRelease)
+    document.addEventListener("touchend", onRelease)
+    return () => {
+      document.removeEventListener("pointerup", onRelease)
+      document.removeEventListener("touchend", onRelease)
+    }
+  }, [isRecording, stopRecording])
 
-  const handleMicClick = useCallback(() => {
-    if (!isRecording) startRecording()
-    else stopRecording()
-  }, [isRecording, startRecording, stopRecording])
+  const handleSend = () => sendContent(input.trim())
+  const handleKeyDown = (e: React.KeyboardEvent) => {
+    if (e.key === "Enter" && !e.shiftKey) { e.preventDefault(); handleSend() }
+  }
+  const isLimitReached = messageCount >= 3
 
   return (
     <div className="flex h-screen bg-gray-950 text-white overflow-hidden">
@@ -245,11 +267,7 @@ export default function DemoChat({ companion }: Props) {
               className="absolute inset-0 w-full h-full object-cover object-top"
             />
           ) : (
-            <img
-              src={char.imageUrl}
-              alt={char.name}
-              className="absolute inset-0 w-full h-full object-cover object-top"
-            />
+            <img src={char.imageUrl} alt={char.name} className="absolute inset-0 w-full h-full object-cover object-top" />
           )
         ) : (
           <div className="absolute inset-0 bg-gradient-to-br from-purple-900 via-pink-900 to-gray-900 flex items-center justify-center">
@@ -257,18 +275,12 @@ export default function DemoChat({ companion }: Props) {
           </div>
         )}
         <div className="absolute inset-0 bg-gradient-to-t from-gray-950 via-gray-950/20 to-transparent" />
-
         <div className="absolute top-4 right-4">
-          <span className="bg-purple-600/80 backdrop-blur-sm text-white text-xs font-medium px-3 py-1 rounded-full">
-            🎭 Demo
-          </span>
+          <span className="bg-purple-600/80 backdrop-blur-sm text-white text-xs font-medium px-3 py-1 rounded-full">🎭 Demo</span>
         </div>
-
         <div className="absolute bottom-0 left-0 right-0 p-5">
           <Link href="/companions" className="text-gray-400 hover:text-white transition text-xs flex items-center gap-1 mb-3 w-fit">
-            <svg className="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" />
-            </svg>
+            <svg className="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" /></svg>
             All companions
           </Link>
           <h2 className="text-2xl font-bold">{char.name}</h2>
@@ -279,27 +291,21 @@ export default function DemoChat({ companion }: Props) {
 
       {/* ── Chat Panel ── */}
       <div className="flex-1 flex flex-col min-w-0">
-
         <div className="bg-gradient-to-r from-purple-600/90 to-pink-600/90 px-4 py-2 text-center text-xs flex items-center justify-center gap-3 flex-wrap">
           <span className="font-medium">🎭 Demo — {3 - messageCount} messages remaining</span>
-          <Link href="/auth/register" className="underline font-medium hover:opacity-80">
-            Sign up for unlimited →
-          </Link>
+          <Link href="/auth/register" className="underline font-medium hover:opacity-80">Sign up for unlimited →</Link>
         </div>
 
-        {/* Mobile portrait strip */}
+        {/* Mobile portrait */}
         <div className="md:hidden relative h-52 flex-shrink-0">
-          {char.imageUrl ? (
-            <img src={char.imageUrl} alt={char.name} className="absolute inset-0 w-full h-full object-cover object-top" />
-          ) : (
-            <div className="absolute inset-0 bg-gradient-to-br from-purple-900 to-pink-900" />
-          )}
+          {char.imageUrl
+            ? <img src={char.imageUrl} alt={char.name} className="absolute inset-0 w-full h-full object-cover object-top" />
+            : <div className="absolute inset-0 bg-gradient-to-br from-purple-900 to-pink-900" />
+          }
           <div className="absolute inset-0 bg-gradient-to-t from-gray-950 via-gray-950/30 to-transparent" />
           <div className="absolute top-3 left-4">
             <Link href="/companions" className="p-2 rounded-full bg-gray-950/50 backdrop-blur-sm text-white">
-              <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" />
-              </svg>
+              <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" /></svg>
             </Link>
           </div>
           <div className="absolute bottom-0 left-0 right-0 px-4 pb-3">
@@ -354,13 +360,9 @@ export default function DemoChat({ companion }: Props) {
               <div className="bg-gray-900 border border-purple-500/30 rounded-2xl px-6 py-5 max-w-sm text-center w-full">
                 <div className="text-2xl mb-2">💜</div>
                 <h3 className="font-bold text-lg mb-1">Keep chatting with {char.name}</h3>
-                <p className="text-sm text-gray-400 mb-4">
-                  Sign up to unlock unlimited messages, voice responses, and 25 more companions.
-                </p>
-                <Link
-                  href={`/auth/register?from=demo&character=${char.slug}`}
-                  className="block w-full bg-gradient-to-r from-purple-600 to-pink-600 hover:from-purple-500 hover:to-pink-500 py-3 rounded-xl font-semibold transition-all text-sm"
-                >
+                <p className="text-sm text-gray-400 mb-4">Sign up to unlock unlimited messages, voice responses, and 25 more companions.</p>
+                <Link href={`/auth/register?from=demo&character=${char.slug}`}
+                  className="block w-full bg-gradient-to-r from-purple-600 to-pink-600 hover:from-purple-500 hover:to-pink-500 py-3 rounded-xl font-semibold transition-all text-sm">
                   Continue with {char.name} →
                 </Link>
                 <Link href="/companions/showcase" className="block mt-2 text-xs text-gray-500 hover:text-gray-300 transition">
@@ -369,12 +371,13 @@ export default function DemoChat({ companion }: Props) {
               </div>
             </div>
           )}
-
           <div ref={messagesEndRef} />
         </div>
 
-        {/* Input */}
+        {/* Input area */}
         <div className="border-t border-gray-800/50 bg-gray-950/90 backdrop-blur-sm">
+
+          {/* Recording overlay */}
           {isRecording && (
             <div className="px-4 pt-3 pb-2">
               <div className="flex items-center gap-3 bg-red-500/10 border border-red-500/30 rounded-xl px-4 py-3">
@@ -387,10 +390,10 @@ export default function DemoChat({ companion }: Props) {
                 <p className="flex-1 text-sm text-white truncate min-w-0">
                   {interimText ? <>&ldquo;{interimText}&rdquo;</> : `Listening — speak to ${char.name}`}
                 </p>
+                {/* Visible stop button — tap if hold didn't register */}
                 <button
                   onPointerDown={(e) => { e.preventDefault(); stopRecording() }}
-                  onClick={stopRecording}
-                  className="flex-shrink-0 px-3 py-1.5 bg-red-500/20 text-red-300 text-xs rounded-lg"
+                  className="flex-shrink-0 px-3 py-1.5 bg-red-500/20 hover:bg-red-500/40 text-red-300 text-xs rounded-lg transition-colors"
                 >
                   Release
                 </button>
@@ -400,14 +403,17 @@ export default function DemoChat({ companion }: Props) {
 
           <div className="px-3 py-3">
             <div className="flex items-end gap-2">
+
+              {/* Mic button — visible only when not recording */}
               {!isLimitReached && (
                 <button
-                  onPointerDown={handleMicPointerDown}
+                  onPointerDown={(e) => { e.preventDefault(); startRecording() }}
                   disabled={isLimitReached}
-                  className={`flex flex-col items-center gap-0.5 flex-shrink-0 transition-all select-none touch-none ${isRecording ? "opacity-0 pointer-events-none" : ""}`}
+                  style={{ visibility: isRecording ? "hidden" : "visible" }}
+                  className="flex flex-col items-center gap-0.5 flex-shrink-0 select-none touch-none"
                   title="Hold to speak"
                 >
-                  <div className="p-2.5 rounded-xl border transition-all bg-gray-900 border-gray-600 text-gray-300 hover:bg-purple-900/30 hover:border-purple-500/60 hover:text-purple-300 active:scale-95 active:bg-purple-900/50">
+                  <div className="p-2.5 rounded-xl border transition-all bg-gray-900 border-gray-600 text-gray-300 hover:bg-purple-900/30 hover:border-purple-500/60 hover:text-purple-300 active:scale-95 active:bg-purple-900/50 active:border-purple-400">
                     <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                       <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 11a7 7 0 01-7 7m0 0a7 7 0 01-7-7m7 7v4m0 0H8m4 0h4m-4-8a3 3 0 01-3-3V5a3 3 0 116 0v6a3 3 0 01-3 3z" />
                     </svg>
