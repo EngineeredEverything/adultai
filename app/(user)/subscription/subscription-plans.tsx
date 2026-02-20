@@ -176,7 +176,7 @@ export function SubscriptionPlans({
 
     // Add nuts info
     if (plan.nutsPerMonth === -1) {
-      features.push("Unlimited nuts per month");
+      features.push("Unlimited TEMPT per month");
     } else {
       features.push(`${plan.nutsPerMonth} nuts per month`);
     }
@@ -327,7 +327,7 @@ export function SubscriptionPlans({
                   </div>
                   <span className="font-medium">
                     {plan.nutsPerMonth === -1
-                      ? "Unlimited nuts"
+                      ? "Unlimited TEMPT"
                       : `${plan.nutsPerMonth} nuts per month`}
                   </span>
                 </div>

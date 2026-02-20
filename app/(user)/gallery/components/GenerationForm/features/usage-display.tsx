@@ -28,7 +28,7 @@ export const UsageDisplay = memo(function UsageDisplay({
       <CardContent className="space-y-4">
         <div>
           <div className="flex justify-between text-sm mb-2">
-            <span>Nuts Used</span>
+            <span>TEMPT Used</span>
             <span>
               {usage.nutsUsed} / {formatLimit(usage.nutsLimit)}
             </span>

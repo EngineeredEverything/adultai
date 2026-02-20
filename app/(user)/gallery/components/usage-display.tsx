@@ -125,7 +125,7 @@ export function UsageDisplay({ subscriptionStatus }: UsageDisplayProps) {
       <div className="grid gap-4 md:grid-cols-2">
         <Card>
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">Nuts Usage</CardTitle>
+            <CardTitle className="text-sm font-medium">TEMPT Balance</CardTitle>
             <Zap className="h-4 w-4 text-muted-foreground" />
           </CardHeader>
           <CardContent>
@@ -136,7 +136,7 @@ export function UsageDisplay({ subscriptionStatus }: UsageDisplayProps) {
               <>
                 <Progress value={usage.nutsPercentage} className="mt-2" />
                 <p className="text-xs text-muted-foreground mt-2">
-                  {formatNumber(usage.remainingNuts)} nuts remaining
+                  {formatNumber(usage.remainingNuts)} TEMPT remaining
                 </p>
               </>
             ) : (
@@ -280,7 +280,7 @@ export function UsageDisplay({ subscriptionStatus }: UsageDisplayProps) {
               {!status.isBanned &&
                 !status.isSuspended &&
                 usage.remainingNuts <= 0 &&
-                "No nuts remaining"}
+                "No TEMPT remaining"}
               {!status.isBanned &&
                 !status.isSuspended &&
                 usage.remainingNuts > 0 &&

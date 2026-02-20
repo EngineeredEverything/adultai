@@ -102,7 +102,7 @@ export function Navigation({
                 Generate
               </Button>
             </motion.form>
-            {/* Nuts Counter - Always visible */}
+            {/* TEMPT Counter - Always visible */}
 
             <TooltipProvider>
               <Tooltip>
@@ -112,14 +112,14 @@ export function Navigation({
                     onClick={() => !user && setIsLoginOpen(true)}
                   >
                     <Coins className="h-4 w-4 text-yellow-400" />
-                    <span>{userNuts || 0} nuts</span>
+                    <span>{userNuts || 0} TEMPT</span>
                   </div>
                 </TooltipTrigger>
                 <TooltipContent>
                   <p>
                     {user
-                      ? "Your current nuts balance"
-                      : "Sign in for daily nuts!"}
+                      ? "Your current TEMPT balance"
+                      : "Sign in for daily TEMPT!"}
                   </p>
                 </TooltipContent>
               </Tooltip>

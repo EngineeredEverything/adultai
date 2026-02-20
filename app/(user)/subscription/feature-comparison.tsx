@@ -18,12 +18,12 @@ import {
 
 const features = [
   {
-    name: "Monthly Nuts",
+    name: "Monthly TEMPT",
     free: "200",
     basic: "500",
     pro: "1,500",
     unlimited: "Unlimited",
-    tooltip: "Nuts are used to generate images. Each image costs 10 nuts.",
+    tooltip: "Nuts are used to generate images. Each image costs 10 TEMPT.",
   },
   {
     name: "Images Per Generation",

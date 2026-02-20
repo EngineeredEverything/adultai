@@ -329,7 +329,7 @@ export function AdvancedGenerationForm({
               <div className="space-y-1">
                 <p className="text-sm font-medium">Estimated Cost</p>
                 <p className="text-2xl font-bold text-primary">
-                  {estimatedCost} nuts
+                  {estimatedCost} TEMPT
                 </p>
               </div>
               <div className="text-right space-y-1">
@@ -973,7 +973,7 @@ export function AdvancedGenerationForm({
           ) : (
             <>
               <Zap className="w-4 h-4 mr-2" />
-              Generate Images ({estimatedCost} nuts)
+              Generate Images ({estimatedCost} TEMPT)
             </>
           )}
         </Button>

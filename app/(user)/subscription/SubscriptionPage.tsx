@@ -47,9 +47,9 @@ export default function SubscriptionPage({
 
       {/* <div className="my-16">
         <div className="mb-8 text-center">
-          <h2 className="text-3xl font-bold">Need More Nuts?</h2>
+          <h2 className="text-3xl font-bold">Need More TEMPT?</h2>
           <p className="text-muted-foreground mt-2 max-w-2xl mx-auto">
-            Purchase additional nuts to generate more amazing images
+            Purchase additional TEMPT to generate more amazing images
           </p>
         </div>
 

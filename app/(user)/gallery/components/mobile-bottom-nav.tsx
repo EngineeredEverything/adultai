@@ -168,7 +168,7 @@ export default function MobileBottomNav({
 
                     <div className="space-y-2 text-xs">
                       <div className="flex justify-between">
-                        <span className="text-muted-foreground">Nuts</span>
+                        <span className="text-muted-foreground">TEMPT</span>
                         <span>
                           {currentUsage.nutsUsed === -1
                             ? "∞"

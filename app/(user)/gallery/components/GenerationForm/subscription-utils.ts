@@ -263,7 +263,7 @@ export const getWarningMessage = (
 
   // Handle unlimited nuts case
   if (remainingNuts !== Number.POSITIVE_INFINITY && remainingNuts < nutsRequired) {
-    return `Not enough nuts remaining. Need ${nutsRequired}, have ${remainingNuts}`
+    return `Not enough TEMPT remaining. Need ${nutsRequired}, have ${remainingNuts}`
   }
 
   // Handle unlimited images case

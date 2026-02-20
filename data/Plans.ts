@@ -4,7 +4,7 @@ export const plans = [
     name: "Free",
     price: { monthly: 0, yearly: 0 },
     description: "Basic access to AI image generation",
-    features: ["200 nuts per month", "Basic image resolution", "Standard response time",],
+    features: ["200 TEMPT per month", "Basic image resolution", "Standard response time",],
     limitations: ["No negative prompts", "No style customization", "Limited to 2 image per generation"],
     nuts: 200,
     imagesPerDay: 20,
@@ -20,7 +20,7 @@ export const plans = [
     price: { monthly: 9.99, yearly: 99.99 },
     description: "Enhanced image generation capabilities",
     features: [
-      "500 nuts per month",
+      "500 TEMPT per month",
       "HD image resolution",
       "Faster response time",
       "Basic negative prompts",
@@ -42,7 +42,7 @@ export const plans = [
     price: { monthly: 19.99, yearly: 199.99 },
     description: "Professional image generation suite",
     features: [
-      "1,500 nuts per month",
+      "1,500 TEMPT per month",
       "4K image resolution",
       "Priority response time",
       "Advanced negative prompts",
@@ -67,7 +67,7 @@ export const plans = [
     price: { monthly: 39.99, yearly: 399.99 },
     description: "Unlimited creative potential",
     features: [
-      "Unlimited nuts",
+      "Unlimited TEMPT",
       "8K image resolution",
       "Instant response time",
       "Advanced negative prompts",

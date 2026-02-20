@@ -77,7 +77,7 @@ export default function SideBarPlanCard({
       <HoverCardContent className="w-64 text-xs space-y-2">
         <div className="space-y-1">
           <div className="flex justify-between">
-            <span className="text-muted-foreground">Nuts</span>
+            <span className="text-muted-foreground">TEMPT</span>
             <span>
               {currentUsage.nutsUsed === -1
                 ? "∞"

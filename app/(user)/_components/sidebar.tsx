@@ -65,8 +65,8 @@ export function Sidebar({
   const nutsDisplay = () => {
     if (!currentUsage) return null;
     const limit = currentUsage.nutsLimit;
-    if (limit === Number.POSITIVE_INFINITY || limit === -1) return "∞ nuts";
-    return `${currentUsage.remainingNuts} nuts`;
+    if (limit === Number.POSITIVE_INFINITY || limit === -1) return "∞ TEMPT";
+    return `${currentUsage.remainingNuts} TEMPT`;
   };
 
   return (

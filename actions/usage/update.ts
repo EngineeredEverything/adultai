@@ -25,7 +25,7 @@ export async function checkAndUpdateUsage(userId: string, imagesToGenerate: numb
       nutsToUse,
       monthlyLimit: plan.nutsPerMonth,
     })
-    throw new Error(`Monthly nuts limit exceeded. Remaining: ${plan.nutsPerMonth - usage.nutsUsed}`)
+    throw new Error(`Monthly TEMPT limit exceeded. Remaining: ${plan.nutsPerMonth - usage.nutsUsed}`)
   }
   // Hided becuase feature is to be removed
   // Check daily image limit

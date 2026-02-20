@@ -229,7 +229,7 @@ export function ImageCountSelector({
 
                 {/* Cost Estimation */}
                 <div className="text-xs text-muted-foreground">
-                  Estimated cost: {imageCount * 10} nuts
+                  Estimated cost: {imageCount * 10} TEMPT
                 </div>
               </div>
             </div>
