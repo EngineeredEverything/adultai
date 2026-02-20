@@ -192,13 +192,12 @@ export default function DemoChat({ companion }: Props) {
 
   // Document-level pointerup so releasing anywhere stops recording
   useEffect(() => {
-    if (!isRecording) return
-    const onRelease = () => stopRecording()
-    document.addEventListener("pointerup", onRelease)
-    document.addEventListener("touchend", onRelease)
+    const onRelease = () => { if (isRecording) stopRecording() }
+    document.addEventListener("pointerup", onRelease, { capture: true })
+    document.addEventListener("touchend", onRelease, { capture: true })
     return () => {
-      document.removeEventListener("pointerup", onRelease)
-      document.removeEventListener("touchend", onRelease)
+      document.removeEventListener("pointerup", onRelease, { capture: true })
+      document.removeEventListener("touchend", onRelease, { capture: true })
     }
   }, [isRecording, stopRecording])
 
@@ -364,18 +363,20 @@ export default function DemoChat({ companion }: Props) {
               {/* Mic button — visible only when not recording */}
               {!isLimitReached && (
                 <button
-                  onPointerDown={startRecording}
+                  onPointerDown={(e) => { e.preventDefault(); startRecording() }}
+                  onPointerUp={stopRecording}
+                  onPointerCancel={stopRecording}
+                  onPointerLeave={stopRecording}
                   disabled={isLimitReached}
-                  style={{ visibility: isRecording ? "hidden" : "visible" }}
                   className="flex flex-col items-center gap-0.5 flex-shrink-0 select-none touch-none"
-                  title="Hold to speak"
+                  title={isRecording ? "Release to send" : "Hold to speak"}
                 >
-                  <div className="p-2.5 rounded-xl border transition-all bg-gray-900 border-gray-600 text-gray-300 hover:bg-purple-900/30 hover:border-purple-500/60 hover:text-purple-300 active:scale-95 active:bg-purple-900/50 active:border-purple-400">
+                  <div className={`p-2.5 rounded-xl border transition-all ${isRecording ? 'bg-red-900/40 border-red-500 text-red-300 scale-110' : 'bg-gray-900 border-gray-600 text-gray-300 hover:bg-purple-900/30 hover:border-purple-500/60 hover:text-purple-300 active:scale-95 active:bg-purple-900/50 active:border-purple-400'}`}>
                     <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                       <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 11a7 7 0 01-7 7m0 0a7 7 0 01-7-7m7 7v4m0 0H8m4 0h4m-4-8a3 3 0 01-3-3V5a3 3 0 116 0v6a3 3 0 01-3 3z" />
                     </svg>
                   </div>
-                  <span className="text-[10px] text-gray-600">Hold</span>
+                  <span className={`text-[10px] ${isRecording ? text-red-400 : text-gray-600}`}>{isRecording ? Release : Hold}</span>
                 </button>
               )}
 
