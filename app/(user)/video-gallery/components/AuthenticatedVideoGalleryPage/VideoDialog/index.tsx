@@ -5,7 +5,7 @@ import type React from "react"
 import { Dialog, DialogContent } from "@/components/ui/dialog"
 import { Button } from "@/components/ui/button"
 import { useState, useEffect } from "react"
-import { X, Trash2, MessageCircle, Send, Download } from "lucide-react"
+import { X, Trash2, MessageCircle, Send, Download, Sparkles, Loader2 } from "lucide-react"
 import type { SearchVideosResponseSuccessType } from "@/types/videos"
 import { Input } from "@/components/ui/input"
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
@@ -35,6 +35,8 @@ export function VideoDialog({
   const [comments, setComments] = useState<any[]>([])
   const [newComment, setNewComment] = useState("")
   const [isLoading, setIsLoading] = useState(false)
+  const [gifUrl, setGifUrl] = useState<string | null>(null)
+  const [gifLoading, setGifLoading] = useState(false)
 
   useEffect(() => {
     if (isOpen && video) {
@@ -50,6 +52,8 @@ export function VideoDialog({
     if (!isOpen) {
       setNewComment("")
       setComments([])
+      setGifUrl(null)
+      setGifLoading(false)
     }
   }, [isOpen])
 
@@ -58,6 +62,27 @@ export function VideoDialog({
     if (!user || !video || !newComment.trim() || isLoading) return
 
     toast.info("Comments feature coming soon!")
+  }
+
+  const handleExportGif = async () => {
+    if (!video?.video.cdnUrl) return
+    setGifLoading(true)
+    setGifUrl(null)
+    try {
+      const res = await fetch("/api/video-to-gif", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ videoUrl: video.video.cdnUrl, fps: 10, width: 480, duration: 4 }),
+      })
+      const data = await res.json()
+      if (!res.ok) throw new Error(data.error || "Failed")
+      setGifUrl(data.gifUrl)
+      toast.success("GIF ready!")
+    } catch (e: any) {
+      toast.error("GIF export failed", { description: e.message })
+    } finally {
+      setGifLoading(false)
+    }
   }
 
   const handleDelete = () => {
@@ -120,15 +145,38 @@ export function VideoDialog({
                   )}
                 </div>
                 {video.video.cdnUrl && (
-                  <div className="flex gap-2 mt-2">
-                    <a
-                      href={video.video.cdnUrl}
-                      download="adultai-video.mp4"
-                      className="flex items-center gap-2 px-4 py-2 bg-gray-100 hover:bg-gray-200 dark:bg-gray-800 dark:hover:bg-gray-700 rounded-lg text-sm font-medium transition-colors flex-1 justify-center"
-                    >
-                      <Download className="w-4 h-4" />
-                      Download Video
-                    </a>
+                  <div className="flex flex-col gap-2 mt-2">
+                    <div className="flex gap-2">
+                      <a
+                        href={video.video.cdnUrl}
+                        download="adultai-video.mp4"
+                        className="flex items-center gap-2 px-4 py-2 bg-gray-100 hover:bg-gray-200 dark:bg-gray-800 dark:hover:bg-gray-700 rounded-lg text-sm font-medium transition-colors flex-1 justify-center"
+                      >
+                        <Download className="w-4 h-4" />
+                        Download MP4
+                      </a>
+                      <button
+                        onClick={handleExportGif}
+                        disabled={gifLoading}
+                        className="flex items-center gap-2 px-4 py-2 bg-purple-100 hover:bg-purple-200 dark:bg-purple-900/30 dark:hover:bg-purple-900/50 border border-purple-200 dark:border-purple-700 rounded-lg text-sm font-medium transition-colors flex-1 justify-center text-purple-700 dark:text-purple-300 disabled:opacity-60"
+                      >
+                        {gifLoading ? <Loader2 className="w-4 h-4 animate-spin" /> : <Sparkles className="w-4 h-4" />}
+                        {gifLoading ? "Converting..." : "Export GIF"}
+                      </button>
+                    </div>
+                    {gifUrl && (
+                      <div className="rounded-lg overflow-hidden border border-gray-200 dark:border-gray-700">
+                        <img src={gifUrl} alt="Exported GIF" className="w-full" />
+                        <a
+                          href={gifUrl}
+                          download="adultai-animation.gif"
+                          className="flex items-center justify-center gap-2 py-2 bg-green-50 dark:bg-green-900/20 text-green-700 dark:text-green-300 text-sm font-medium hover:bg-green-100 dark:hover:bg-green-900/40 transition"
+                        >
+                          <Download className="w-3.5 h-3.5" />
+                          Download GIF
+                        </a>
+                      </div>
+                    )}
                   </div>
                 )}
               </div>

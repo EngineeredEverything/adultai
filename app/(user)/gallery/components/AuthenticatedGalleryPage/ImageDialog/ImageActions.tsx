@@ -183,6 +183,13 @@ export function ImageActions({ image, onGenerateVariations, onSetPrompt }: Image
 
         <ActionBtn icon={<UserPlus className="w-3.5 h-3.5" />} label="Create Companion" color="teal"
           onClick={handleCompanion} />
+
+        <ActionBtn icon={<Mic className="w-3.5 h-3.5" />} label="Speak Studio ↗" color="purple"
+          onClick={() => {
+            if (imageUrl) {
+              window.open(`/studio/speak?imageUrl=${encodeURIComponent(imageUrl)}`, "_blank")
+            }
+          }} />
       </div>
 
       {/* ── Animate (image-to-video) panel ── */}
