@@ -5,7 +5,8 @@ datasource db {
 }
 
 generator client {
-  provider        = "prisma-client-js"
+  provider      = "prisma-client-js"
+  binaryTargets = ["native", "linux-musl-openssl-3.0.x"]
 }
 
 model Companion {
@@ -21,11 +22,14 @@ model Companion {
   characteristics Json    // Flexible object for appearance details
   featured       Boolean  @default(false)
   customizable   Boolean  @default(true)
+  introVideoUrl  String?  // pre-generated intro video URL
+  voiceId        String?  // ElevenLabs voice ID
   userId         String?  // Optional - for custom user-created companions
-  createdAt      DateTime @default(now())
-  updatedAt      DateTime @updatedAt
+  createdAt      DateTime? @default(now())
+  updatedAt      DateTime? @updatedAt
 
   @@index([category])
   @@index([featured])
   @@index([userId])
+  @@map("companions")
 }
