@@ -29,7 +29,6 @@ import {
 import { Card, CardHeader, CardTitle } from "@/components/ui/card";
 import { GetSubscriptionInfoSuccessType } from "@/types/subscriptions";
 import SideBarFooter from "./footer";
-import SideBarPlanCard from "./plan-card";
 import SideBarUserNavigation from "./user-navigation";
 import { navItems, userNavItems } from "./constant";
 import { useSidebar } from "./use-sidebar";
@@ -62,6 +61,14 @@ export function Sidebar({
     toggleSidebar,
     handleModelClose,
   } = useSidebar();
+
+  const nutsDisplay = () => {
+    if (!currentUsage) return null;
+    const limit = currentUsage.nutsLimit;
+    if (limit === Number.POSITIVE_INFINITY || limit === -1) return "∞ nuts";
+    return `${currentUsage.remainingNuts} nuts`;
+  };
+
   return (
     <div className="flex">
       <aside
@@ -99,7 +106,7 @@ export function Sidebar({
               !expanded && "sr-only"
             )}
           >
-            A safar way to Adult
+            A safer way to Adult
           </div>
           <nav className="flex flex-col gap-1 px-2">
             {navItems.map((item) => (
@@ -128,14 +135,6 @@ export function Sidebar({
             />
           )}
         </div>
-        {user && currentPlan && currentUsage && (
-          <SideBarPlanCard
-            currentUsage={currentUsage}
-            currentPlan={currentPlan}
-            currentSubscriptionStatus={currentSubscriptionStatus}
-            expanded={expanded}
-          />
-        )}
 
         {/* Footer */}
         <SideBarFooter
@@ -149,12 +148,7 @@ export function Sidebar({
       <div className="flex flex-col w-full h-screen">
         {/* Top Navigation Bar */}
         <header className="h-16 border-b bg-background flex items-center justify-end px-4">
-          {/* <Link href="/" className="flex items-center space-x-2">
-            <Image src="/logo.png" alt="Logo" width={28} height={28} />
-            <span className="font-bold text-lg">AdultAI</span>
-          </Link> */}
-
-          <div className="flex items-center gap-2">
+          <div className="flex items-center gap-3">
             <SearchBar
               placeholder="Search generations..."
               searchParamKey="search"
@@ -163,12 +157,6 @@ export function Sidebar({
               showSearchButton={true}
             />
 
-            {/* <LoginButton isOpen={isLoginOpen} onClose={handleModelClose}>
-              <Button size="sm" variant="default">
-                <UserIcon className="h-4 w-4" />
-                <span className="ml-2">Sign In</span>
-              </Button>
-            </LoginButton> */}
             {!user ? (
               <LoginButton isOpen={isLoginOpen} onClose={handleModelClose}>
                 <Button size="sm" variant="default">
@@ -177,18 +165,56 @@ export function Sidebar({
                 </Button>
               </LoginButton>
             ) : (
-              <Avatar className="h-8 w-8">
-                <AvatarImage src={user.image ?? ""} alt={user.name ?? "User"} />
-                <AvatarFallback>{user.name?.[0] ?? "U"}</AvatarFallback>
-              </Avatar>
+              <HoverCard openDelay={200}>
+                <HoverCardTrigger asChild>
+                  <div className="flex items-center gap-2 cursor-pointer select-none">
+                    {currentUsage && currentPlan && (
+                      <span className="text-xs text-muted-foreground hidden sm:flex items-center gap-1">
+                        <span className="font-medium text-foreground">{currentPlan.name}</span>
+                        <span className="text-muted-foreground/50">·</span>
+                        <span>{nutsDisplay()}</span>
+                      </span>
+                    )}
+                    <Avatar className="h-8 w-8">
+                      <AvatarImage src={user.image ?? ""} alt={user.name ?? "User"} />
+                      <AvatarFallback>{user.name?.[0] ?? "U"}</AvatarFallback>
+                    </Avatar>
+                  </div>
+                </HoverCardTrigger>
+                <HoverCardContent className="w-52 text-xs space-y-2" align="end">
+                  <div>
+                    <p className="font-medium text-sm">{user.name}</p>
+                    <p className="text-muted-foreground">{currentPlan?.name ?? "Free"} plan</p>
+                  </div>
+                  {currentUsage && (
+                    <div className="pt-2 border-t space-y-1.5">
+                      <div className="flex justify-between">
+                        <span className="text-muted-foreground">Nuts used</span>
+                        <span className="font-medium">
+                          {currentUsage.nutsLimit === Number.POSITIVE_INFINITY || currentUsage.nutsLimit === -1
+                            ? "∞"
+                            : `${currentUsage.nutsUsed} / ${currentUsage.nutsLimit}`}
+                        </span>
+                      </div>
+                      <div className="flex justify-between">
+                        <span className="text-muted-foreground">Images/gen</span>
+                        <span className="font-medium">{currentUsage.imagesPerGeneration}</span>
+                      </div>
+                      {currentSubscriptionStatus?.daysUntilRenewal != null && (
+                        <div className="flex justify-between">
+                          <span className="text-muted-foreground">Renews in</span>
+                          <span className="font-medium">{currentSubscriptionStatus.daysUntilRenewal}d</span>
+                        </div>
+                      )}
+                    </div>
+                  )}
+                </HoverCardContent>
+              </HoverCard>
             )}
           </div>
         </header>
 
-        {/* Main scrollable content fills remaining height */}
-        {/* <div className="flex-1 h-[calc(100vh-48px)]"> */}
         <ScrollProvider>{children}</ScrollProvider>
-        {/* </div> */}
       </div>
     </div>
   );

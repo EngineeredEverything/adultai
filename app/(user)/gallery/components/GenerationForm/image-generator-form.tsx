@@ -309,12 +309,7 @@ export default function GenerationForm({
         </Alert>
       )}
 
-      {/* Usage Display */}
-      {subscriptionStatus && (
-        <div className="mt-6">
-          <UsageDisplay subscriptionStatus={subscriptionStatus} />
-        </div>
-      )}
+      {/* Usage display moved to header user menu */}
 
       {/* Image Count Selector */}
 
