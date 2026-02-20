@@ -67,20 +67,25 @@ export default async function ShowcasePage() {
 function CompanionCard({ companion }: { companion: any }) {
   return (
     <div className="bg-gray-800 rounded-lg overflow-hidden hover:shadow-2xl hover:scale-105 transition-all duration-300">
-      <div className="relative aspect-[2/3]">
+      <Link href={`/companions/demo?character=${companion.slug}`} className="block relative aspect-[2/3] group cursor-pointer">
         <Image
           src={companion.imageUrl}
           alt={companion.name}
           fill
-          className="object-cover"
+          className="object-cover group-hover:scale-105 transition-transform duration-300"
           unoptimized
         />
+        <div className="absolute inset-0 bg-black/0 group-hover:bg-black/20 transition-colors duration-300 flex items-center justify-center">
+          <span className="opacity-0 group-hover:opacity-100 transition-opacity duration-300 bg-purple-600/90 backdrop-blur-sm text-white text-sm font-semibold px-4 py-2 rounded-full">
+            ▶ Try Demo
+          </span>
+        </div>
         <div className="absolute top-2 right-2">
           <span className="bg-purple-600/90 px-3 py-1 rounded-full text-xs font-semibold">
             {companion.archetype}
           </span>
         </div>
-      </div>
+      </Link>
       
       <div className="p-4">
         <h3 className="text-xl font-bold mb-1">{companion.name}</h3>
