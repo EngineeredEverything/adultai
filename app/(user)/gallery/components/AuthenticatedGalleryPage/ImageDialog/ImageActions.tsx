@@ -27,8 +27,8 @@ export function ImageActions({ image, onGenerateVariations, onSetPrompt }: Image
   // Talk state
   const [talkText, setTalkText] = useState("")
   const [talkLoading, setTalkLoading] = useState(false)
-  const [talkResult, setTalkResult] = useState<{ videoUrl?: string | null; audioUrl?: string | null; audioOnly?: boolean } | null>(null)
   const [talkVoiceId, setTalkVoiceId] = useState("21m00Tcm4TlvDq8ikWAM")
+  const [talkResult, setTalkResult] = useState<{ videoUrl?: string | null; audioUrl?: string | null; audioOnly?: boolean } | null>(null)
 
   // img2img state
   const [editPrompt, setEditPrompt] = useState("")
@@ -345,8 +345,14 @@ export function ImageActions({ image, onGenerateVariations, onSetPrompt }: Image
             )}
           </div>
           {talkResult?.videoUrl && (
-            <div className="mt-3 rounded-lg overflow-hidden bg-black aspect-[3/4]">
-              <video src={talkResult.videoUrl} controls autoPlay playsInline className="w-full h-full object-contain" />
+            <div className="mt-3 space-y-2">
+              <div className="rounded-lg overflow-hidden bg-black aspect-[3/4] relative">
+                <video src={talkResult.videoUrl} controls autoPlay playsInline className="w-full h-full object-contain" />
+              </div>
+              <a href={talkResult.videoUrl} download="adultai-speak.mp4"
+                className="flex items-center justify-center gap-2 w-full py-1.5 bg-gray-800 hover:bg-gray-700 rounded-lg transition text-xs text-gray-300">
+                <Download className="w-3.5 h-3.5" /> Download Video
+              </a>
             </div>
           )}
           {talkResult?.audioOnly && (
