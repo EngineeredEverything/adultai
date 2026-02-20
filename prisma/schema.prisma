@@ -24,6 +24,7 @@ model Companion {
   customizable   Boolean  @default(true)
   introVideoUrl  String?  // pre-generated intro video URL
   voiceId        String?  // ElevenLabs voice ID
+  introText      String?  // spoken greeting (matches introVideoUrl audio)
   userId         String?  // Optional - for custom user-created companions
   createdAt      DateTime? @default(now())
   updatedAt      DateTime? @updatedAt

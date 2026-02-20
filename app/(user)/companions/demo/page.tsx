@@ -20,7 +20,7 @@ export default async function DemoPage({ searchParams }: Props) {
   if (slug) {
     companion = await db.companion.findFirst({
       where: { slug },
-      select: { name: true, slug: true, personality: true, imageUrl: true, archetype: true, description: true },
+      select: { name: true, slug: true, personality: true, imageUrl: true, archetype: true, description: true, introVideoUrl: true, introText: true, voiceId: true },
     })
   }
 
@@ -28,7 +28,7 @@ export default async function DemoPage({ searchParams }: Props) {
   if (!companion) {
     companion = await db.companion.findFirst({
       where: { featured: true },
-      select: { name: true, slug: true, personality: true, imageUrl: true, archetype: true, description: true },
+      select: { name: true, slug: true, personality: true, imageUrl: true, archetype: true, description: true, introVideoUrl: true, introText: true, voiceId: true },
       orderBy: { createdAt: "asc" },
     })
   }

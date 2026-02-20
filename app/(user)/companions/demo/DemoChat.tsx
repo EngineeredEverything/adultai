@@ -10,6 +10,9 @@ interface DemoCompanion {
   imageUrl: string | null
   archetype: string | null
   description: string | null
+  introVideoUrl?: string | null
+  introText?: string | null
+  voiceId?: string | null
 }
 
 interface Message {
@@ -30,10 +33,10 @@ const DEFAULT_COMPANION: DemoCompanion = {
   imageUrl: null,
   archetype: "companion",
   description: "A playful AI companion who loves getting to know new people.",
+  introText: "Hey there... I've been waiting for someone interesting to show up. Tell me — what brings you here?",
 }
 
-const DEMO_RESPONSES = [
-  "Hey there... I've been waiting for someone interesting to show up. 😏 Tell me — what brings you here?",
+const FOLLOWUP_RESPONSES = [
   "Mmm, I like the way you think. I'd love to keep exploring this with you, but I'm just a little taste of what's possible. Sign up and get the real me — no limits. 💜",
   "You're making this very hard to keep professional... 😈 Create your account and we can pick up exactly where we left off. No restrictions.",
   "You've unlocked something in me I don't share with just anyone. Sign up — I'll be waiting for you. 💋",
@@ -41,37 +44,93 @@ const DEMO_RESPONSES = [
 
 export default function DemoChat({ companion }: Props) {
   const char = companion || DEFAULT_COMPANION
+  const firstMessage = char.introText || "Hey there... I've been waiting for someone interesting to show up. 😏 Tell me — what brings you here?"
+
   const [messages, setMessages] = useState<Message[]>([
-    { id: "1", role: "assistant", content: DEMO_RESPONSES[0], timestamp: new Date() },
+    { id: "1", role: "assistant", content: firstMessage, timestamp: new Date() },
   ])
   const [input, setInput] = useState("")
   const [messageCount, setMessageCount] = useState(0)
   const [isTyping, setIsTyping] = useState(false)
+  const [showIntroVideo, setShowIntroVideo] = useState(!!companion?.introVideoUrl)
   const [isRecording, setIsRecording] = useState(false)
   const [interimText, setInterimText] = useState("")
   const messagesEndRef = useRef<HTMLDivElement>(null)
   const recognitionRef = useRef<any>(null)
+  const mediaRecorderRef = useRef<MediaRecorder | null>(null)
+  const audioChunksRef = useRef<Blob[]>([])
+  const audioRef = useRef<HTMLAudioElement | null>(null)
+  const isRecordingRef = useRef(false)
 
   useEffect(() => {
     messagesEndRef.current?.scrollIntoView({ behavior: "smooth" })
   }, [messages, isTyping])
 
-  const sendContent = useCallback((content: string) => {
+  // Document-level pointerup so releasing anywhere stops recording
+  // (button becomes invisible while recording, so its onPointerUp won't fire)
+  useEffect(() => {
+    if (!isRecording) return
+    const stopRecording = () => {
+      if (recognitionRef.current) {
+        recognitionRef.current.stop()
+        recognitionRef.current = null
+        return
+      }
+      if (mediaRecorderRef.current && mediaRecorderRef.current.state !== "inactive") {
+        mediaRecorderRef.current.stop()
+      }
+    }
+    document.addEventListener("pointerup", stopRecording)
+    document.addEventListener("touchend", stopRecording)
+    return () => {
+      document.removeEventListener("pointerup", stopRecording)
+      document.removeEventListener("touchend", stopRecording)
+    }
+  }, [isRecording])
+
+  const sendContent = useCallback(async (content: string) => {
     if (!content.trim() || messageCount >= 3) return
     const userMsg: Message = { id: `user-${Date.now()}`, role: "user", content, timestamp: new Date() }
     setMessages((prev) => [...prev, userMsg])
     setInput("")
     setMessageCount((prev) => prev + 1)
     setIsTyping(true)
-    setTimeout(() => {
-      const idx = Math.min(messageCount + 1, DEMO_RESPONSES.length - 1)
+    try {
+      const history = messages.map((m) => ({ role: m.role, content: m.content }))
+      history.push({ role: "user", content })
+      const res = await fetch("/api/demo/chat", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          messages: history,
+          companionName: char.name,
+          companionPersonality: char.personality,
+          companionDescription: char.description,
+          voiceId: char.voiceId,
+        }),
+      })
+      const data = await res.json()
+      const reply = data.content || FOLLOWUP_RESPONSES[Math.min(messageCount, FOLLOWUP_RESPONSES.length - 1)]
       setMessages((prev) => [
         ...prev,
-        { id: `ai-${Date.now()}`, role: "assistant", content: DEMO_RESPONSES[idx], timestamp: new Date() },
+        { id: `ai-${Date.now()}`, role: "assistant", content: reply, timestamp: new Date() },
       ])
+      if (data.audioUrl) {
+        if (audioRef.current) { audioRef.current.pause(); audioRef.current = null }
+        const audio = new Audio(data.audioUrl)
+        audioRef.current = audio
+        audio.play().catch(() => {})
+      }
+    } catch {
+      const idx = Math.min(messageCount, FOLLOWUP_RESPONSES.length - 1)
+      setMessages((prev) => [
+        ...prev,
+        { id: `ai-${Date.now()}`, role: "assistant", content: FOLLOWUP_RESPONSES[idx], timestamp: new Date() },
+      ])
+    } finally {
       setIsTyping(false)
-    }, 1200)
-  }, [messageCount])
+    }
+  }, [messageCount, messages, char])
 
   const handleSend = () => sendContent(input.trim())
 
@@ -79,43 +138,96 @@ export default function DemoChat({ companion }: Props) {
     if (e.key === "Enter" && !e.shiftKey) { e.preventDefault(); handleSend() }
   }
 
-  const handleMicClick = useCallback(() => {
-    if (isRecording) {
-      recognitionRef.current?.stop()
+  const isLimitReached = messageCount >= 3
+
+  const startRecording = useCallback(async () => {
+    if (isRecordingRef.current || isLimitReached) return
+    isRecordingRef.current = true
+    setIsRecording(true)
+
+    const SR = (window as any).SpeechRecognition || (window as any).webkitSpeechRecognition
+    if (SR) {
+      let accumulated = ""
+      const r = new SR()
+      recognitionRef.current = r
+      r.continuous = true
+      r.interimResults = true
+      r.lang = "en-US"
+      r.onresult = (e: any) => {
+        let interim = ""
+        for (let i = e.resultIndex; i < e.results.length; i++) {
+          const t = e.results[i][0].transcript
+          if (e.results[i].isFinal) accumulated += t
+          else interim += t
+        }
+        setInterimText(accumulated + interim)
+      }
+      r.onend = () => {
+        recognitionRef.current = null
+        isRecordingRef.current = false
+        setIsRecording(false)
+        setInterimText("")
+        if (accumulated.trim()) sendContent(accumulated.trim())
+      }
+      r.onerror = () => {
+        recognitionRef.current = null
+        isRecordingRef.current = false
+        setIsRecording(false)
+        setInterimText("")
+      }
+      r.start()
+    } else {
+      try {
+        const stream = await navigator.mediaDevices.getUserMedia({ audio: true })
+        const mr = new MediaRecorder(stream)
+        mediaRecorderRef.current = mr
+        audioChunksRef.current = []
+        mr.ondataavailable = (ev) => { if (ev.data.size > 0) audioChunksRef.current.push(ev.data) }
+        mr.onstop = async () => {
+          stream.getTracks().forEach((t) => t.stop())
+          const blob = new Blob(audioChunksRef.current, { type: "audio/webm" })
+          if (blob.size < 500) { isRecordingRef.current = false; setIsRecording(false); setInterimText(""); return }
+          setInterimText("Transcribing...")
+          try {
+            const form = new FormData()
+            form.append("audio", blob, "recording.webm")
+            const res = await fetch("/api/stt", { method: "POST", body: form })
+            const data = await res.json()
+            if (data.text?.trim()) sendContent(data.text.trim())
+          } catch { }
+          isRecordingRef.current = false
+          setIsRecording(false)
+          setInterimText("")
+          mediaRecorderRef.current = null
+        }
+        mr.start()
+      } catch {
+        isRecordingRef.current = false
+        setIsRecording(false)
+      }
+    }
+  }, [isLimitReached, sendContent])
+
+  const stopRecording = useCallback(() => {
+    if (recognitionRef.current) {
+      recognitionRef.current.stop()
       recognitionRef.current = null
-      setIsRecording(false)
-      setInterimText("")
       return
     }
-    const SR = (window as any).SpeechRecognition || (window as any).webkitSpeechRecognition
-    if (!SR) { alert("Voice not supported in this browser. Try Chrome."); return }
-    const r = new SR()
-    recognitionRef.current = r
-    r.continuous = false
-    r.interimResults = true
-    r.lang = "en-US"
-    r.onresult = (e: any) => {
-      let interim = "", final = ""
-      for (let i = e.resultIndex; i < e.results.length; i++) {
-        const t = e.results[i][0].transcript
-        if (e.results[i].isFinal) final += t
-        else interim += t
-      }
-      if (interim) setInterimText(interim)
-      if (final) {
-        setInterimText("")
-        setIsRecording(false)
-        recognitionRef.current = null
-        sendContent(final)
-      }
+    if (mediaRecorderRef.current && mediaRecorderRef.current.state !== "inactive") {
+      mediaRecorderRef.current.stop()
     }
-    r.onerror = () => { setIsRecording(false); setInterimText("") }
-    r.onend = () => { if (recognitionRef.current === r) { setIsRecording(false); setInterimText(""); recognitionRef.current = null } }
-    r.start()
-    setIsRecording(true)
-  }, [isRecording, sendContent])
+  }, [])
 
-  const isLimitReached = messageCount >= 3
+  const handleMicPointerDown = useCallback((e: React.PointerEvent) => {
+    e.preventDefault()
+    startRecording()
+  }, [startRecording])
+
+  const handleMicClick = useCallback(() => {
+    if (!isRecording) startRecording()
+    else stopRecording()
+  }, [isRecording, startRecording, stopRecording])
 
   return (
     <div className="flex h-screen bg-gray-950 text-white overflow-hidden">
@@ -123,11 +235,22 @@ export default function DemoChat({ companion }: Props) {
       {/* ── Portrait Panel (desktop) ── */}
       <div className="hidden md:block relative w-[36%] lg:w-[32%] flex-shrink-0">
         {char.imageUrl ? (
-          <img
-            src={char.imageUrl}
-            alt={char.name}
-            className="absolute inset-0 w-full h-full object-cover object-top"
-          />
+          showIntroVideo && char.introVideoUrl ? (
+            <video
+              key={char.introVideoUrl}
+              src={char.introVideoUrl}
+              autoPlay
+              playsInline
+              onEnded={() => setShowIntroVideo(false)}
+              className="absolute inset-0 w-full h-full object-cover object-top"
+            />
+          ) : (
+            <img
+              src={char.imageUrl}
+              alt={char.name}
+              className="absolute inset-0 w-full h-full object-cover object-top"
+            />
+          )
         ) : (
           <div className="absolute inset-0 bg-gradient-to-br from-purple-900 via-pink-900 to-gray-900 flex items-center justify-center">
             <span className="text-8xl">💜</span>
@@ -135,14 +258,12 @@ export default function DemoChat({ companion }: Props) {
         )}
         <div className="absolute inset-0 bg-gradient-to-t from-gray-950 via-gray-950/20 to-transparent" />
 
-        {/* Demo badge */}
         <div className="absolute top-4 right-4">
           <span className="bg-purple-600/80 backdrop-blur-sm text-white text-xs font-medium px-3 py-1 rounded-full">
             🎭 Demo
           </span>
         </div>
 
-        {/* Name at bottom */}
         <div className="absolute bottom-0 left-0 right-0 p-5">
           <Link href="/companions" className="text-gray-400 hover:text-white transition text-xs flex items-center gap-1 mb-3 w-fit">
             <svg className="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
@@ -159,7 +280,6 @@ export default function DemoChat({ companion }: Props) {
       {/* ── Chat Panel ── */}
       <div className="flex-1 flex flex-col min-w-0">
 
-        {/* Demo banner */}
         <div className="bg-gradient-to-r from-purple-600/90 to-pink-600/90 px-4 py-2 text-center text-xs flex items-center justify-center gap-3 flex-wrap">
           <span className="font-medium">🎭 Demo — {3 - messageCount} messages remaining</span>
           <Link href="/auth/register" className="underline font-medium hover:opacity-80">
@@ -170,11 +290,7 @@ export default function DemoChat({ companion }: Props) {
         {/* Mobile portrait strip */}
         <div className="md:hidden relative h-52 flex-shrink-0">
           {char.imageUrl ? (
-            <img
-              src={char.imageUrl}
-              alt={char.name}
-              className="absolute inset-0 w-full h-full object-cover object-top"
-            />
+            <img src={char.imageUrl} alt={char.name} className="absolute inset-0 w-full h-full object-cover object-top" />
           ) : (
             <div className="absolute inset-0 bg-gradient-to-br from-purple-900 to-pink-900" />
           )}
@@ -216,7 +332,6 @@ export default function DemoChat({ companion }: Props) {
             </div>
           ))}
 
-          {/* Typing indicator */}
           {isTyping && (
             <div className="flex gap-2 justify-start">
               {char.imageUrl && (
@@ -234,7 +349,6 @@ export default function DemoChat({ companion }: Props) {
             </div>
           )}
 
-          {/* Signup CTA when limit reached */}
           {isLimitReached && (
             <div className="flex justify-center pt-2">
               <div className="bg-gray-900 border border-purple-500/30 rounded-2xl px-6 py-5 max-w-sm text-center w-full">
@@ -261,7 +375,6 @@ export default function DemoChat({ companion }: Props) {
 
         {/* Input */}
         <div className="border-t border-gray-800/50 bg-gray-950/90 backdrop-blur-sm">
-          {/* Recording overlay */}
           {isRecording && (
             <div className="px-4 pt-3 pb-2">
               <div className="flex items-center gap-3 bg-red-500/10 border border-red-500/30 rounded-xl px-4 py-3">
@@ -274,8 +387,12 @@ export default function DemoChat({ companion }: Props) {
                 <p className="flex-1 text-sm text-white truncate min-w-0">
                   {interimText ? <>&ldquo;{interimText}&rdquo;</> : `Listening — speak to ${char.name}`}
                 </p>
-                <button onClick={handleMicClick} className="flex-shrink-0 px-3 py-1.5 bg-red-500/20 text-red-300 text-xs rounded-lg">
-                  Stop
+                <button
+                  onPointerDown={(e) => { e.preventDefault(); stopRecording() }}
+                  onClick={stopRecording}
+                  className="flex-shrink-0 px-3 py-1.5 bg-red-500/20 text-red-300 text-xs rounded-lg"
+                >
+                  Release
                 </button>
               </div>
             </div>
@@ -283,20 +400,19 @@ export default function DemoChat({ companion }: Props) {
 
           <div className="px-3 py-3">
             <div className="flex items-end gap-2">
-              {/* Mic button */}
               {!isLimitReached && (
                 <button
-                  onClick={handleMicClick}
+                  onPointerDown={handleMicPointerDown}
                   disabled={isLimitReached}
-                  className={`flex flex-col items-center gap-0.5 flex-shrink-0 transition-all ${isRecording ? "opacity-0 pointer-events-none" : ""}`}
-                  title="Tap to speak"
+                  className={`flex flex-col items-center gap-0.5 flex-shrink-0 transition-all select-none touch-none ${isRecording ? "opacity-0 pointer-events-none" : ""}`}
+                  title="Hold to speak"
                 >
-                  <div className="p-2.5 rounded-xl border bg-gray-900 border-gray-600 text-gray-300 hover:bg-purple-900/30 hover:border-purple-500/60 hover:text-purple-300 active:scale-95 transition-all">
+                  <div className="p-2.5 rounded-xl border transition-all bg-gray-900 border-gray-600 text-gray-300 hover:bg-purple-900/30 hover:border-purple-500/60 hover:text-purple-300 active:scale-95 active:bg-purple-900/50">
                     <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                       <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 11a7 7 0 01-7 7m0 0a7 7 0 01-7-7m7 7v4m0 0H8m4 0h4m-4-8a3 3 0 01-3-3V5a3 3 0 116 0v6a3 3 0 01-3 3z" />
                     </svg>
                   </div>
-                  <span className="text-[10px] text-gray-600">Speak</span>
+                  <span className="text-[10px] text-gray-600">Hold</span>
                 </button>
               )}
 
@@ -323,7 +439,7 @@ export default function DemoChat({ companion }: Props) {
             <p className="text-xs text-gray-600 text-center mt-1">
               {isLimitReached
                 ? <Link href="/auth/register" className="text-purple-400 hover:text-purple-300">Sign up to continue →</Link>
-                : `${3 - messageCount} demo messages left · type or speak`
+                : `${3 - messageCount} demo messages left · hold mic to speak`
               }
             </p>
           </div>
