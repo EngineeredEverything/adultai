@@ -610,6 +610,8 @@ export default function GalleryPage(props: GalleryPageProps) {
           image={selectedImage}
           onDelete={handleDelete}
           user={user}
+          onSetPrompt={(p) => { setPrompt(p); setSelectedImage(null) }}
+          onGenerateVariations={(p) => { setPrompt(p); setSelectedImage(null) }}
         />
       )}
 

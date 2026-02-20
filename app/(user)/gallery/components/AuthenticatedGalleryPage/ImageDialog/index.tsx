@@ -62,6 +62,7 @@ import { ImageVotes } from "./image-votes";
 import { cn } from "@/lib/utils";
 import { getAllCategoriesResponseSuccessType } from "@/types/categories";
 import { getAllCategories } from "@/actions/category/info";
+import { ImageActions } from "./ImageActions";
 
 interface ImageDialogProps {
   isOpen: boolean;
@@ -73,6 +74,8 @@ interface ImageDialogProps {
   setSelectedImage: (
     image: SearchImagesResponseSuccessType["images"][number] | null
   ) => void;
+  onGenerateVariations?: (prompt: string) => void;
+  onSetPrompt?: (prompt: string) => void;
 }
 
 export function ImageDialog({
@@ -83,6 +86,8 @@ export function ImageDialog({
   onDelete,
   subscriptionStatus,
   setSelectedImage,
+  onGenerateVariations,
+  onSetPrompt,
 }: ImageDialogProps) {
   const [comments, setComments] = useState<
     {
@@ -611,6 +616,15 @@ export function ImageDialog({
                       </div>
                     )}
                   </div>
+                )}
+
+                {/* ── Quick Actions ── */}
+                {image && (
+                  <ImageActions
+                    image={image}
+                    onGenerateVariations={onGenerateVariations}
+                    onSetPrompt={onSetPrompt}
+                  />
                 )}
 
                 {/* Interaction Controls */}
