@@ -28,6 +28,7 @@ export function ImageActions({ image, onGenerateVariations, onSetPrompt }: Image
   const [talkText, setTalkText] = useState("")
   const [talkLoading, setTalkLoading] = useState(false)
   const [talkResult, setTalkResult] = useState<{ videoUrl?: string | null; audioUrl?: string | null; audioOnly?: boolean } | null>(null)
+  const [talkVoiceId, setTalkVoiceId] = useState("21m00Tcm4TlvDq8ikWAM")
 
   // img2img state
   const [editPrompt, setEditPrompt] = useState("")
@@ -79,7 +80,7 @@ export function ImageActions({ image, onGenerateVariations, onSetPrompt }: Image
     try {
       const res = await fetch("/api/animate-image", {
         method: "POST", headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ imageUrl, text: talkText.trim() }),
+        body: JSON.stringify({ imageUrl, text: talkText.trim(), voiceId: talkVoiceId }),
       })
       const data = await res.json()
       if (!res.ok) throw new Error(data.error || "Failed")
@@ -291,6 +292,33 @@ export function ImageActions({ image, onGenerateVariations, onSetPrompt }: Image
       {activePanel === "talk" && (
         <Panel title="Make it Talk" onClose={() => setActivePanel(null)}>
           <p className="text-xs text-gray-500 mb-3">Type what she should say — get voice + lip sync.</p>
+
+          {/* Voice selector */}
+          <div className="mb-3">
+            <p className="text-[10px] text-gray-500 uppercase tracking-widest mb-1.5">Voice</p>
+            <div className="grid grid-cols-4 gap-1">
+              {[
+                { id: "21m00Tcm4TlvDq8ikWAM", name: "Rachel", desc: "Warm" },
+                { id: "EXAVITQu4vr4xnSDxMaL", name: "Bella", desc: "Soft" },
+                { id: "AZnzlk1XvdvUeBnXmlld", name: "Domi", desc: "Bold" },
+                { id: "MF3mGyEYCl7XYWbV9V6O", name: "Elli", desc: "Bright" },
+              ].map((v) => (
+                <button
+                  key={v.id}
+                  onClick={() => setTalkVoiceId(v.id)}
+                  className={`flex flex-col items-center py-1.5 px-1 rounded-lg border text-[10px] transition-all ${
+                    talkVoiceId === v.id
+                      ? "border-pink-500 bg-pink-500/10 text-pink-300"
+                      : "border-gray-700 text-gray-500 hover:border-gray-500 hover:text-gray-400"
+                  }`}
+                >
+                  <span className="font-medium">{v.name}</span>
+                  <span className="opacity-70">{v.desc}</span>
+                </button>
+              ))}
+            </div>
+          </div>
+
           <Textarea value={talkText} onChange={(e) => setTalkText(e.target.value)}
             placeholder={'"Hey... I was just thinking about you."'}
             rows={2} maxLength={500}

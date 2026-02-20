@@ -4,16 +4,20 @@ import { Badge } from "@/components/ui/badge";
 import { LoadingSpinner } from "@/components/ui/loading-spinner";
 import type { SearchImagesResponseSuccessType } from "@/types/images";
 import {
-  Heart,
   Lock,
   MessageCircle,
   TrendingUp,
   TrendingDown,
+  Film,
+  Loader2,
+  Play,
+  X,
 } from "lucide-react";
 import Image from "next/image";
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import { motion } from "framer-motion";
 import { logger } from "@/lib/logger";
+import { toast } from "sonner";
 
 // Alternative compact version for smaller cards
 export function ImageCard({
@@ -39,6 +43,9 @@ export function ImageCard({
 }) {
   const [hovering, setHovering] = useState(false);
   const [imageLoaded, setImageLoaded] = useState(isLoaded);
+  const [isAnimating, setIsAnimating] = useState(false);
+  const [animatedVideoUrl, setAnimatedVideoUrl] = useState<string | null>(null);
+  const videoRef = useRef<HTMLVideoElement | null>(null);
 
   useEffect(() => {
     logger.debug(`ImageCard mounted for image ID: ${image.image.id}`);
@@ -54,6 +61,33 @@ export function ImageCard({
   const handleError = (e: any) => {
     logger.error(`handleError triggered for image ID: ${image.image.id}`, e);
     onError(new Error("Failed to load image"));
+  };
+
+  const handleQuickAnimate = async (e: React.MouseEvent) => {
+    e.stopPropagation();
+    if (isAnimating || animatedVideoUrl) return;
+    const imageUrl = image.image.cdnUrl || image.image.imageUrl;
+    if (!imageUrl) return;
+    setIsAnimating(true);
+    try {
+      const res = await fetch("/api/image-to-video", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ imageUrl, frames: 25, fps: 8, motionStrength: 100 }),
+      });
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.error || "Failed");
+      setAnimatedVideoUrl(data.videoUrl);
+    } catch (e: any) {
+      toast.error("Animation failed", { description: e.message });
+    } finally {
+      setIsAnimating(false);
+    }
+  };
+
+  const handleClearAnimation = (e: React.MouseEvent) => {
+    e.stopPropagation();
+    setAnimatedVideoUrl(null);
   };
 
   // Get vote statistics
@@ -100,30 +134,61 @@ export function ImageCard({
       )}
 
       <div className="relative w-full h-full">
-        <Image
-          src={image.image.cdnUrl || "/placeholder.png"}
-          alt={image.image.prompt || "Generated image"}
-          fill
-          className={`object-cover transition-all duration-300 ${
-            imageLoaded ? "opacity-100" : "opacity-0"
-          }`}
-          onLoad={() => {
-            logger.debug(
-              `Image element onLoad triggered for ${image.image.cdnUrl}`
-            );
-            handleLoad();
-          }}
-          onError={(e) => {
-            logger.error(
-              `Image element onError triggered for ${image.image.cdnUrl}`,
-              e
-            );
-            handleError(e);
-          }}
-          sizes={`${width}px`}
-          priority={false}
-        />
+        {animatedVideoUrl ? (
+          <video
+            ref={videoRef}
+            src={animatedVideoUrl}
+            className="w-full h-full object-cover"
+            autoPlay
+            loop
+            muted
+            playsInline
+          />
+        ) : (
+          <Image
+            src={image.image.cdnUrl || "/placeholder.png"}
+            alt={image.image.prompt || "Generated image"}
+            fill
+            className={`object-cover transition-all duration-300 ${
+              imageLoaded ? "opacity-100" : "opacity-0"
+            }`}
+            onLoad={() => {
+              logger.debug(
+                `Image element onLoad triggered for ${image.image.cdnUrl}`
+              );
+              handleLoad();
+            }}
+            onError={(e) => {
+              logger.error(
+                `Image element onError triggered for ${image.image.cdnUrl}`,
+                e
+              );
+              handleError(e);
+            }}
+            sizes={`${width}px`}
+            priority={false}
+          />
+        )}
       </div>
+
+      {/* Animating spinner */}
+      {isAnimating && (
+        <div className="absolute inset-0 bg-black/60 flex flex-col items-center justify-center gap-2 z-20">
+          <Loader2 className="w-8 h-8 text-pink-400 animate-spin" />
+          <span className="text-white text-xs font-medium">Animating...</span>
+        </div>
+      )}
+
+      {/* Clear animation button */}
+      {animatedVideoUrl && (
+        <button
+          onClick={handleClearAnimation}
+          className="absolute top-2 left-2 z-30 bg-black/60 hover:bg-black/80 text-white rounded-full p-1 transition-colors"
+          title="Back to image"
+        >
+          <X className="w-3.5 h-3.5" />
+        </button>
+      )}
 
       {/* Vote Score Badge - Top Right */}
       {hasVotes && Math.abs(voteScore) > 0 && (
@@ -193,6 +258,41 @@ export function ImageCard({
           <p className="text-white text-sm line-clamp-2">
             {image.image.prompt}
           </p>
+        )}
+
+        {/* Quick action buttons */}
+        {!animatedVideoUrl && (
+          <div className="flex gap-1.5 mt-2" onClick={(e) => e.stopPropagation()}>
+            <button
+              onClick={handleQuickAnimate}
+              disabled={isAnimating}
+              className="flex items-center gap-1 px-2 py-1 bg-pink-600/80 hover:bg-pink-600 text-white rounded text-[10px] font-medium transition-colors disabled:opacity-60"
+              title="Animate this image"
+            >
+              {isAnimating ? <Loader2 className="w-3 h-3 animate-spin" /> : <Film className="w-3 h-3" />}
+              {isAnimating ? "Animating…" : "Animate"}
+            </button>
+            <button
+              onClick={onClick}
+              className="flex items-center gap-1 px-2 py-1 bg-white/20 hover:bg-white/30 text-white rounded text-[10px] font-medium transition-colors"
+              title="Open image"
+            >
+              <Play className="w-3 h-3" />
+              More
+            </button>
+          </div>
+        )}
+        {animatedVideoUrl && (
+          <div className="flex gap-1.5 mt-2">
+            <a
+              href={animatedVideoUrl}
+              download="animation.mp4"
+              onClick={(e) => e.stopPropagation()}
+              className="flex items-center gap-1 px-2 py-1 bg-green-600/80 hover:bg-green-600 text-white rounded text-[10px] font-medium transition-colors"
+            >
+              ⬇ Download
+            </a>
+          </div>
         )}
       </div>
 
