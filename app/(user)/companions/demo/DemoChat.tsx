@@ -249,7 +249,7 @@ export default function DemoChat({ companion }: Props) {
       <div className="flex-1 flex flex-col min-w-0">
         <div className="bg-gradient-to-r from-purple-700/95 to-pink-700/95 px-4 py-2 text-center text-xs flex items-center justify-center gap-3 flex-wrap">
           <span className="font-medium">🔥 {3 - messageCount > 0 ? `${3 - messageCount} message${3 - messageCount === 1 ? "" : "s"} left in demo` : "Demo ended"}</span>
-          <Link href="/auth/register" className="bg-white/20 hover:bg-white/30 transition px-3 py-0.5 rounded-full font-semibold">Sign up — it's free →</Link>
+          <Link href="/auth/register" className="bg-white/20 hover:bg-white/30 transition px-3 py-0.5 rounded-full font-semibold">Sign up — free →</Link>
         </div>
 
         {/* Mobile portrait */}
