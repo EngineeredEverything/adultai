@@ -439,6 +439,24 @@ export default function GalleryPage(props: GalleryPageProps) {
 
   return (
     <div className={`container mx-auto px-4 py-8 transition-all duration-300`}>
+      {/* MOBILE GENERATE BAR - only on mobile, only in normal mode */}
+      {isNormalMode && (
+        <div className="md:hidden mb-4">
+          <button
+            onClick={() => setShowMobileSheet(true)}
+            className="w-full flex items-center gap-3 bg-gray-800/60 border border-gray-700/80 rounded-2xl px-4 py-3.5 text-left hover:border-purple-500/50 hover:bg-gray-800 transition-all"
+          >
+            <div className="w-8 h-8 rounded-xl bg-gradient-to-br from-purple-600 to-pink-600 flex items-center justify-center flex-shrink-0">
+              <svg className="w-4 h-4 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" />
+              </svg>
+            </div>
+            <span className="text-gray-400 flex-1 text-sm">What will you create today?</span>
+            <span className="text-purple-400 text-xs font-semibold">Generate ✨</span>
+          </button>
+        </div>
+      )}
+
       {/* TOP INPUT SECTION - Only in normal mode */}
       {isNormalMode && (
         <>
