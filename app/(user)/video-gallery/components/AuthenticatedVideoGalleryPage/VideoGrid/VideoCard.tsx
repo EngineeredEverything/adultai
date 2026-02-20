@@ -1,6 +1,6 @@
 "use client"
 
-import { useState } from "react"
+import { useState, useRef } from "react"
 import type { SearchVideosResponseSuccessType } from "@/types/videos"
 import { Play } from "lucide-react"
 
@@ -17,6 +17,24 @@ interface VideoCardProps {
 
 export function VideoCard({ video, isLoaded, onClick, onLoad, onError, position, width, index }: VideoCardProps) {
   const [thumbnailError, setThumbnailError] = useState(false)
+  const [isHovering, setIsHovering] = useState(false)
+  const videoRef = useRef<HTMLVideoElement | null>(null)
+
+  const handleMouseEnter = () => {
+    setIsHovering(true)
+    if (videoRef.current) {
+      videoRef.current.currentTime = 0
+      videoRef.current.play().catch(() => {})
+    }
+  }
+
+  const handleMouseLeave = () => {
+    setIsHovering(false)
+    if (videoRef.current) {
+      videoRef.current.pause()
+      videoRef.current.currentTime = 0
+    }
+  }
 
   return (
     <div
@@ -28,11 +46,14 @@ export function VideoCard({ video, isLoaded, onClick, onLoad, onError, position,
         height: `${position.height}px`,
       }}
       onClick={onClick}
+      onMouseEnter={handleMouseEnter}
+      onMouseLeave={handleMouseLeave}
     >
       <div className="relative w-full h-full bg-muted rounded-lg overflow-hidden shadow-md hover:shadow-xl transition-shadow">
         {video.video.cdnUrl && !thumbnailError ? (
           <>
             <video
+              ref={videoRef}
               src={video.video.cdnUrl}
               className="w-full h-full object-cover"
               onLoadedData={onLoad}
@@ -42,11 +63,19 @@ export function VideoCard({ video, isLoaded, onClick, onLoad, onError, position,
               }}
               muted
               playsInline
+              loop
             />
-            <div className="absolute inset-0 bg-black/30 group-hover:bg-black/40 transition-colors flex items-center justify-center">
-              <div className="bg-white/90 rounded-full p-4 group-hover:scale-110 transition-transform">
-                <Play className="w-8 h-8 text-black" fill="black" />
-              </div>
+            {/* Play overlay — hidden when hovering and playing */}
+            <div
+              className={`absolute inset-0 transition-colors flex items-center justify-center ${
+                isHovering ? "bg-black/10" : "bg-black/30 group-hover:bg-black/20"
+              }`}
+            >
+              {!isHovering && (
+                <div className="bg-white/90 rounded-full p-4 group-hover:scale-110 transition-transform">
+                  <Play className="w-8 h-8 text-black" fill="black" />
+                </div>
+              )}
             </div>
           </>
         ) : (

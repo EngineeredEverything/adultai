@@ -5,7 +5,7 @@ import type React from "react"
 import { Dialog, DialogContent } from "@/components/ui/dialog"
 import { Button } from "@/components/ui/button"
 import { useState, useEffect } from "react"
-import { X, Trash2, MessageCircle, Send } from "lucide-react"
+import { X, Trash2, MessageCircle, Send, Download } from "lucide-react"
 import type { SearchVideosResponseSuccessType } from "@/types/videos"
 import { Input } from "@/components/ui/input"
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
@@ -109,12 +109,26 @@ export function VideoDialog({
 
           <ScrollArea className="flex-1 max-h-[calc(95vh-69px)]">
             <div className="p-4 space-y-6">
-              <div className="relative w-full max-w-2xl mx-auto bg-muted rounded-lg overflow-hidden">
-                {video.video.cdnUrl ? (
-                  <video src={video.video.cdnUrl} controls className="w-full" style={{ maxHeight: "70vh" }} />
-                ) : (
-                  <div className="w-full h-full flex items-center justify-center p-8">
-                    <p className="text-muted-foreground">Video not available</p>
+              <div className="relative w-full max-w-2xl mx-auto">
+                <div className="bg-muted rounded-lg overflow-hidden">
+                  {video.video.cdnUrl ? (
+                    <video src={video.video.cdnUrl} controls autoPlay className="w-full" style={{ maxHeight: "70vh" }} />
+                  ) : (
+                    <div className="w-full h-full flex items-center justify-center p-8">
+                      <p className="text-muted-foreground">Video not available</p>
+                    </div>
+                  )}
+                </div>
+                {video.video.cdnUrl && (
+                  <div className="flex gap-2 mt-2">
+                    <a
+                      href={video.video.cdnUrl}
+                      download="adultai-video.mp4"
+                      className="flex items-center gap-2 px-4 py-2 bg-gray-100 hover:bg-gray-200 dark:bg-gray-800 dark:hover:bg-gray-700 rounded-lg text-sm font-medium transition-colors flex-1 justify-center"
+                    >
+                      <Download className="w-4 h-4" />
+                      Download Video
+                    </a>
                   </div>
                 )}
               </div>
