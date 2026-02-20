@@ -377,7 +377,7 @@ export default function DemoChat({ companion }: Props) {
         )}
 
         {/* Input bar */}
-        <div className={`flex items-center gap-2 bg-white/10 backdrop-blur-md border border-white/20 rounded-2xl px-3 py-2 transition-opacity ${isLimitReached ? "opacity-40 pointer-events-none" : ""}`}>
+        <div className={`flex items-center gap-2 bg-black/60 backdrop-blur-md border border-white/20 rounded-2xl px-3 py-2 transition-opacity ${isLimitReached ? "opacity-40 pointer-events-none" : ""}`}>
 
           {/* Mic button */}
           <button
