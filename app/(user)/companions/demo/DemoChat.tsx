@@ -62,9 +62,6 @@ export default function DemoChat({ companion }: Props) {
   const mediaRecorderRef = useRef<MediaRecorder | null>(null)
   const audioChunksRef = useRef<Blob[]>([])
   const audioRef = useRef<HTMLAudioElement | null>(null)
-  const isHoldingRef = useRef(false)       // true while finger/mouse is down
-  const accumulatedRef = useRef("")         // text built up across recognition restarts
-
   useEffect(() => {
     messagesEndRef.current?.scrollIntoView({ behavior: "smooth" })
   }, [messages, isTyping])
@@ -107,127 +104,87 @@ export default function DemoChat({ companion }: Props) {
     }
   }, [messageCount, messages, char])
 
-  // ── Web Speech API mic (Chrome/Edge) ──────────────────────────────────────
-  // Key insight: SpeechRecognition auto-stops after ~1s silence.
-  // Fix: restart it in onend as long as isHoldingRef is still true.
-  const startWebSpeech = useCallback(() => {
+  // ── Push-to-talk mic ──────────────────────────────────────────────────────
+  const startRecording = useCallback(async () => {
+    if (isRecording || messageCount >= 3) return
+
     const SR = (window as any).SpeechRecognition || (window as any).webkitSpeechRecognition
-    if (!SR) return false
-
-    const launchSession = () => {
-      if (!isHoldingRef.current) return  // user already released
-
-      const r = new SR()
-      recognitionRef.current = r
-      r.continuous = true
-      r.interimResults = true
-      r.lang = "en-US"
-
-      r.onresult = (e: any) => {
-        let interim = ""
-        for (let i = e.resultIndex; i < e.results.length; i++) {
-          const t = e.results[i][0].transcript
-          if (e.results[i].isFinal) accumulatedRef.current += t + " "
-          else interim += t
+    if (SR) {
+      // Web Speech API (Chrome/Edge) — continuous mode, stops on pointer up
+      try {
+        let accumulated = ""
+        const r = new SR()
+        recognitionRef.current = r
+        r.continuous = true
+        r.interimResults = true
+        r.lang = "en-US"
+        r.onresult = (e: any) => {
+          let interim = ""
+          for (let i = e.resultIndex; i < e.results.length; i++) {
+            const t = e.results[i][0].transcript
+            if (e.results[i].isFinal) accumulated += t
+            else interim += t
+          }
+          setInterimText((accumulated + interim).trim())
         }
-        setInterimText((accumulatedRef.current + interim).trim())
-      }
-
-      r.onerror = (e: any) => {
-        // "no-speech" just means silence — restart if still holding
-        if (e.error === "no-speech" && isHoldingRef.current) {
+        r.onerror = (e: any) => {
+          if (e.error === "aborted") return
           recognitionRef.current = null
-          launchSession()
-          return
-        }
-        // Real error — stop
-        recognitionRef.current = null
-      }
-
-      r.onend = () => {
-        recognitionRef.current = null
-        if (isHoldingRef.current) {
-          // Auto-stopped due to silence — restart immediately
-          launchSession()
-        } else {
-          // User released — finalize
-          const text = accumulatedRef.current.trim()
-          accumulatedRef.current = ""
           setIsRecording(false)
+          setInterimText("")
+        }
+        r.onend = () => {
+          recognitionRef.current = null
+          setIsRecording(false)
+          const text = accumulated.trim()
           setInterimText("")
           if (text) sendContent(text)
         }
-      }
-
-      try { r.start() } catch { /* already started */ }
-    }
-
-    launchSession()
-    return true
-  }, [sendContent])
-
-  // ── MediaRecorder fallback (Firefox/Safari) ────────────────────────────────
-  const startMediaRecorder = useCallback(async () => {
-    try {
-      const stream = await navigator.mediaDevices.getUserMedia({ audio: true })
-      const mr = new MediaRecorder(stream)
-      mediaRecorderRef.current = mr
-      audioChunksRef.current = []
-      mr.ondataavailable = (ev) => { if (ev.data.size > 0) audioChunksRef.current.push(ev.data) }
-      mr.onstop = async () => {
-        stream.getTracks().forEach((t) => t.stop())
-        const blob = new Blob(audioChunksRef.current, { type: "audio/webm" })
+        r.start()
+        setIsRecording(true)
+        setInterimText("")
+      } catch {
         setIsRecording(false)
-        setInterimText("")
-        mediaRecorderRef.current = null
-        if (blob.size < 500) return
-        setInterimText("Transcribing...")
-        try {
-          const form = new FormData()
-          form.append("audio", blob, "recording.webm")
-          const res = await fetch("/api/stt", { method: "POST", body: form })
-          const data = await res.json()
-          if (data.text?.trim()) sendContent(data.text.trim())
-        } catch {}
-        setInterimText("")
       }
-      mr.start(100)  // collect chunks every 100ms
-      return true
-    } catch {
-      return false
-    }
-  }, [sendContent])
-
-  // ── Start recording (called on pointer down) ───────────────────────────────
-  const startRecording = useCallback(async () => {
-    if (isHoldingRef.current || messageCount >= 3) return
-    isHoldingRef.current = true
-    accumulatedRef.current = ""
-    setIsRecording(true)
-    setInterimText("")
-
-    const usedWebSpeech = startWebSpeech()
-    if (!usedWebSpeech) {
-      const ok = await startMediaRecorder()
-      if (!ok) {
-        isHoldingRef.current = false
+    } else {
+      // MediaRecorder fallback (Firefox/Safari)
+      try {
+        const stream = await navigator.mediaDevices.getUserMedia({ audio: true })
+        const mimeType = MediaRecorder.isTypeSupported("audio/webm") ? "audio/webm" : "audio/ogg"
+        const mr = new MediaRecorder(stream, { mimeType })
+        mediaRecorderRef.current = mr
+        audioChunksRef.current = []
+        mr.ondataavailable = (ev) => { if (ev.data.size > 0) audioChunksRef.current.push(ev.data) }
+        mr.onstop = async () => {
+          stream.getTracks().forEach((t) => t.stop())
+          const blob = new Blob(audioChunksRef.current, { type: mimeType })
+          setIsRecording(false)
+          mediaRecorderRef.current = null
+          if (blob.size < 500) { setInterimText(""); return }
+          setInterimText("Transcribing...")
+          try {
+            const form = new FormData()
+            form.append("audio", blob, "audio.webm")
+            const res = await fetch("/api/stt", { method: "POST", body: form })
+            const data = await res.json()
+            if (data.text?.trim()) sendContent(data.text.trim())
+          } catch {}
+          setInterimText("")
+        }
+        mr.start()
+        setIsRecording(true)
+        setInterimText("")
+      } catch {
         setIsRecording(false)
       }
     }
-  }, [messageCount, startWebSpeech, startMediaRecorder])
+  }, [isRecording, messageCount, sendContent])
 
-  // ── Stop recording (called on pointer up / release button) ─────────────────
   const stopRecording = useCallback(() => {
-    isHoldingRef.current = false  // signals onend to finalize instead of restart
-
-    // Stop Web Speech API — onend will fire and finalize
     if (recognitionRef.current) {
       try { recognitionRef.current.stop() } catch {}
-      // onend will handle state cleanup
       return
     }
-
-    // Stop MediaRecorder
     if (mediaRecorderRef.current && mediaRecorderRef.current.state !== "inactive") {
       mediaRecorderRef.current.stop()
     }
@@ -392,10 +349,10 @@ export default function DemoChat({ companion }: Props) {
                 </p>
                 {/* Visible stop button — tap if hold didn't register */}
                 <button
-                  onPointerDown={(e) => { e.preventDefault(); stopRecording() }}
+                  onClick={stopRecording}
                   className="flex-shrink-0 px-3 py-1.5 bg-red-500/20 hover:bg-red-500/40 text-red-300 text-xs rounded-lg transition-colors"
                 >
-                  Release
+                  Done
                 </button>
               </div>
             </div>
@@ -407,7 +364,7 @@ export default function DemoChat({ companion }: Props) {
               {/* Mic button — visible only when not recording */}
               {!isLimitReached && (
                 <button
-                  onPointerDown={(e) => { e.preventDefault(); startRecording() }}
+                  onPointerDown={startRecording}
                   disabled={isLimitReached}
                   style={{ visibility: isRecording ? "hidden" : "visible" }}
                   className="flex flex-col items-center gap-0.5 flex-shrink-0 select-none touch-none"
