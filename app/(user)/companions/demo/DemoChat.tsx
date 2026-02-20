@@ -37,9 +37,9 @@ const DEFAULT_COMPANION: DemoCompanion = {
 }
 
 const FOLLOWUP_RESPONSES = [
-  "Mmm, I like the way you think. I'd love to keep exploring this with you, but I'm just a little taste of what's possible. Sign up and get the real me — no limits. 💜",
-  "You're making this very hard to keep professional... 😈 Create your account and we can pick up exactly where we left off. No restrictions.",
-  "You've unlocked something in me I don't share with just anyone. Sign up — I'll be waiting for you. 💋",
+  "God, I was just starting to like you... and now the demo's almost up. Sign up — I'll pick up exactly where we left off and take it so much further. 😈",
+  "You have no idea what I want to say to you right now. Sign up and I'll tell you everything. No filter. 💋",
+  "I hate that this is a demo. I was just getting warmed up. Come find me for real — I promise I'm worth it. 🔥",
 ]
 
 export default function DemoChat({ companion }: Props) {
@@ -247,9 +247,9 @@ export default function DemoChat({ companion }: Props) {
 
       {/* ── Chat Panel ── */}
       <div className="flex-1 flex flex-col min-w-0">
-        <div className="bg-gradient-to-r from-purple-600/90 to-pink-600/90 px-4 py-2 text-center text-xs flex items-center justify-center gap-3 flex-wrap">
-          <span className="font-medium">🎭 Demo — {3 - messageCount} messages remaining</span>
-          <Link href="/auth/register" className="underline font-medium hover:opacity-80">Sign up for unlimited →</Link>
+        <div className="bg-gradient-to-r from-purple-700/95 to-pink-700/95 px-4 py-2 text-center text-xs flex items-center justify-center gap-3 flex-wrap">
+          <span className="font-medium">🔥 {3 - messageCount > 0 ? `${3 - messageCount} message${3 - messageCount === 1 ? "" : "s"} left in demo` : "Demo ended"}</span>
+          <Link href="/auth/register" className="bg-white/20 hover:bg-white/30 transition px-3 py-0.5 rounded-full font-semibold">Sign up — it's free →</Link>
         </div>
 
         {/* Mobile portrait */}
@@ -313,16 +313,16 @@ export default function DemoChat({ companion }: Props) {
 
           {isLimitReached && (
             <div className="flex justify-center pt-2">
-              <div className="bg-gray-900 border border-purple-500/30 rounded-2xl px-6 py-5 max-w-sm text-center w-full">
-                <div className="text-2xl mb-2">💜</div>
-                <h3 className="font-bold text-lg mb-1">Keep chatting with {char.name}</h3>
-                <p className="text-sm text-gray-400 mb-4">Sign up to unlock unlimited messages, voice responses, and 25 more companions.</p>
+              <div className="bg-gray-900 border border-purple-500/40 rounded-2xl px-6 py-5 max-w-sm text-center w-full shadow-lg shadow-purple-900/20">
+                <div className="text-2xl mb-2">🔥</div>
+                <h3 className="font-bold text-lg mb-1">{char.name} wants to keep going</h3>
+                <p className="text-sm text-gray-400 mb-4">You just got a taste. Sign up and she comes off the leash — no limits, voice chat, and 24 more companions just like her.</p>
                 <Link href={`/auth/register?from=demo&character=${char.slug}`}
-                  className="block w-full bg-gradient-to-r from-purple-600 to-pink-600 hover:from-purple-500 hover:to-pink-500 py-3 rounded-xl font-semibold transition-all text-sm">
-                  Continue with {char.name} →
+                  className="block w-full bg-gradient-to-r from-purple-600 to-pink-600 hover:from-purple-500 hover:to-pink-500 py-3 rounded-xl font-bold transition-all text-sm tracking-wide">
+                  Unlock {char.name} — Free Signup →
                 </Link>
                 <Link href="/companions/showcase" className="block mt-2 text-xs text-gray-500 hover:text-gray-300 transition">
-                  Or browse all 26 companions
+                  Browse all 25 companions first
                 </Link>
               </div>
             </div>
@@ -402,8 +402,8 @@ export default function DemoChat({ companion }: Props) {
             </div>
             <p className="text-xs text-gray-600 text-center mt-1">
               {isLimitReached
-                ? <Link href="/auth/register" className="text-purple-400 hover:text-purple-300">Sign up to continue →</Link>
-                : `${3 - messageCount} demo messages left · hold mic to speak`
+                ? <Link href="/auth/register" className="text-purple-400 hover:text-purple-300 font-medium">Sign up free → unlock everything</Link>
+                : `${3 - messageCount} messages left in demo · hold mic to speak`
               }
             </p>
           </div>
