@@ -3,9 +3,16 @@ import { db } from "@/lib/db"
 import { logger } from "@/lib/logger"
 import { getVideoProvider } from "@/actions/videos/provider"
 import { checkVideoStatusRaw } from "@/actions/videos/info"
+import { uploadBase64VideoToCDN } from "@/lib/custom/video-generation"
 
 const provider = getVideoProvider("CUSTOM")
 const API_TOKEN = process.env.BOT_API_TOKEN
+
+/** Returns true if the string looks like raw base64 or a data URI (not a URL) */
+function isBase64(str: string): boolean {
+  if (!str || typeof str !== "string") return false
+  return str.startsWith("data:") || (!str.startsWith("http") && str.length > 200)
+}
 
 export async function POST(req: NextRequest) {
   try {
@@ -29,44 +36,51 @@ export async function POST(req: NextRequest) {
     }
     logger.debug("Fetch status response:", body.output?.length || 0)
 
-    if (body.status === "success" && body.output && body.output.length > 0) {
-      const updatePromises = pendingVideos.map(async (pendingVideo, index) => {
-        const videoUrl = index < body.output.length ? body.output[index] : null
+    if (body.status === "success" && body.output) {
+      // output may be: base64 string, array of base64 strings, or array of URLs
+      const outputs: string[] = Array.isArray(body.output) ? body.output : [body.output]
 
-        if (!videoUrl) {
+      const updatePromises = pendingVideos.map(async (pendingVideo, index) => {
+        const raw = index < outputs.length ? outputs[index] : outputs[0]
+
+        if (!raw) {
           return db.generatedVideo.update({
             where: { id: pendingVideo.id },
-            data: {
-              status: "failed",
-              updatedAt: new Date(),
-            },
+            data: { status: "failed", updatedAt: new Date() },
           })
         }
 
         try {
-          const { path, cdnUrl } = await provider.uploadVideoUrlToCDN(videoUrl, 3)
+          let cdnUrl: string
+          let path: string
+
+          if (isBase64(raw)) {
+            // Strip data URI prefix if present
+            const b64 = raw.startsWith("data:") ? raw.split(",")[1] : raw
+            const result = await uploadBase64VideoToCDN(b64, 3)
+            cdnUrl = result.cdnUrl
+            path = result.path
+          } else {
+            const result = await provider.uploadVideoUrlToCDN(raw, 3)
+            cdnUrl = result.cdnUrl
+            path = result.path
+          }
 
           return db.generatedVideo.update({
             where: { id: pendingVideo.id },
             data: {
               status: "completed",
               videoUrl: cdnUrl,
-              path: path,
+              path,
               verified: new Date(),
               updatedAt: new Date(),
             },
           })
         } catch (error) {
-          logger.debug("Error uploading to CDN:", error)
-
+          logger.debug("Error uploading video to CDN:", error)
           return db.generatedVideo.update({
             where: { id: pendingVideo.id },
-            data: {
-              status: "completed",
-              videoUrl: "",
-              verified: new Date(),
-              updatedAt: new Date(),
-            },
+            data: { status: "failed", updatedAt: new Date() },
           })
         }
       })

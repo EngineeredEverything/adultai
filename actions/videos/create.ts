@@ -5,6 +5,7 @@ import { currentUser, type User } from "@/utils/auth"
 import type { z } from "zod"
 import { logger } from "@/lib/logger"
 import { getVideoProvider } from "./provider"
+import { GPU_API_KEY } from "@/lib/custom/config"
 import { analyzePromptForCategory } from "@/lib/category-analyzer"
 import { createGeneratedVideoSchema, createGeneratedVideosBatchSchema } from "@/schemas/videos"
 import { getUserActivePlan } from "@/actions/subscriptions/info"
@@ -174,7 +175,10 @@ export async function initiateVideoGeneration({
   try {
     const response = await provider.fetchWithRetry(provider.VIDEO_API_URL, {
       method: "POST",
-      headers: { "Content-Type": "application/json" },
+      headers: {
+        "Content-Type": "application/json",
+        "X-API-Key": GPU_API_KEY,
+      },
       body: JSON.stringify({
         prompt,
         seed,
@@ -185,6 +189,8 @@ export async function initiateVideoGeneration({
         num_inference_steps: videoConfig.num_inference_steps,
         guidance_scale: videoConfig.guidance_scale,
         negative_prompt: negativePrompt || "blurry, low quality, distorted",
+        webhook: WEBHOOK_URL,
+        track_id: userId,
       }),
     })
 
@@ -196,22 +202,24 @@ export async function initiateVideoGeneration({
       eta: data.eta,
     })
 
-    if (data.status === "error") {
+    if (data.status === "error" || data.detail) {
       logger.error("Provider returned error", {
         userId,
-        error: data.message,
+        error: data.message || data.detail,
         responseStatus: response.status,
       })
-      throw new provider.VideoGenerationError(data.message || "Failed to generate video", response.status, false)
+      throw new provider.VideoGenerationError(data.message || data.detail || "Failed to generate video", response.status, false)
     }
 
-    if (!data.id) {
-      logger.error("No task ID returned from provider", { userId, responseStatus: response.status })
+    // GPU API returns task_id; other providers may return id
+    const taskId = data.task_id || data.id
+    if (!taskId) {
+      logger.error("No task ID returned from provider", { userId, responseData: JSON.stringify(data).substring(0, 200) })
       throw new provider.VideoGenerationError("No task ID returned from API", response.status, false)
     }
 
     return {
-      taskId: data.id.toString(),
+      taskId: taskId.toString(),
       eta: data.eta,
       futureLinks: data.future_links,
     }

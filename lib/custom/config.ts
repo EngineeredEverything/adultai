@@ -3,6 +3,8 @@ export const BASE_URL = process.env.AI_IMAGE_BASE_URL
 export const API_URL = `${BASE_URL}/generate`
 export const apiKey = process.env.MODELS_LAB_API_KEY || ""
 
+export const GPU_API_KEY = process.env.GPU_API_KEY || process.env.MODELS_LAB_API_KEY || ""
+
 export const VIDEO_BASE_URL = process.env.AI_VIDEO_BASE_URL || BASE_URL
 export const VIDEO_API_URL = `${VIDEO_BASE_URL}/video/generate-video`
 export const VIDEO_FETCH_URL = `${VIDEO_BASE_URL}/video/fetch-video/`

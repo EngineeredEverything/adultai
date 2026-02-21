@@ -4,11 +4,18 @@ import type React from "react"
 
 import { useState, useEffect, useRef, useCallback, useMemo } from "react"
 import type { SearchVideosResponseSuccessType } from "@/types/videos"
-import { checkVideoStatus, searchVideos } from "@/actions/videos/info"
+import { searchVideos } from "@/actions/videos/info"
 import { createGeneratedVideo } from "@/actions/videos/create"
 import { logger } from "@/lib/logger"
 import { toast } from "sonner"
 import { useLoadingState } from "../../../gallery/components/hooks/use-loading-state"
+
+/** Poll the GPU-aware status route instead of the DB-only server action */
+async function pollVideoStatus(taskId: string): Promise<{ status: string; videos?: any[]; progress?: number }> {
+  const res = await fetch(`/api/video-status/${taskId}`)
+  if (!res.ok) return { status: "processing", progress: 0 }
+  return res.json()
+}
 
 const POLL_INTERVAL = 5000
 
@@ -149,7 +156,7 @@ export function useVideoGeneration(params: UseVideoGenerationParams) {
 
       const taskResults = await Promise.allSettled(
         pendingTaskIds.map(async (taskId) => {
-          const result = await checkVideoStatus({ taskId })
+          const result = await pollVideoStatus(taskId)
           return { taskId, result }
         }),
       )
@@ -158,8 +165,8 @@ export function useVideoGeneration(params: UseVideoGenerationParams) {
         if (taskResult.status === "fulfilled") {
           const { taskId, result } = taskResult.value
 
-          if (!result || "error" in result) {
-            logger.warn(`Error checking task ${taskId}:`, result?.error)
+          if (!result || result.status === "failed") {
+            if (result?.status === "failed") failedTasks.push(taskId)
             continue
           }
 
@@ -168,8 +175,6 @@ export function useVideoGeneration(params: UseVideoGenerationParams) {
             if (result.videos) {
               newVideos.push(...result.videos)
             }
-          } else if (result.status === "failed") {
-            failedTasks.push(taskId)
           }
         }
       }
