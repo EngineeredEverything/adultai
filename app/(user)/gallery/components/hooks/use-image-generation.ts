@@ -41,7 +41,7 @@ export function useImageGeneration(params: UseImageGenerationParams) {
     isGenerating: false,
     ratio: { width: 512, height: 768 }, // SD 1.5 optimal portrait — hires-fix upscales to final size
     isPublic: false, // Default to private - users must explicitly publish
-    count: 1,
+    count: 2, // Default 2 so users can pick their favorite (A/B preference data)
     showSignInDialog: false,
   })
 

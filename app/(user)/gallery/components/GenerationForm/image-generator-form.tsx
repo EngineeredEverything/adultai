@@ -92,7 +92,7 @@ export default function GenerationForm({
   // Set default image count based on plan
   useEffect(() => {
     if (currentPlan) {
-      setCount(Math.min(currentPlan.imagesPerGeneration, 1));
+      setCount(Math.min(currentPlan.imagesPerGeneration, 2));
     }
   }, [currentPlan]);
 

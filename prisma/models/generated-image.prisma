@@ -89,3 +89,16 @@ enum VoteType {
   UPVOTE
   DOWNVOTE
 }
+
+// Tracks which image a user preferred from a generation batch (A/B preference data)
+model ImagePreference {
+  id            String   @id @default(auto()) @map("_id") @db.ObjectId
+  userId        String   @db.ObjectId
+  chosenImageId String   @db.ObjectId
+  rejectedImageIds String[] @db.ObjectId
+  prompt        String
+  createdAt     DateTime @default(now())
+
+  @@index([userId])
+  @@index([chosenImageId])
+}

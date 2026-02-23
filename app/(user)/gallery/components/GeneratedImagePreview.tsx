@@ -5,7 +5,8 @@ import { motion, AnimatePresence } from "framer-motion"
 import { Button } from "@/components/ui/button"
 import { updateImageInfo } from "@/actions/images/update"
 import { toast } from "sonner"
-import { Loader2, Globe, Lock, Download, Trash2 } from "lucide-react"
+import { Loader2, Globe, Lock, Download, Trash2, Heart, Check } from "lucide-react"
+import { recordImagePreference } from "@/actions/images/preference"
 import type { SearchImagesResponseSuccessType } from "@/types/images"
 
 interface GeneratedImagePreviewProps {
@@ -28,8 +29,37 @@ export function GeneratedImagePreview({
   const [publishingIds, setPublishingIds] = useState<Set<string>>(new Set())
   const [savingPrivateIds, setSavingPrivateIds] = useState<Set<string>>(new Set())
   const [deletingIds, setDeletingIds] = useState<Set<string>>(new Set())
+  const [favoriteId, setFavoriteId] = useState<string | null>(null)
+  const [pickingFavorite, setPickingFavorite] = useState(false)
+
+  // Check if we have multiple completed images that need a favorite pick
+  const completedImages = images.filter(
+    (item) => item.image.status === "completed" && item.image.imageUrl
+  )
+  const needsFavoritePick = completedImages.length >= 2 && !favoriteId
 
   if (images.length === 0 && pendingCount === 0) return null
+
+  const handlePickFavorite = async (chosenId: string) => {
+    setPickingFavorite(true)
+    setFavoriteId(chosenId)
+    const rejected = completedImages
+      .filter((img) => img.image.id !== chosenId)
+      .map((img) => img.image.id)
+    const prompt = completedImages[0]?.image.prompt || ""
+    try {
+      await recordImagePreference({
+        chosenImageId: chosenId,
+        rejectedImageIds: rejected,
+        prompt,
+      })
+      toast.success("Thanks! Your preference helps us improve.")
+    } catch {
+      // silent — preference is non-critical
+    } finally {
+      setPickingFavorite(false)
+    }
+  }
 
   const handlePublish = async (imageId: string) => {
     setPublishingIds((prev) => new Set(prev).add(imageId))
@@ -106,8 +136,22 @@ export function GeneratedImagePreview({
     >
       <div className="flex items-center justify-between">
         <h3 className="text-lg font-semibold flex items-center gap-2">
-          <Lock className="w-5 h-5 text-yellow-500" />
-          Your Generated Images (Private)
+          {needsFavoritePick ? (
+            <>
+              <Heart className="w-5 h-5 text-pink-500" />
+              Pick your favorite!
+            </>
+          ) : favoriteId ? (
+            <>
+              <Check className="w-5 h-5 text-green-500" />
+              Great choice! Now save your images.
+            </>
+          ) : (
+            <>
+              <Lock className="w-5 h-5 text-yellow-500" />
+              Your Generated Images
+            </>
+          )}
         </h3>
         {images.length > 0 && (
           <Button
@@ -120,6 +164,11 @@ export function GeneratedImagePreview({
           </Button>
         )}
       </div>
+      {needsFavoritePick && (
+        <p className="text-sm text-gray-400 -mt-2">
+          Tap the image you like best — this helps us personalise your experience.
+        </p>
+      )}
 
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
         <AnimatePresence mode="popLayout">
@@ -164,11 +213,38 @@ export function GeneratedImagePreview({
                     <img
                       src={image.imageUrl}
                       alt={image.prompt}
-                      className="w-full h-full object-cover"
+                      className={`w-full h-full object-cover transition-all duration-300 ${
+                        needsFavoritePick ? "cursor-pointer" : ""
+                      } ${favoriteId && favoriteId !== image.id ? "opacity-50 grayscale" : ""}`}
+                      onClick={() => {
+                        if (needsFavoritePick && !pickingFavorite) {
+                          handlePickFavorite(image.id)
+                        }
+                      }}
                     />
                   ) : (
                     <div className="w-full h-full flex items-center justify-center bg-gray-800">
                       <Loader2 className="w-8 h-8 animate-spin text-purple-500" />
+                    </div>
+                  )}
+
+                  {/* Favorite pick overlay */}
+                  {needsFavoritePick && image.imageUrl && (
+                    <button
+                      onClick={() => !pickingFavorite && handlePickFavorite(image.id)}
+                      className="absolute inset-0 bg-black/0 hover:bg-black/30 transition-all flex items-center justify-center group"
+                    >
+                      <div className="opacity-0 group-hover:opacity-100 transition-opacity bg-pink-600 rounded-full p-3 shadow-xl">
+                        <Heart className="w-8 h-8 text-white fill-white" />
+                      </div>
+                    </button>
+                  )}
+
+                  {/* Chosen badge */}
+                  {favoriteId === image.id && (
+                    <div className="absolute top-2 left-2 bg-pink-600 text-white text-xs font-bold px-2.5 py-1 rounded-full flex items-center gap-1 shadow-lg">
+                      <Heart className="w-3 h-3 fill-white" />
+                      Favorite
                     </div>
                   )}
 
@@ -277,8 +353,17 @@ export function GeneratedImagePreview({
 
       <div className="text-center py-2">
         <p className="text-sm text-gray-400">
-          <Lock className="w-4 h-4 inline mr-1" />
-          &quot;Save Private&quot; keeps images in your private gallery. &quot;Save Public&quot; shares them with everyone.
+          {needsFavoritePick ? (
+            <>
+              <Heart className="w-4 h-4 inline mr-1 text-pink-500" />
+              Tap your favorite to help us learn your style
+            </>
+          ) : (
+            <>
+              <Lock className="w-4 h-4 inline mr-1" />
+              &quot;Save Private&quot; keeps images in your private gallery. &quot;Save Public&quot; shares them with everyone.
+            </>
+          )}
         </p>
       </div>
     </motion.div>
