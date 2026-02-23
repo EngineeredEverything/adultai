@@ -10,6 +10,7 @@ import type { SearchImagesResponseSuccessType } from "@/types/images"
 
 interface GeneratedImagePreviewProps {
   images: SearchImagesResponseSuccessType["images"]
+  pendingCount?: number
   onPublish?: (imageId: string) => void
   onDelete?: (imageId: string) => void
   onClear?: () => void
@@ -17,6 +18,7 @@ interface GeneratedImagePreviewProps {
 
 export function GeneratedImagePreview({
   images,
+  pendingCount = 0,
   onPublish,
   onDelete,
   onClear,
@@ -24,7 +26,7 @@ export function GeneratedImagePreview({
   const [publishingIds, setPublishingIds] = useState<Set<string>>(new Set())
   const [deletingIds, setDeletingIds] = useState<Set<string>>(new Set())
 
-  if (images.length === 0) return null
+  if (images.length === 0 && pendingCount === 0) return null
 
   const handlePublish = async (imageId: string) => {
     setPublishingIds((prev) => new Set(prev).add(imageId))
@@ -103,6 +105,26 @@ export function GeneratedImagePreview({
 
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
         <AnimatePresence mode="popLayout">
+          {/* Pending generation placeholders */}
+          {Array.from({ length: pendingCount }).map((_, i) => (
+            <motion.div
+              key={`pending-${i}`}
+              layout
+              initial={{ opacity: 0, scale: 0.9 }}
+              animate={{ opacity: 1, scale: 1 }}
+              exit={{ opacity: 0, scale: 0.9 }}
+              className="relative bg-gray-900 rounded-xl overflow-hidden border border-purple-500/30"
+            >
+              <div className="aspect-[4/5] relative flex items-center justify-center bg-gray-800/50">
+                <div className="text-center">
+                  <Loader2 className="w-8 h-8 animate-spin text-purple-500 mx-auto mb-2" />
+                  <p className="text-sm text-gray-400">Generating...</p>
+                </div>
+                {/* Shimmer effect */}
+                <div className="absolute inset-0 bg-gradient-to-r from-transparent via-white/5 to-transparent animate-pulse" />
+              </div>
+            </motion.div>
+          ))}
           {images.map((item) => {
             const image = item.image
             const isPublishing = publishingIds.has(image.id)

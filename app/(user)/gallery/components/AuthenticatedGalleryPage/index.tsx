@@ -499,6 +499,9 @@ export default function GalleryPage(props: GalleryPageProps) {
       {/* TOP INPUT SECTION - Only in normal mode */}
       {isNormalMode && (
         <>
+          {/* COMPANION FEATURE BANNER - Above the prompt bar */}
+          <CompanionFeatureBanner />
+
           <div className="flex flex-col sm:flex-row gap-4 justify-between items-center h-full">
             {isLoadingSubscription || isLoadingUser ? (
               <div className="w-full h-[180px] animate-pulse rounded-xl bg-muted" />
@@ -522,12 +525,10 @@ export default function GalleryPage(props: GalleryPageProps) {
             )}
           </div>
 
-          {/* COMPANION FEATURE BANNER - Only in normal mode */}
-          <CompanionFeatureBanner />
-
           {/* GENERATED IMAGES PREVIEW - Only in normal mode */}
           <GeneratedImagePreview
             images={generatedImages}
+            pendingCount={pendingCount}
             onPublish={(imageId) => {
               // Move image from generated to public gallery
               const publishedImage = generatedImages.find(
@@ -615,7 +616,7 @@ export default function GalleryPage(props: GalleryPageProps) {
           loadedImages={loadedImages}
           onDelete={handleDelete}
           user={user}
-          tempImages={isNormalMode ? pendingCount : 0}
+          tempImages={0}
           setLoadedImages={setLoadedImages}
         />
       )}

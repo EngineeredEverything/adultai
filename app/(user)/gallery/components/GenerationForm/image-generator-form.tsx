@@ -5,7 +5,7 @@ import { type Dispatch, type SetStateAction, useState, useEffect } from "react";
 import { AnimatePresence, motion } from "framer-motion";
 import { Textarea } from "@/components/ui/textarea";
 import { Button } from "@/components/ui/button";
-import { MoreHorizontal, AlertTriangle } from "lucide-react";
+import { MoreHorizontal, AlertTriangle, Search, Wand2 } from "lucide-react";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { Navigation } from "./navigation";
 import type { User } from "next-auth";
@@ -17,6 +17,7 @@ import {
 } from "./subscription-utils";
 import { useFeatureAccess } from "./hooks/use-feature-access";
 import { usePremiumModal } from "./hooks/use-premium-modal";
+import { useRouter } from "next/navigation";
 import { logger } from "@/lib/logger";
 
 // Feature Components
@@ -71,11 +72,12 @@ export default function GenerationForm({
 }: GenerationFormProps) {
   // Form state
   const [aspectRatio, setAspectRatio] = useState("4:5");
-  // const [count, setCount] = useState(1);
+  const [mode, setMode] = useState<"generate" | "search">("generate");
   const [selectedModel, setSelectedModel] = useState("3.0-default");
   const [selectedMP, setSelectedMP] = useState("standard");
   const [selectedStyle, setSelectedStyle] = useState("none");
   const [selectedColor, setSelectedColor] = useState("natural");
+  const router = useRouter();
   logger.info({ count });
   // Custom hooks
   const premiumModal = usePremiumModal();
@@ -168,9 +170,15 @@ export default function GenerationForm({
     );
   }
 
+  const handleSearchSubmit = (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!prompt.trim()) return;
+    router.push(`/gallery?search=${encodeURIComponent(prompt.trim())}`);
+  };
+
   return (
     <motion.form
-      onSubmit={handleSubmit}
+      onSubmit={mode === "search" ? handleSearchSubmit : handleSubmit}
       className="max-w-3xl mx-auto"
       initial={{ opacity: 0, y: 20 }}
       animate={{ opacity: 1, y: 0 }}
@@ -182,14 +190,44 @@ export default function GenerationForm({
       )}
 
       <div className="relative">
+        {/* Mode toggle tabs */}
+        <div className="flex border border-b-0 border-border rounded-t-lg overflow-hidden">
+          <button
+            type="button"
+            onClick={() => setMode("generate")}
+            className={`flex-1 flex items-center justify-center gap-2 px-4 py-2.5 text-sm font-medium transition-colors ${
+              mode === "generate"
+                ? "bg-purple-600/20 text-purple-400 border-b-2 border-purple-500"
+                : "bg-muted/50 text-muted-foreground hover:text-foreground hover:bg-muted"
+            }`}
+          >
+            <Wand2 className="w-4 h-4" />
+            Generate
+          </button>
+          <button
+            type="button"
+            onClick={() => setMode("search")}
+            className={`flex-1 flex items-center justify-center gap-2 px-4 py-2.5 text-sm font-medium transition-colors ${
+              mode === "search"
+                ? "bg-blue-600/20 text-blue-400 border-b-2 border-blue-500"
+                : "bg-muted/50 text-muted-foreground hover:text-foreground hover:bg-muted"
+            }`}
+          >
+            <Search className="w-4 h-4" />
+            Search
+          </button>
+        </div>
+
         <Textarea
-          disabled={isGenerating || !featureAccess.canGenerate}
+          disabled={mode === "generate" && (isGenerating || !featureAccess.canGenerate)}
           placeholder={
-            featureAccess.canGenerate
-              ? "Describe what you want to see"
-              : "Upgrade your plan to start generating images"
+            mode === "search"
+              ? "Search images, prompts, or users..."
+              : featureAccess.canGenerate
+                ? "Describe what you want to see"
+                : "Upgrade your plan to start generating images"
           }
-          className="min-h-24 bg-primary/10 border border-border text-foreground resize-none rounded-t-lg"
+          className="min-h-24 bg-primary/10 border border-border border-t-0 text-foreground resize-none"
           value={prompt}
           onChange={(e) => setPrompt(e.target.value)}
         />
@@ -197,6 +235,7 @@ export default function GenerationForm({
         <div className="p-3 bg-muted border border-t-0 border-border rounded-b-lg">
           <div className="flex flex-col space-y-3 sm:space-y-0 sm:flex-row sm:justify-between">
             <div className="flex flex-col sm:flex-row w-full items-center justify-between gap-2 pb-2 sm:pb-0 hide-scrollbar">
+              {mode === "generate" ? (
               <div className="flex items-center gap-2 overflow-x-auto pb-2 sm:pb-0 hide-scrollbar">
                 <PrivacyToggle
                   isPublic={isPublic}
@@ -290,11 +329,18 @@ export default function GenerationForm({
                   </Button>
                 </motion.div>
               </div>
+              ) : (
+              <div className="flex items-center gap-2 flex-1 text-sm text-muted-foreground">
+                <Search className="w-4 h-4" />
+                Search images by prompt, style, or keyword
+              </div>
+              )}
 
               <motion.div
                 whileTap={{ scale: 0.95 }}
                 className="w-full sm:w-auto"
               >
+                {mode === "generate" ? (
                 <Button
                   disabled={
                     isGenerating || !prompt.trim() || !featureAccess.canGenerate
@@ -306,6 +352,18 @@ export default function GenerationForm({
                 >
                   {isGenerating ? "Generating..." : "Generate"}
                 </Button>
+                ) : (
+                <Button
+                  disabled={!prompt.trim()}
+                  variant="default"
+                  type="submit"
+                  size="sm"
+                  className="bg-blue-600 text-white hover:bg-blue-700 w-full sm:w-auto disabled:opacity-50"
+                >
+                  <Search className="w-4 h-4 mr-2" />
+                  Search
+                </Button>
+                )}
               </motion.div>
             </div>
           </div>
