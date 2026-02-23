@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useTransition } from "react";
+import { useState, useTransition, useEffect } from "react";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
@@ -28,6 +28,8 @@ import { useRouter } from "next/navigation";
 import { toast } from "sonner";
 import { GetCurrentUserInfoSuccessType } from "@/types/user";
 import { logger } from "@/lib/logger";
+import { InterestSelector } from "@/components/ui/interest-selector";
+import { getContentInterests } from "@/actions/user/interests";
 
 const profileFormSchema = z.object({
   name: z.string().min(2, {
@@ -58,6 +60,12 @@ const passwordFormSchema = z
 export function ProfileForm({ user }: { user: GetCurrentUserInfoSuccessType }) {
   const [isPending, startTransition] = useTransition();
   const [isPasswordChangePending, startPasswordTransition] = useTransition();
+  const [interests, setInterests] = useState<string[]>([]);
+  const [interestsSaved, setInterestsSaved] = useState(false);
+
+  useEffect(() => {
+    getContentInterests().then(setInterests).catch(() => {});
+  }, []);
   const [isGoogleProvider, setIsGoogleProvider] = useState(
     user?.user.accounts?.provider === "google"
   );
@@ -128,6 +136,7 @@ export function ProfileForm({ user }: { user: GetCurrentUserInfoSuccessType }) {
       <TabsList className="mb-6">
         <TabsTrigger value="general">General</TabsTrigger>
         <TabsTrigger value="password">Password</TabsTrigger>
+        <TabsTrigger value="interests">Interests</TabsTrigger>
       </TabsList>
 
       <TabsContent value="general">
@@ -325,6 +334,29 @@ export function ProfileForm({ user }: { user: GetCurrentUserInfoSuccessType }) {
           </Card>
         )}
       </TabsContent>
+      <TabsContent value="interests">
+        <Card>
+          <CardContent className="pt-6">
+            <p className="text-sm text-muted-foreground mb-4">
+              Tell us what you enjoy — we&apos;ll personalise your gallery and category recommendations accordingly.
+            </p>
+            {interestsSaved && (
+              <div className="mb-4 rounded-lg bg-green-500/10 border border-green-500/30 px-4 py-2 text-sm text-green-600 font-medium">
+                Preferences saved!
+              </div>
+            )}
+            <InterestSelector
+              initialInterests={interests}
+              onSave={(saved) => {
+                setInterests(saved);
+                setInterestsSaved(true);
+                setTimeout(() => setInterestsSaved(false), 3000);
+              }}
+            />
+          </CardContent>
+        </Card>
+      </TabsContent>
+
       {/* Mobile bottom navigation */}
       <div className="md:hidden">
         <MobileBottomNav

@@ -6,6 +6,15 @@ export interface ModelConfig {
   num_inference_steps: number
   guidance_scale: number
   enhance_style?: string
+  // Quality optimization params
+  negative_prompt?: string
+  sampler?: string
+  hires_fix?: boolean
+  hires_scale?: number
+  hires_denoise?: number
+  hires_steps?: number
+  face_restore?: boolean
+  face_restore_strength?: number
 }
 
 export interface GenerateImagesParams {

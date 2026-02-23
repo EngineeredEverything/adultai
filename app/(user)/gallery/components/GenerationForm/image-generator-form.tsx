@@ -103,13 +103,24 @@ export default function GenerationForm({
   const handleAspectRatioChange = (ratio: string) => {
     setAspectRatio(ratio);
     const [w, h] = ratio.split(":").map(Number);
-    let newWidth = 1120,
-      newHeight = 1120;
+    // SD 1.5 optimal: keep short side at 512, long side derived from ratio.
+    // Hires-fix handles upscaling; don't exceed 768 on long side natively.
+    const BASE = 512;
+    let newWidth: number, newHeight: number;
 
-    if (w > h) {
-      newHeight = (h / w) * newWidth;
+    if (w >= h) {
+      // Landscape or square: fix width at 512
+      newWidth = BASE;
+      newHeight = (h / w) * BASE;
     } else {
-      newWidth = (w / h) * newHeight;
+      // Portrait: fix width at 512, scale height
+      newWidth = BASE;
+      newHeight = (h / w) * BASE;
+      // Cap portrait height at 768 (SD 1.5 sweet spot)
+      if (newHeight > 768) {
+        newHeight = 768;
+        newWidth = (w / h) * newHeight;
+      }
     }
 
     const adjusted = adjustDimensions(newWidth, newHeight);

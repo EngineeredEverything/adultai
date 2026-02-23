@@ -49,8 +49,6 @@ export default function MobileGenerateSheet({
   setCount,
 }: MobileGenerateSheetProps) {
   const [aspectRatio, setAspectRatio] = useState("4:5");
-  const [width, setWidth] = useState(896);
-  const [height, setHeight] = useState(1120);
 
   // Ensure dimensions are multiples of 8
   const adjustDimensions = (w: number, h: number) => {
@@ -60,24 +58,25 @@ export default function MobileGenerateSheet({
     };
   };
 
-  const handleAspectRatioChange = (ratio: string) => {
-    setAspectRatio(ratio);
-
-    // Update dimensions based on aspect ratio
-    const [w, h] = ratio.split(":").map(Number);
-    let newWidth, newHeight;
-
-    if (w > h) {
-      newWidth = 1120;
-      newHeight = (h / w) * newWidth;
+  const handleAspectRatioChange = (r: string) => {
+    setAspectRatio(r);
+    const [w, h] = r.split(":").map(Number);
+    // SD 1.5 optimal: short side at 512, portrait height capped at 768
+    const BASE = 512;
+    let newWidth: number, newHeight: number;
+    if (w >= h) {
+      newWidth = BASE;
+      newHeight = (h / w) * BASE;
     } else {
-      newHeight = 1120;
-      newWidth = (w / h) * newHeight;
+      newWidth = BASE;
+      newHeight = (h / w) * BASE;
+      if (newHeight > 768) {
+        newHeight = 768;
+        newWidth = (w / h) * newHeight;
+      }
     }
-
     const adjusted = adjustDimensions(newWidth, newHeight);
-    setWidth(adjusted.width);
-    setHeight(adjusted.height);
+    setRatio({ width: adjusted.width, height: adjusted.height });
   };
 
   return (

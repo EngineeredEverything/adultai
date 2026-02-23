@@ -39,7 +39,7 @@ export function useImageGeneration(params: UseImageGenerationParams) {
   const [state, setState] = useState<GenerationState>({
     prompt: "",
     isGenerating: false,
-    ratio: { width: 896, height: 1120 },
+    ratio: { width: 512, height: 768 }, // SD 1.5 optimal portrait — hires-fix upscales to final size
     isPublic: false, // Default to private - users must explicitly publish
     count: 1,
     showSignInDialog: false,
