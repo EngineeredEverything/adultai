@@ -12,6 +12,7 @@ interface GeneratedImagePreviewProps {
   images: SearchImagesResponseSuccessType["images"]
   pendingCount?: number
   onPublish?: (imageId: string) => void
+  onSavePrivate?: (imageId: string) => void
   onDelete?: (imageId: string) => void
   onClear?: () => void
 }
@@ -20,10 +21,12 @@ export function GeneratedImagePreview({
   images,
   pendingCount = 0,
   onPublish,
+  onSavePrivate,
   onDelete,
   onClear,
 }: GeneratedImagePreviewProps) {
   const [publishingIds, setPublishingIds] = useState<Set<string>>(new Set())
+  const [savingPrivateIds, setSavingPrivateIds] = useState<Set<string>>(new Set())
   const [deletingIds, setDeletingIds] = useState<Set<string>>(new Set())
 
   if (images.length === 0 && pendingCount === 0) return null
@@ -48,6 +51,21 @@ export function GeneratedImagePreview({
       toast.error("Failed to publish image")
     } finally {
       setPublishingIds((prev) => {
+        const next = new Set(prev)
+        next.delete(imageId)
+        return next
+      })
+    }
+  }
+
+  const handleSavePrivate = async (imageId: string) => {
+    setSavingPrivateIds((prev) => new Set(prev).add(imageId))
+    try {
+      // Image is already private in DB — just remove from preview
+      toast.success("Saved to your private gallery!")
+      onSavePrivate?.(imageId)
+    } finally {
+      setSavingPrivateIds((prev) => {
         const next = new Set(prev)
         next.delete(imageId)
         return next
@@ -184,45 +202,70 @@ export function GeneratedImagePreview({
                     </p>
 
                     {/* Actions */}
-                    <div className="flex gap-2">
-                      <Button
-                        size="sm"
-                        onClick={() => handlePublish(image.id)}
-                        disabled={isPublishing || isDeleting}
-                        className="flex-1 bg-gradient-to-r from-purple-600 to-pink-600 hover:from-purple-700 hover:to-pink-700"
-                      >
-                        {isPublishing ? (
-                          <>
-                            <Loader2 className="w-4 h-4 mr-2 animate-spin" />
-                            Publishing
-                          </>
-                        ) : (
-                          <>
-                            <Globe className="w-4 h-4 mr-2" />
-                            Publish
-                          </>
-                        )}
-                      </Button>
+                    <div className="flex flex-col gap-2">
+                      <div className="flex gap-2">
+                        <Button
+                          size="sm"
+                          onClick={() => handleSavePrivate(image.id)}
+                          disabled={isPublishing || isDeleting || savingPrivateIds.has(image.id)}
+                          variant="outline"
+                          className="flex-1 border-yellow-600/50 text-yellow-500 hover:bg-yellow-600/10 hover:border-yellow-500"
+                        >
+                          {savingPrivateIds.has(image.id) ? (
+                            <>
+                              <Loader2 className="w-4 h-4 mr-1.5 animate-spin" />
+                              Saving
+                            </>
+                          ) : (
+                            <>
+                              <Lock className="w-4 h-4 mr-1.5" />
+                              Save Private
+                            </>
+                          )}
+                        </Button>
 
-                      <Button
-                        size="sm"
-                        variant="outline"
-                        onClick={() => handleDownload(image.imageUrl!, image.id)}
-                        disabled={isPublishing || isDeleting}
-                        className="border-gray-700"
-                      >
-                        <Download className="w-4 h-4" />
-                      </Button>
+                        <Button
+                          size="sm"
+                          onClick={() => handlePublish(image.id)}
+                          disabled={isPublishing || isDeleting || savingPrivateIds.has(image.id)}
+                          className="flex-1 bg-gradient-to-r from-purple-600 to-pink-600 hover:from-purple-700 hover:to-pink-700"
+                        >
+                          {isPublishing ? (
+                            <>
+                              <Loader2 className="w-4 h-4 mr-1.5 animate-spin" />
+                              Publishing
+                            </>
+                          ) : (
+                            <>
+                              <Globe className="w-4 h-4 mr-1.5" />
+                              Save Public
+                            </>
+                          )}
+                        </Button>
+                      </div>
 
-                      <Button
-                        size="sm"
-                        variant="outline"
-                        onClick={() => handleDelete(image.id)}
-                        disabled={isPublishing || isDeleting}
-                        className="border-gray-700 hover:border-red-500 hover:text-red-500"
-                      >
-                        <Trash2 className="w-4 h-4" />
-                      </Button>
+                      <div className="flex gap-2">
+                        <Button
+                          size="sm"
+                          variant="outline"
+                          onClick={() => handleDownload(image.imageUrl!, image.id)}
+                          disabled={isPublishing || isDeleting}
+                          className="flex-1 border-gray-700"
+                        >
+                          <Download className="w-4 h-4 mr-1.5" />
+                          Download
+                        </Button>
+
+                        <Button
+                          size="sm"
+                          variant="outline"
+                          onClick={() => handleDelete(image.id)}
+                          disabled={isPublishing || isDeleting}
+                          className="border-gray-700 hover:border-red-500 hover:text-red-500"
+                        >
+                          <Trash2 className="w-4 h-4" />
+                        </Button>
+                      </div>
                     </div>
                   </div>
                 )}
@@ -235,7 +278,7 @@ export function GeneratedImagePreview({
       <div className="text-center py-2">
         <p className="text-sm text-gray-400">
           <Lock className="w-4 h-4 inline mr-1" />
-          These images are private and only visible to you. Click &quot;Publish&quot; to add them to the public gallery.
+          &quot;Save Private&quot; keeps images in your private gallery. &quot;Save Public&quot; shares them with everyone.
         </p>
       </div>
     </motion.div>

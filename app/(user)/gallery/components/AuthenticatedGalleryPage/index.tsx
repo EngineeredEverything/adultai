@@ -542,6 +542,12 @@ export default function GalleryPage(props: GalleryPageProps) {
                 );
               }
             }}
+            onSavePrivate={(imageId) => {
+              // Image is already private in DB — just remove from preview
+              setGeneratedImages((prev) =>
+                prev.filter((img) => img.image.id !== imageId)
+              );
+            }}
             onDelete={async (imageId) => {
               // Remove from generated images
               setGeneratedImages((prev) =>
