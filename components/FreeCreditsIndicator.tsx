@@ -81,7 +81,7 @@ export default function FreeCreditsIndicator({
               "Upgrade to continue generating images"
             ) : isLow ? (
               <>
-                You're running low on free generations.{" "}
+                You&apos;re running low on free generations.{" "}
                 <Link href="/subscription" className="text-purple-400 hover:text-purple-300 underline">
                   Upgrade now
                 </Link>{" "}
