@@ -178,8 +178,8 @@ export async function generateImages({
   seeds,
   count = 4,
   modelConfig = MODEL_CONFIGS.sdxl,
-  width = 1024,
-  height = 1024,
+  width = 512,
+  height = 768,
 }: GenerateImagesParams): Promise<ImageResult[]> {
   if (!prompt) {
     throw new ImageGenerationError("Prompt is required", 400, false);

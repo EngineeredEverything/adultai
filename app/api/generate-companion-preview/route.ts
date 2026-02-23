@@ -26,12 +26,18 @@ export async function POST(request: NextRequest) {
         'X-API-Key': GPU_API_KEY
       },
       body: JSON.stringify({
-        prompt: prompt + ', photorealistic, detailed face, 8k',
-        negative_prompt: 'low quality, blurry, deformed, ugly, child, young, minor, cartoon',
+        prompt: prompt + ', photorealistic, detailed face, natural skin, soft lighting',
+        negative_prompt: '(worst quality, low quality:1.4), blurry, deformed, bad anatomy, extra fingers, poorly drawn hands, plastic skin, oversharpened, watermark, text, logo, cgi, 3d render, cartoon, child, minor',
         width: 512,
         height: 768,
-        num_inference_steps: 30,
-        guidance_scale: 7.5
+        num_inference_steps: 42,
+        guidance_scale: 6.8,
+        hires_fix: true,
+        hires_scale: 1.75,
+        hires_denoise: 0.4,
+        hires_steps: 28,
+        face_restore: true,
+        face_restore_strength: 0.2
       })
     });
 

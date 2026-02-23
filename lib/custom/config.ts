@@ -13,13 +13,13 @@ export const MODEL_CONFIGS: Record<string, ModelConfig> = {
   flux: {
     lora_model: "uncensored-flux-lora",
     lora_strength: 0.8,
-    num_inference_steps: 30,
-    guidance_scale: 7.5,
+    num_inference_steps: 42,
+    guidance_scale: 6.8,
     model_id: "",
   },
   sdxl: {
-    num_inference_steps: 30,
-    guidance_scale: 7.5,
+    num_inference_steps: 42,
+    guidance_scale: 6.8,
     enhance_style: "nude",
     model_id: "",
   },

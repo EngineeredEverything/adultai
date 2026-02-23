@@ -57,7 +57,7 @@ export async function GET(
     // 1. Check DB first
     const dbVideos = await db.generatedVideo.findMany({
       where: { taskId, userId: user.id },
-      select: { id: true, status: true, videoUrl: true, cdnUrl: true },
+      select: { id: true, status: true, videoUrl: true },
     })
 
     if (dbVideos.length === 0) {
@@ -70,7 +70,7 @@ export async function GET(
 
     if (anyCompleted) {
       const videos = dbVideos.filter((v) => v.status === "completed")
-      return NextResponse.json({ status: "completed", videos })
+      return NextResponse.json({ status: "completed", videos, cdnUrl: videos[0]?.videoUrl })
     }
 
     if (allFailed) {
@@ -122,7 +122,7 @@ export async function GET(
           where: { taskId, userId: user.id },
           select: { id: true, status: true, videoUrl: true },
         })
-        return NextResponse.json({ status: "completed", videos: updated, cdnUrl })
+        return NextResponse.json({ status: "completed", videos: updated, cdnUrl: cdnUrl })
       } catch (uploadErr) {
         logger.error("[video-status] CDN upload failed", { taskId, error: String(uploadErr) })
         return NextResponse.json({ status: "processing", progress: 99 })

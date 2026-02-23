@@ -51,8 +51,8 @@ export const createGeneratedImagesRAW = async (user: User, data: z.infer<typeof 
       seeds,
       count: data.count,
       modelConfig,
-      width: data.width || 1024,
-      height: data.height || 1024,
+      width: data.width || 512,
+      height: data.height || 768,
       userId: user.id,
     })
 
@@ -64,8 +64,8 @@ export const createGeneratedImagesRAW = async (user: User, data: z.infer<typeof 
       response.taskId,
       modelConfig,
       0, // No cost for bots
-      data.width || 1024,
-      data.height || 1024,
+      data.width || 512,
+      data.height || 768,
       response.futureLinks || [],
     )
 
@@ -133,8 +133,8 @@ export const createGeneratedImagesRAW = async (user: User, data: z.infer<typeof 
     seeds,
     count: data.count,
     modelConfig,
-    width: data.width || 1024,
-    height: data.height || 1024,
+    width: data.width || 512,
+    height: data.height || 768,
     userId: user.id,
   })
 
@@ -146,8 +146,8 @@ export const createGeneratedImagesRAW = async (user: User, data: z.infer<typeof 
     response.taskId,
     modelConfig,
     totalCost,
-    data.width || 1024,
-    data.height || 1024,
+    data.width || 512,
+    data.height || 768,
     response.futureLinks || [],
   )
 
@@ -441,8 +441,8 @@ export const createSingleGeneratedImage = async (prompt: string) => {
   return await createGeneratedImage({
     prompt,
     count: 1,
-    width: 1024,
-    height: 1024,
+    width: 512,
+    height: 768,
     isPublic: true,
   })
 }

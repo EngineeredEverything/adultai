@@ -207,7 +207,7 @@ export const searchVideosInfoRAW = async (
       ])
 
       if (!videos || videos.length === 0) {
-        throw new Error("No videos found")
+        return { videos: [], count: 0 }
       }
 
       const videosInfo = await getVideosInfoRAW(
@@ -284,7 +284,7 @@ async function getFilteredVideos(
   ])
 
   if (!videos || videos.length === 0) {
-    throw new Error("No videos found")
+    return { videos: [], count: 0 }
   }
 
   const videosInfo = await getVideosInfoRAW(

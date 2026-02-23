@@ -5,11 +5,11 @@ const GPU_API_KEY = process.env.GPU_API_KEY || "Pd10V9L4ULaOxmq93oHTktk6Fa5FxjX2
 
 const QUALITY_SUFFIX = ", masterpiece, best quality, ultra-detailed, photorealistic, 8k"
 const NEGATIVE_DEFAULT =
-  "deformed, ugly, bad anatomy, bad hands, extra fingers, mutated, poorly drawn face, blurry, watermark, text, logo, lowres, worst quality"
+  "(worst quality, low quality:1.4), blurry, bad anatomy, extra fingers, extra limbs, poorly drawn hands, deformed, jpeg artifacts, oversharpened, plastic skin, watermark, text, logo, cgi, 3d render, cartoon, doll skin, smooth skin"
 
 export async function POST(req: NextRequest) {
   try {
-    const { imageUrl, prompt, negativePrompt, strength = 0.65, steps = 30, seed } = await req.json()
+    const { imageUrl, prompt, negativePrompt, strength = 0.4, steps = 42, seed } = await req.json()
 
     if (!imageUrl || !prompt) {
       return NextResponse.json({ error: "imageUrl and prompt are required" }, { status: 400 })
@@ -24,7 +24,7 @@ export async function POST(req: NextRequest) {
         negative_prompt: negativePrompt || NEGATIVE_DEFAULT,
         strength,
         steps,
-        guidance_scale: 7.5,
+        guidance_scale: 6.8,
         seed: seed ?? undefined,
       }),
       signal: AbortSignal.timeout(120000),

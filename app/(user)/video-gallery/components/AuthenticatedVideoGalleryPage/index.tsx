@@ -10,6 +10,7 @@ import { VideoGenerationForm } from "../GenerationForm/desktop"
 import type { SearchVideosResponseSuccessType } from "@/types/videos"
 import { toast } from "sonner"
 import { searchVideos } from "@/actions/videos/info"
+import { getCurrentUserInfo } from "@/actions/user/info"
 
 interface AuthenticatedVideoGalleryPageProps {
   userId?: string
@@ -39,6 +40,14 @@ export default function AuthenticatedVideoGalleryPage({
       try {
         setIsLoading(true)
 
+        // Fetch current user
+        if (userId) {
+          const userResult = await getCurrentUserInfo({})
+          if (userResult && !("error" in userResult)) {
+            setUser(userResult)
+          }
+        }
+
         const videosResult = await searchVideos({
           query: searchQuery,
           filters: {},
@@ -52,23 +61,19 @@ export default function AuthenticatedVideoGalleryPage({
           },
         })
 
-        if ("error" in videosResult) {
-          throw new Error(videosResult.error)
+        // Empty gallery is fine — just show empty state
+        if (!("error" in videosResult)) {
+          setVideos(videosResult.videos)
         }
-
-        setVideos(videosResult.videos)
       } catch (error) {
         logger.error("Error fetching initial data:", error)
-        toast.error("Error", {
-          description: "Failed to load videos",
-        })
       } finally {
         setIsLoading(false)
       }
     }
 
     fetchInitialData()
-  }, [searchQuery])
+  }, [searchQuery, userId])
 
   const handleVideoClick = useCallback((video: SearchVideosResponseSuccessType["videos"][number]) => {
     setSelectedVideo(video)

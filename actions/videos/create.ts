@@ -75,16 +75,17 @@ export const createGeneratedVideosRAW = async (user: User, data: z.infer<typeof 
     }
   }
 
-  const { plan } = await getUserActivePlan(user.id)
-  if (!plan) {
-    logger.error("No plan found for user", { userId: user.id })
-    throw new Error("No plan found for user")
+  // Best-effort plan check — don't block generation if no plan found yet
+  let totalCost = 0
+  try {
+    const { plan } = await getUserActivePlan(user.id)
+    if (plan) {
+      totalCost = data.count * NEXT_PUBLIC_NUTS_PER_VIDEO
+      await checkAndUpdateUsage(user.id, data.count, totalCost)
+    }
+  } catch (planErr) {
+    logger.warn("Plan check skipped — allowing generation without plan", { userId: user.id })
   }
-
-  const totalCost = data.count * NEXT_PUBLIC_NUTS_PER_VIDEO
-  logger.debug("Calculated generation cost", { userId: user.id, totalCost, nutsPerVideo: NEXT_PUBLIC_NUTS_PER_VIDEO })
-
-  await checkAndUpdateUsage(user.id, data.count, totalCost)
 
   const seeds = Array.from({ length: data.count }, () => Math.floor(Math.random() * 1000000))
 
