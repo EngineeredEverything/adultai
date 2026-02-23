@@ -4,10 +4,12 @@ import { useState } from "react"
 import { motion, AnimatePresence } from "framer-motion"
 import { Button } from "@/components/ui/button"
 import { updateImageInfo } from "@/actions/images/update"
-import { toast } from "sonner"
-import { Loader2, Globe, Lock, Download, Trash2, Heart, Check } from "lucide-react"
 import { recordImagePreference } from "@/actions/images/preference"
+import { toast } from "sonner"
+import { Loader2, Globe, Lock, Download, Trash2, X, ChevronLeft, ChevronRight } from "lucide-react"
 import type { SearchImagesResponseSuccessType } from "@/types/images"
+
+type ImageItem = SearchImagesResponseSuccessType["images"][number]
 
 interface GeneratedImagePreviewProps {
   images: SearchImagesResponseSuccessType["images"]
@@ -29,83 +31,61 @@ export function GeneratedImagePreview({
   const [publishingIds, setPublishingIds] = useState<Set<string>>(new Set())
   const [savingPrivateIds, setSavingPrivateIds] = useState<Set<string>>(new Set())
   const [deletingIds, setDeletingIds] = useState<Set<string>>(new Set())
-  const [favoriteId, setFavoriteId] = useState<string | null>(null)
-  const [pickingFavorite, setPickingFavorite] = useState(false)
+  // Full-size lightbox
+  const [viewingImage, setViewingImage] = useState<ImageItem | null>(null)
 
-  // Check if we have multiple completed images that need a favorite pick
   const completedImages = images.filter(
     (item) => item.image.status === "completed" && item.image.imageUrl
   )
-  const needsFavoritePick = completedImages.length >= 2 && !favoriteId
 
   if (images.length === 0 && pendingCount === 0) return null
 
-  const handlePickFavorite = async (chosenId: string) => {
-    setPickingFavorite(true)
-    setFavoriteId(chosenId)
+  // Record implicit preference when user saves an image (the saved one is preferred)
+  const recordPreferenceOnSave = async (chosenId: string) => {
+    if (completedImages.length < 2) return
     const rejected = completedImages
       .filter((img) => img.image.id !== chosenId)
       .map((img) => img.image.id)
     const prompt = completedImages[0]?.image.prompt || ""
     try {
-      await recordImagePreference({
-        chosenImageId: chosenId,
-        rejectedImageIds: rejected,
-        prompt,
-      })
-      toast.success("Thanks! Your preference helps us improve.")
+      await recordImagePreference({ chosenImageId: chosenId, rejectedImageIds: rejected, prompt })
     } catch {
-      // silent — preference is non-critical
-    } finally {
-      setPickingFavorite(false)
+      // non-critical
     }
   }
 
   const handlePublish = async (imageId: string) => {
     setPublishingIds((prev) => new Set(prev).add(imageId))
-    
     try {
-      const result = await updateImageInfo({
-        imageId,
-        isPublic: true,
-      })
-
+      const result = await updateImageInfo({ imageId, isPublic: true })
       if ("error" in result) {
         toast.error("Failed to publish image")
       } else {
         toast.success("Image published to gallery!")
+        recordPreferenceOnSave(imageId)
         onPublish?.(imageId)
       }
     } catch (error) {
       console.error("Error publishing image:", error)
       toast.error("Failed to publish image")
     } finally {
-      setPublishingIds((prev) => {
-        const next = new Set(prev)
-        next.delete(imageId)
-        return next
-      })
+      setPublishingIds((prev) => { const n = new Set(prev); n.delete(imageId); return n })
     }
   }
 
   const handleSavePrivate = async (imageId: string) => {
     setSavingPrivateIds((prev) => new Set(prev).add(imageId))
     try {
-      // Image is already private in DB — just remove from preview
       toast.success("Saved to your private gallery!")
+      recordPreferenceOnSave(imageId)
       onSavePrivate?.(imageId)
     } finally {
-      setSavingPrivateIds((prev) => {
-        const next = new Set(prev)
-        next.delete(imageId)
-        return next
-      })
+      setSavingPrivateIds((prev) => { const n = new Set(prev); n.delete(imageId); return n })
     }
   }
 
   const handleDelete = async (imageId: string) => {
     setDeletingIds((prev) => new Set(prev).add(imageId))
-    // Call parent handler which will remove from preview
     onDelete?.(imageId)
   }
 
@@ -122,250 +102,282 @@ export function GeneratedImagePreview({
       window.URL.revokeObjectURL(url)
       document.body.removeChild(a)
       toast.success("Image downloaded!")
-    } catch (error) {
-      console.error("Error downloading image:", error)
+    } catch {
       toast.error("Failed to download image")
     }
   }
 
+  // Lightbox navigation
+  const viewingIndex = viewingImage
+    ? completedImages.findIndex((img) => img.image.id === viewingImage.image.id)
+    : -1
+  const canGoPrev = viewingIndex > 0
+  const canGoNext = viewingIndex < completedImages.length - 1
+
   return (
-    <motion.div
-      initial={{ opacity: 0, y: 20 }}
-      animate={{ opacity: 1, y: 0 }}
-      className="mt-6 space-y-4"
-    >
-      <div className="flex items-center justify-between">
-        <h3 className="text-lg font-semibold flex items-center gap-2">
-          {needsFavoritePick ? (
-            <>
-              <Heart className="w-5 h-5 text-pink-500" />
-              Pick your favorite!
-            </>
-          ) : favoriteId ? (
-            <>
-              <Check className="w-5 h-5 text-green-500" />
-              Great choice! Now save your images.
-            </>
-          ) : (
-            <>
-              <Lock className="w-5 h-5 text-yellow-500" />
-              Your Generated Images
-            </>
-          )}
-        </h3>
-        {images.length > 0 && (
-          <Button
-            variant="ghost"
-            size="sm"
-            onClick={onClear}
-            className="text-sm text-gray-400 hover:text-white"
-          >
-            Clear All
-          </Button>
-        )}
-      </div>
-      {needsFavoritePick && (
-        <p className="text-sm text-gray-400 -mt-2">
-          Tap the image you like best — this helps us personalise your experience.
-        </p>
-      )}
-
-      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
-        <AnimatePresence mode="popLayout">
-          {/* Pending generation placeholders */}
-          {Array.from({ length: pendingCount }).map((_, i) => (
-            <motion.div
-              key={`pending-${i}`}
-              layout
-              initial={{ opacity: 0, scale: 0.9 }}
-              animate={{ opacity: 1, scale: 1 }}
-              exit={{ opacity: 0, scale: 0.9 }}
-              className="relative bg-gray-900 rounded-xl overflow-hidden border border-purple-500/30"
+    <>
+      <motion.div
+        initial={{ opacity: 0, y: 20 }}
+        animate={{ opacity: 1, y: 0 }}
+        className="mt-6 space-y-4"
+      >
+        <div className="flex items-center justify-between">
+          <h3 className="text-lg font-semibold flex items-center gap-2">
+            <Lock className="w-5 h-5 text-yellow-500" />
+            Your Generated Images
+          </h3>
+          {images.length > 0 && (
+            <Button
+              variant="ghost"
+              size="sm"
+              onClick={onClear}
+              className="text-sm text-gray-400 hover:text-white"
             >
-              <div className="aspect-[4/5] relative flex items-center justify-center bg-gray-800/50">
-                <div className="text-center">
-                  <Loader2 className="w-8 h-8 animate-spin text-purple-500 mx-auto mb-2" />
-                  <p className="text-sm text-gray-400">Generating...</p>
-                </div>
-                {/* Shimmer effect */}
-                <div className="absolute inset-0 bg-gradient-to-r from-transparent via-white/5 to-transparent animate-pulse" />
-              </div>
-            </motion.div>
-          ))}
-          {images.map((item) => {
-            const image = item.image
-            const isPublishing = publishingIds.has(image.id)
-            const isDeleting = deletingIds.has(image.id)
-            const isProcessing = image.status === "processing"
+              Clear All
+            </Button>
+          )}
+        </div>
 
-            return (
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
+          <AnimatePresence mode="popLayout">
+            {/* Pending generation placeholders */}
+            {Array.from({ length: pendingCount }).map((_, i) => (
               <motion.div
-                key={image.id}
+                key={`pending-${i}`}
                 layout
                 initial={{ opacity: 0, scale: 0.9 }}
                 animate={{ opacity: 1, scale: 1 }}
                 exit={{ opacity: 0, scale: 0.9 }}
-                className="group relative bg-gray-900 rounded-xl overflow-hidden border border-gray-800 hover:border-purple-500/50 transition-all"
+                className="relative bg-gray-900 rounded-xl overflow-hidden border border-purple-500/30"
               >
-                {/* Image */}
-                <div className="aspect-[4/5] relative">
-                  {image.imageUrl ? (
-                    <img
-                      src={image.imageUrl}
-                      alt={image.prompt}
-                      className={`w-full h-full object-cover transition-all duration-300 ${
-                        needsFavoritePick ? "cursor-pointer" : ""
-                      } ${favoriteId && favoriteId !== image.id ? "opacity-50 grayscale" : ""}`}
-                      onClick={() => {
-                        if (needsFavoritePick && !pickingFavorite) {
-                          handlePickFavorite(image.id)
-                        }
-                      }}
-                    />
-                  ) : (
-                    <div className="w-full h-full flex items-center justify-center bg-gray-800">
-                      <Loader2 className="w-8 h-8 animate-spin text-purple-500" />
-                    </div>
-                  )}
-
-                  {/* Favorite pick overlay */}
-                  {needsFavoritePick && image.imageUrl && (
-                    <button
-                      onClick={() => !pickingFavorite && handlePickFavorite(image.id)}
-                      className="absolute inset-0 bg-black/0 hover:bg-black/30 transition-all flex items-center justify-center group"
-                    >
-                      <div className="opacity-0 group-hover:opacity-100 transition-opacity bg-pink-600 rounded-full p-3 shadow-xl">
-                        <Heart className="w-8 h-8 text-white fill-white" />
-                      </div>
-                    </button>
-                  )}
-
-                  {/* Chosen badge */}
-                  {favoriteId === image.id && (
-                    <div className="absolute top-2 left-2 bg-pink-600 text-white text-xs font-bold px-2.5 py-1 rounded-full flex items-center gap-1 shadow-lg">
-                      <Heart className="w-3 h-3 fill-white" />
-                      Favorite
-                    </div>
-                  )}
-
-                  {/* Processing overlay */}
-                  {isProcessing && (
-                    <div className="absolute inset-0 bg-black/60 flex items-center justify-center">
-                      <div className="text-center">
-                        <Loader2 className="w-8 h-8 animate-spin text-purple-500 mx-auto mb-2" />
-                        <p className="text-sm text-gray-300">Generating...</p>
-                      </div>
-                    </div>
-                  )}
-
-                  {/* Publishing overlay */}
-                  {isPublishing && (
-                    <div className="absolute inset-0 bg-black/60 flex items-center justify-center">
-                      <div className="text-center">
-                        <Loader2 className="w-8 h-8 animate-spin text-purple-500 mx-auto mb-2" />
-                        <p className="text-sm text-gray-300">Publishing...</p>
-                      </div>
-                    </div>
-                  )}
-                </div>
-
-                {/* Info & Actions */}
-                {!isProcessing && image.imageUrl && (
-                  <div className="p-3 space-y-2">
-                    {/* Prompt */}
-                    <p className="text-sm text-gray-400 line-clamp-2">
-                      {image.prompt}
-                    </p>
-
-                    {/* Actions */}
-                    <div className="flex flex-col gap-2">
-                      <div className="flex gap-2">
-                        <Button
-                          size="sm"
-                          onClick={() => handleSavePrivate(image.id)}
-                          disabled={isPublishing || isDeleting || savingPrivateIds.has(image.id)}
-                          variant="outline"
-                          className="flex-1 border-yellow-600/50 text-yellow-500 hover:bg-yellow-600/10 hover:border-yellow-500"
-                        >
-                          {savingPrivateIds.has(image.id) ? (
-                            <>
-                              <Loader2 className="w-4 h-4 mr-1.5 animate-spin" />
-                              Saving
-                            </>
-                          ) : (
-                            <>
-                              <Lock className="w-4 h-4 mr-1.5" />
-                              Save Private
-                            </>
-                          )}
-                        </Button>
-
-                        <Button
-                          size="sm"
-                          onClick={() => handlePublish(image.id)}
-                          disabled={isPublishing || isDeleting || savingPrivateIds.has(image.id)}
-                          className="flex-1 bg-gradient-to-r from-purple-600 to-pink-600 hover:from-purple-700 hover:to-pink-700"
-                        >
-                          {isPublishing ? (
-                            <>
-                              <Loader2 className="w-4 h-4 mr-1.5 animate-spin" />
-                              Publishing
-                            </>
-                          ) : (
-                            <>
-                              <Globe className="w-4 h-4 mr-1.5" />
-                              Save Public
-                            </>
-                          )}
-                        </Button>
-                      </div>
-
-                      <div className="flex gap-2">
-                        <Button
-                          size="sm"
-                          variant="outline"
-                          onClick={() => handleDownload(image.imageUrl!, image.id)}
-                          disabled={isPublishing || isDeleting}
-                          className="flex-1 border-gray-700"
-                        >
-                          <Download className="w-4 h-4 mr-1.5" />
-                          Download
-                        </Button>
-
-                        <Button
-                          size="sm"
-                          variant="outline"
-                          onClick={() => handleDelete(image.id)}
-                          disabled={isPublishing || isDeleting}
-                          className="border-gray-700 hover:border-red-500 hover:text-red-500"
-                        >
-                          <Trash2 className="w-4 h-4" />
-                        </Button>
-                      </div>
-                    </div>
+                <div className="aspect-[4/5] relative flex items-center justify-center bg-gray-800/50">
+                  <div className="text-center">
+                    <Loader2 className="w-8 h-8 animate-spin text-purple-500 mx-auto mb-2" />
+                    <p className="text-sm text-gray-400">Generating...</p>
                   </div>
-                )}
+                  <div className="absolute inset-0 bg-gradient-to-r from-transparent via-white/5 to-transparent animate-pulse" />
+                </div>
               </motion.div>
-            )
-          })}
-        </AnimatePresence>
-      </div>
+            ))}
 
-      <div className="text-center py-2">
-        <p className="text-sm text-gray-400">
-          {needsFavoritePick ? (
-            <>
-              <Heart className="w-4 h-4 inline mr-1 text-pink-500" />
-              Tap your favorite to help us learn your style
-            </>
-          ) : (
-            <>
-              <Lock className="w-4 h-4 inline mr-1" />
-              &quot;Save Private&quot; keeps images in your private gallery. &quot;Save Public&quot; shares them with everyone.
-            </>
-          )}
-        </p>
-      </div>
-    </motion.div>
+            {images.map((item) => {
+              const image = item.image
+              const isPublishing = publishingIds.has(image.id)
+              const isDeleting = deletingIds.has(image.id)
+              const isProcessing = image.status === "processing"
+              const isBusy = isPublishing || isDeleting || savingPrivateIds.has(image.id)
+
+              return (
+                <motion.div
+                  key={image.id}
+                  layout
+                  initial={{ opacity: 0, scale: 0.9 }}
+                  animate={{ opacity: 1, scale: 1 }}
+                  exit={{ opacity: 0, scale: 0.9 }}
+                  className="group relative bg-gray-900 rounded-xl overflow-hidden border border-gray-800 hover:border-purple-500/50 transition-all"
+                >
+                  {/* Image — click to view full size */}
+                  <div className="aspect-[4/5] relative">
+                    {image.imageUrl ? (
+                      <img
+                        src={image.imageUrl}
+                        alt={image.prompt}
+                        className="w-full h-full object-cover cursor-pointer transition-transform duration-200 hover:scale-[1.02]"
+                        onClick={() => setViewingImage(item)}
+                      />
+                    ) : (
+                      <div className="w-full h-full flex items-center justify-center bg-gray-800">
+                        <Loader2 className="w-8 h-8 animate-spin text-purple-500" />
+                      </div>
+                    )}
+
+                    {isProcessing && (
+                      <div className="absolute inset-0 bg-black/60 flex items-center justify-center">
+                        <div className="text-center">
+                          <Loader2 className="w-8 h-8 animate-spin text-purple-500 mx-auto mb-2" />
+                          <p className="text-sm text-gray-300">Generating...</p>
+                        </div>
+                      </div>
+                    )}
+
+                    {isPublishing && (
+                      <div className="absolute inset-0 bg-black/60 flex items-center justify-center">
+                        <div className="text-center">
+                          <Loader2 className="w-8 h-8 animate-spin text-purple-500 mx-auto mb-2" />
+                          <p className="text-sm text-gray-300">Publishing...</p>
+                        </div>
+                      </div>
+                    )}
+                  </div>
+
+                  {/* Actions */}
+                  {!isProcessing && image.imageUrl && (
+                    <div className="p-3 space-y-2">
+                      <p className="text-sm text-gray-400 line-clamp-2">{image.prompt}</p>
+
+                      <div className="flex flex-col gap-2">
+                        <div className="flex gap-2">
+                          <Button
+                            size="sm"
+                            onClick={() => handleSavePrivate(image.id)}
+                            disabled={isBusy}
+                            variant="outline"
+                            className="flex-1 border-yellow-600/50 text-yellow-500 hover:bg-yellow-600/10 hover:border-yellow-500"
+                          >
+                            <Lock className="w-4 h-4 mr-1.5" />
+                            Save Private
+                          </Button>
+                          <Button
+                            size="sm"
+                            onClick={() => handlePublish(image.id)}
+                            disabled={isBusy}
+                            className="flex-1 bg-gradient-to-r from-purple-600 to-pink-600 hover:from-purple-700 hover:to-pink-700"
+                          >
+                            {isPublishing ? (
+                              <Loader2 className="w-4 h-4 mr-1.5 animate-spin" />
+                            ) : (
+                              <Globe className="w-4 h-4 mr-1.5" />
+                            )}
+                            Save Public
+                          </Button>
+                        </div>
+                        <div className="flex gap-2">
+                          <Button
+                            size="sm"
+                            variant="outline"
+                            onClick={() => handleDownload(image.imageUrl!, image.id)}
+                            disabled={isBusy}
+                            className="flex-1 border-gray-700"
+                          >
+                            <Download className="w-4 h-4 mr-1.5" />
+                            Download
+                          </Button>
+                          <Button
+                            size="sm"
+                            variant="outline"
+                            onClick={() => handleDelete(image.id)}
+                            disabled={isBusy}
+                            className="border-gray-700 hover:border-red-500 hover:text-red-500"
+                          >
+                            <Trash2 className="w-4 h-4" />
+                          </Button>
+                        </div>
+                      </div>
+                    </div>
+                  )}
+                </motion.div>
+              )
+            })}
+          </AnimatePresence>
+        </div>
+
+        <div className="text-center py-2">
+          <p className="text-sm text-gray-400">
+            <Lock className="w-4 h-4 inline mr-1" />
+            &quot;Save Private&quot; keeps images in your gallery. &quot;Save Public&quot; shares with everyone.
+          </p>
+        </div>
+      </motion.div>
+
+      {/* Full-size lightbox */}
+      <AnimatePresence>
+        {viewingImage && viewingImage.image.imageUrl && (
+          <motion.div
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            className="fixed inset-0 z-50 bg-black/90 backdrop-blur-sm flex items-center justify-center p-4"
+            onClick={() => setViewingImage(null)}
+          >
+            {/* Close button */}
+            <button
+              onClick={() => setViewingImage(null)}
+              className="absolute top-4 right-4 z-10 bg-black/60 hover:bg-black/80 text-white rounded-full p-2 transition-colors"
+            >
+              <X className="w-6 h-6" />
+            </button>
+
+            {/* Nav: previous */}
+            {canGoPrev && (
+              <button
+                onClick={(e) => { e.stopPropagation(); setViewingImage(completedImages[viewingIndex - 1]) }}
+                className="absolute left-4 z-10 bg-black/60 hover:bg-black/80 text-white rounded-full p-2 transition-colors"
+              >
+                <ChevronLeft className="w-6 h-6" />
+              </button>
+            )}
+
+            {/* Nav: next */}
+            {canGoNext && (
+              <button
+                onClick={(e) => { e.stopPropagation(); setViewingImage(completedImages[viewingIndex + 1]) }}
+                className="absolute right-4 z-10 bg-black/60 hover:bg-black/80 text-white rounded-full p-2 transition-colors"
+              >
+                <ChevronRight className="w-6 h-6" />
+              </button>
+            )}
+
+            {/* Full-size image */}
+            <motion.img
+              key={viewingImage.image.id}
+              initial={{ scale: 0.9, opacity: 0 }}
+              animate={{ scale: 1, opacity: 1 }}
+              exit={{ scale: 0.9, opacity: 0 }}
+              src={viewingImage.image.imageUrl}
+              alt={viewingImage.image.prompt}
+              className="max-w-full max-h-[90vh] object-contain rounded-lg shadow-2xl"
+              onClick={(e) => e.stopPropagation()}
+            />
+
+            {/* Bottom action bar */}
+            <div
+              className="absolute bottom-4 left-1/2 -translate-x-1/2 flex items-center gap-3 bg-black/70 backdrop-blur-md rounded-2xl px-4 py-3"
+              onClick={(e) => e.stopPropagation()}
+            >
+              <Button
+                size="sm"
+                onClick={() => { handleSavePrivate(viewingImage.image.id); setViewingImage(null) }}
+                variant="outline"
+                className="border-yellow-600/50 text-yellow-500 hover:bg-yellow-600/10"
+              >
+                <Lock className="w-4 h-4 mr-1.5" />
+                Save Private
+              </Button>
+              <Button
+                size="sm"
+                onClick={() => { handlePublish(viewingImage.image.id); setViewingImage(null) }}
+                className="bg-gradient-to-r from-purple-600 to-pink-600 hover:from-purple-700 hover:to-pink-700"
+              >
+                <Globe className="w-4 h-4 mr-1.5" />
+                Save Public
+              </Button>
+              <Button
+                size="sm"
+                variant="outline"
+                onClick={() => handleDownload(viewingImage.image.imageUrl!, viewingImage.image.id)}
+                className="border-gray-600"
+              >
+                <Download className="w-4 h-4" />
+              </Button>
+              <Button
+                size="sm"
+                variant="outline"
+                onClick={() => { handleDelete(viewingImage.image.id); setViewingImage(null) }}
+                className="border-gray-600 hover:border-red-500 hover:text-red-500"
+              >
+                <Trash2 className="w-4 h-4" />
+              </Button>
+
+              {/* Image counter */}
+              {completedImages.length > 1 && (
+                <span className="text-xs text-gray-400 ml-1">
+                  {viewingIndex + 1} / {completedImages.length}
+                </span>
+              )}
+            </div>
+          </motion.div>
+        )}
+      </AnimatePresence>
+    </>
   )
 }
