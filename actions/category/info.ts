@@ -112,6 +112,9 @@ export async function getTopCategories(limit = 6) {
             imageUrl: true,
             categoryIds: true,
           },
+          orderBy: {
+            upvotes: "desc",
+          },
         }),
       )
 

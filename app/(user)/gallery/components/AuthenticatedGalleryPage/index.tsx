@@ -7,6 +7,8 @@ import { deleteImageAction } from "@/actions/images/delete";
 import { searchImages } from "@/actions/images/info";
 import { getCurrentUserInfo } from "@/actions/user/info";
 import { getTopCategories } from "@/actions/category/info";
+import { getContentInterests, getKeywordsForInterests } from "@/actions/user/interests";
+import { InterestOnboardingModal } from "@/components/ui/interest-selector";
 import { getSubscriptionInfo } from "@/actions/subscriptions/info";
 import { isGetCurrentUserInfoSuccess } from "@/types/user";
 import { isGetSubscriptionInfoSuccess } from "@/types/subscriptions";
@@ -57,6 +59,8 @@ export default function GalleryPage(props: GalleryPageProps) {
   >([]);
   const [totalCount, setTotalCount] = useState(0);
   const [categories, setCategories] = useState<Category[]>([]);
+  const [interests, setInterests] = useState<string[]>([]);
+  const [showOnboarding, setShowOnboarding] = useState(false);
   const [subscriptionStatus, setSubscriptionStatus] =
     useState<GetSubscriptionInfoSuccessType | null>(null);
 
@@ -252,14 +256,26 @@ export default function GalleryPage(props: GalleryPageProps) {
     async function fetchCategories() {
       setIsLoadingCategories(true);
       try {
-        const result = await getTopCategories();
+        const [result, userInterests] = await Promise.all([
+          getTopCategories(),
+          userId ? getContentInterests() : Promise.resolve([]),
+        ]);
         if (isMountedRef.current) {
           setCategories(result);
+          setInterests(userInterests);
+          // Show onboarding if user is logged in and has never set interests
+          if (userId) {
+            const alreadySet = typeof window !== "undefined"
+              ? localStorage.getItem("adultai_interests_set")
+              : "1";
+            if (!alreadySet && userInterests.length === 0) {
+              setShowOnboarding(true);
+            }
+          }
         }
       } catch (error) {
         if (isMountedRef.current) {
           console.error("[Gallery] Failed to fetch categories:", error);
-          toast.error("Failed to load categories");
         }
       } finally {
         if (isMountedRef.current) {
@@ -437,8 +453,30 @@ export default function GalleryPage(props: GalleryPageProps) {
     skeletonImages,
   ]);
 
+  // Sort top categories by user interests (matching ones rise to top)
+  const sortedCategories = useMemo(() => {
+    if (!interests.length) return categories;
+    const interestKws = new Set(getKeywordsForInterests(interests));
+    return [...categories].sort((a, b) => {
+      const scoreA = (a as any).keywords?.filter((k: string) => interestKws.has(k.toLowerCase())).length ?? 0;
+      const scoreB = (b as any).keywords?.filter((k: string) => interestKws.has(k.toLowerCase())).length ?? 0;
+      return scoreB - scoreA;
+    });
+  }, [categories, interests]);
+
   return (
     <div className={`container mx-auto px-4 py-8 transition-all duration-300`}>
+      {/* Interest onboarding modal */}
+      {showOnboarding && (
+        <InterestOnboardingModal
+          initialInterests={interests}
+          onDone={(newInterests) => {
+            setInterests(newInterests);
+            setShowOnboarding(false);
+          }}
+        />
+      )}
+
       {/* MOBILE GENERATE BAR - only on mobile, only in normal mode */}
       {isNormalMode && (
         <div className="md:hidden mb-4">
@@ -523,8 +561,9 @@ export default function GalleryPage(props: GalleryPageProps) {
 
           {/* CATEGORIES - Only in normal mode */}
           <Categories
-            categories={isLoadingCategories ? [] : categories}
+            categories={isLoadingCategories ? [] : sortedCategories}
             isLoading={isLoadingCategories}
+            hasInterests={interests.length > 0}
           />
         </>
       )}
