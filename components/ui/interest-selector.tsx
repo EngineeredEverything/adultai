@@ -1,7 +1,8 @@
 "use client"
 
 import { useState, useEffect } from "react"
-import { saveContentInterests, INTEREST_OPTIONS } from "@/actions/user/interests"
+import { saveContentInterests } from "@/actions/user/interests"
+import { INTEREST_OPTIONS } from "@/lib/interests"
 import { X, Sparkles } from "lucide-react"
 
 interface InterestSelectorProps {
