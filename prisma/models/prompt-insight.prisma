@@ -1,0 +1,42 @@
+// Stores learned insights about which prompt fragments perform well
+model PromptInsight {
+  id              String   @id @default(auto()) @map("_id") @db.ObjectId
+  fragment        String   @unique // the keyword or phrase
+  score           Float    @default(0) // effectiveness score (normalized avg voteScore)
+  category        String?  // optional category association
+  sampleSize      Int      @default(0) // how many images contributed
+  avgVoteScore    Float    @default(0) // raw average voteScore
+  upvoteRate      Float    @default(0) // % of votes that are upvotes
+  lastAnalyzedAt  DateTime @default(now())
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+
+  @@index([score])
+  @@index([category])
+  @@index([sampleSize])
+  @@index([fragment, category])
+}
+
+// Stores learned optimal generation parameters
+model GenerationDefault {
+  id          String   @id @default(auto()) @map("_id") @db.ObjectId
+  key         String   @unique // e.g. 'cfg', 'steps', 'width', 'height'
+  value       Float    // best-performing value
+  confidence  Float    @default(0) // 0-1 confidence score based on sample size
+  sampleSize  Int      @default(0)
+  updatedAt   DateTime @updatedAt
+}
+
+// Stores negative prompt fragments learned from downvoted images
+model NegativeInsight {
+  id              String   @id @default(auto()) @map("_id") @db.ObjectId
+  fragment        String   @unique
+  downvoteRate    Float    @default(0) // how often images with this fragment get downvoted
+  sampleSize      Int      @default(0)
+  lastAnalyzedAt  DateTime @default(now())
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+
+  @@index([downvoteRate])
+  @@index([sampleSize])
+}
