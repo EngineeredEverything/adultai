@@ -271,6 +271,51 @@ export function useImageGeneration(params: UseImageGenerationParams) {
     [user, state, updateState, addPending],
   )
 
+  // Retry: re-generate with the same prompt but new seed (server generates random seeds)
+  const retryPrompt = useCallback(
+    async (prompt: string) => {
+      if (!user) {
+        updateState({ showSignInDialog: true })
+        return
+      }
+
+      updateState({ isGenerating: true })
+
+      try {
+        const results = await createGeneratedImage({
+          count: state.count,
+          prompt,
+          width: state.ratio.width,
+          height: state.ratio.height,
+          isPublic: state.isPublic,
+        })
+
+        if ("error" in results) {
+          throw new Error(results.error)
+        }
+
+        if (results.status === "processing" && results.taskId) {
+          setPendingTaskIds((prev) => [...prev, results.taskId])
+          setPendingCount(state.count)
+
+          for (let i = 0; i < state.count; i++) {
+            addPending()
+          }
+        }
+
+        toast.success("Retrying with new variations...")
+      } catch (error) {
+        logger.error("Error retrying generation:", error)
+        toast.error("Error", {
+          description: error instanceof Error ? error.message : "Failed to retry generation",
+        })
+      } finally {
+        updateState({ isGenerating: false })
+      }
+    },
+    [user, state, updateState, addPending],
+  )
+
   // Polling effect
   useEffect(() => {
     if (pendingTaskIds.length > 0) {
@@ -303,6 +348,7 @@ export function useImageGeneration(params: UseImageGenerationParams) {
     setCount,
     setShowSignInDialog,
     handleSubmit,
+    retryPrompt,
     pendingCount,
     pollPendingTasks,
   }

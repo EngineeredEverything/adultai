@@ -371,6 +371,7 @@ export default function GalleryPage(props: GalleryPageProps) {
     setPrompt,
     isGenerating,
     handleSubmit,
+    retryPrompt,
     setRatio,
     ratio,
     isPublic,
@@ -570,9 +571,8 @@ export default function GalleryPage(props: GalleryPageProps) {
               setGeneratedImages([]);
             }}
             onRetry={(promptText) => {
-              // Re-fill prompt and auto-submit
-              setPrompt(promptText);
-              toast.info("Prompt loaded — hit Generate to retry");
+              // Auto-retry with same prompt, new seed
+              retryPrompt(promptText);
             }}
             onEdit={(promptText) => {
               // Fill prompt for editing
