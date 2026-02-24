@@ -314,6 +314,7 @@ export async function createPendingImages(
           eta: null,
           width,
           height,
+          isPublic: false, // Always private until user explicitly publishes
           futureLinks: futureLinks.length > index ? [futureLinks[index]] : [],
           imageUrl: null, // Will be filled when generation completes
           path: null, // Will be filled when generation completes

@@ -195,6 +195,9 @@ export function useImageLoading(params: UseImageLoadingParams) {
                 if (userMode && user?.user.id) {
                     filters.userId = user.user.id
                     filters.private = true
+                } else {
+                    // Public gallery should only show public images
+                    filters.isPublic = true
                 }
                 if (category_id) {
                     filters.category_id = category_id

@@ -168,11 +168,15 @@ export default function GalleryPage(props: GalleryPageProps) {
           userId?: string;
           private?: boolean;
           category_id?: string;
+          isPublic?: boolean;
         } = {};
 
         if (isUserMode && userId) {
           filters.userId = userId;
           filters.private = true;
+        } else {
+          // Public gallery should only show public images
+          filters.isPublic = true;
         }
 
         if (isCategoryMode && category_id) {
@@ -525,9 +529,9 @@ export default function GalleryPage(props: GalleryPageProps) {
             )}
           </div>
 
-          {/* GENERATED IMAGES PREVIEW - Only in normal mode */}
+          {/* GENERATED IMAGES PREVIEW - Only in normal mode, limited to last 8 */}
           <GeneratedImagePreview
-            images={generatedImages}
+            images={generatedImages.slice(0, 8)}
             pendingCount={pendingCount}
             onPublish={(imageId) => {
               // Move image from generated to public gallery
@@ -564,6 +568,16 @@ export default function GalleryPage(props: GalleryPageProps) {
             }}
             onClear={() => {
               setGeneratedImages([]);
+            }}
+            onRetry={(promptText) => {
+              // Re-fill prompt and auto-submit
+              setPrompt(promptText);
+              toast.info("Prompt loaded — hit Generate to retry");
+            }}
+            onEdit={(promptText) => {
+              // Fill prompt for editing
+              setPrompt(promptText);
+              toast.info("Edit your prompt and generate again");
             }}
           />
 

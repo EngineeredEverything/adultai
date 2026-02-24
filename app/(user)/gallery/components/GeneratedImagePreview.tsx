@@ -6,7 +6,7 @@ import { Button } from "@/components/ui/button"
 import { updateImageInfo } from "@/actions/images/update"
 import { recordImagePreference } from "@/actions/images/preference"
 import { toast } from "sonner"
-import { Loader2, Globe, Lock, Download, Trash2, X, ChevronLeft, ChevronRight } from "lucide-react"
+import { Loader2, Globe, Lock, Download, Trash2, X, ChevronLeft, ChevronRight, RefreshCw, Pencil } from "lucide-react"
 import type { SearchImagesResponseSuccessType } from "@/types/images"
 
 type ImageItem = SearchImagesResponseSuccessType["images"][number]
@@ -18,6 +18,8 @@ interface GeneratedImagePreviewProps {
   onSavePrivate?: (imageId: string) => void
   onDelete?: (imageId: string) => void
   onClear?: () => void
+  onRetry?: (prompt: string) => void
+  onEdit?: (prompt: string) => void
 }
 
 export function GeneratedImagePreview({
@@ -27,6 +29,8 @@ export function GeneratedImagePreview({
   onSavePrivate,
   onDelete,
   onClear,
+  onRetry,
+  onEdit,
 }: GeneratedImagePreviewProps) {
   const [publishingIds, setPublishingIds] = useState<Set<string>>(new Set())
   const [savingPrivateIds, setSavingPrivateIds] = useState<Set<string>>(new Set())
@@ -57,7 +61,7 @@ export function GeneratedImagePreview({
   const handlePublish = async (imageId: string) => {
     setPublishingIds((prev) => new Set(prev).add(imageId))
     try {
-      const result = await updateImageInfo({ imageId, isPublic: true })
+      const result = await updateImageInfo(imageId, { isPublic: true })
       if ("error" in result) {
         toast.error("Failed to publish image")
       } else {
@@ -242,6 +246,32 @@ export function GeneratedImagePreview({
                           </Button>
                         </div>
                         <div className="flex gap-2">
+                          {onRetry && (
+                            <Button
+                              size="sm"
+                              variant="outline"
+                              onClick={() => onRetry(image.prompt)}
+                              disabled={isBusy}
+                              className="flex-1 border-blue-600/50 text-blue-400 hover:bg-blue-600/10"
+                            >
+                              <RefreshCw className="w-4 h-4 mr-1.5" />
+                              Retry
+                            </Button>
+                          )}
+                          {onEdit && (
+                            <Button
+                              size="sm"
+                              variant="outline"
+                              onClick={() => onEdit(image.prompt)}
+                              disabled={isBusy}
+                              className="flex-1 border-emerald-600/50 text-emerald-400 hover:bg-emerald-600/10"
+                            >
+                              <Pencil className="w-4 h-4 mr-1.5" />
+                              Edit
+                            </Button>
+                          )}
+                        </div>
+                        <div className="flex gap-2">
                           <Button
                             size="sm"
                             variant="outline"
@@ -331,7 +361,7 @@ export function GeneratedImagePreview({
 
             {/* Bottom action bar */}
             <div
-              className="absolute bottom-4 left-1/2 -translate-x-1/2 flex items-center gap-3 bg-black/70 backdrop-blur-md rounded-2xl px-4 py-3"
+              className="absolute bottom-4 left-1/2 -translate-x-1/2 flex flex-wrap items-center justify-center gap-2 bg-black/70 backdrop-blur-md rounded-2xl px-4 py-3 max-w-[95vw]"
               onClick={(e) => e.stopPropagation()}
             >
               <Button
@@ -351,6 +381,28 @@ export function GeneratedImagePreview({
                 <Globe className="w-4 h-4 mr-1.5" />
                 Save Public
               </Button>
+              {onRetry && (
+                <Button
+                  size="sm"
+                  variant="outline"
+                  onClick={() => { onRetry(viewingImage.image.prompt); setViewingImage(null) }}
+                  className="border-blue-600/50 text-blue-400 hover:bg-blue-600/10 hover:border-blue-500"
+                >
+                  <RefreshCw className="w-4 h-4 mr-1.5" />
+                  Retry
+                </Button>
+              )}
+              {onEdit && (
+                <Button
+                  size="sm"
+                  variant="outline"
+                  onClick={() => { onEdit(viewingImage.image.prompt); setViewingImage(null) }}
+                  className="border-emerald-600/50 text-emerald-400 hover:bg-emerald-600/10 hover:border-emerald-500"
+                >
+                  <Pencil className="w-4 h-4 mr-1.5" />
+                  Edit
+                </Button>
+              )}
               <Button
                 size="sm"
                 variant="outline"

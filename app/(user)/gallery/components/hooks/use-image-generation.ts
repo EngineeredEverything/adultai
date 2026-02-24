@@ -193,7 +193,8 @@ export function useImageGeneration(params: UseImageGenerationParams) {
                 images: refreshedImages.images.map(d => d.image.cdnUrl)
               })
 
-              setImages((prev) => [...refreshedImages.images, ...prev])
+              // Keep only last 8 generated images
+              setImages((prev) => [...refreshedImages.images, ...prev].slice(0, 8))
             }
           }
 
