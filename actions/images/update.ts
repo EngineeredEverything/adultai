@@ -67,32 +67,14 @@ export async function updateImageInfo(
       updatedAt: new Date(),
     };
 
-    // Handle categories update
+    // Handle categories update — MongoDB uses categoryIds array, not a relation
     if (data.categoryIds !== undefined) {
-      // Use the new categoryIds array (can be empty to remove all categories)
-      if (validCategoryIds.length > 0) {
-        updateData.categories = {
-          set: validCategoryIds.map(id => ({ id })),
-        };
-      } else {
-        // Remove all categories if empty array is provided
-        updateData.categories = {
-          set: [],
-        };
-      }
+      updateData.categoryIds = validCategoryIds;
     }
 
     const updatedImage = await db.generatedImage.update({
       where: { id: imageId },
       data: updateData,
-      include: {
-        categories: {
-          select: {
-            id: true,
-            name: true,
-          }
-        }
-      }
     });
 
     return updatedImage;
