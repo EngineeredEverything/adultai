@@ -14,12 +14,11 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { Switch } from "@/components/ui/switch";
-import { Badge } from "@/components/ui/badge";
 import { Card, CardContent } from "@/components/ui/card";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Separator } from "@/components/ui/separator";
 import { Alert, AlertDescription } from "@/components/ui/alert";
-import { Lock, Zap, Info, AlertCircle, CheckCircle } from "lucide-react";
+import { Zap, Info, AlertCircle, CheckCircle } from "lucide-react";
 import {
   Tooltip,
   TooltipContent,
@@ -27,26 +26,18 @@ import {
   TooltipTrigger,
 } from "@/components/ui/tooltip";
 
-import type { SubscriptionStatus } from "../../gallery/components/GenerationForm/subscription-utils";
 import {
   DEFAULT_OPTIONS,
-  AVAILABLE_MODELS,
   AVAILABLE_SAMPLERS,
-  AVAILABLE_SCHEDULERS,
-  AVAILABLE_LORAS,
   AVAILABLE_DIMENSIONS,
-  getAdvancedFeatureAccess,
-  getMaxImageCount,
   calculateGenerationCost,
   validateGenerationOptions,
   type GenerationOptions,
 } from "../advanced-generation-utils";
-import { ENHANCE_STYLES } from "@/data/ENHANCE_STYLES";
-import { logger } from "@/lib/logger";
 import { toast } from "sonner";
 
 interface AdvancedGenerationFormProps {
-  subscriptionStatus?: SubscriptionStatus;
+  subscriptionStatus?: unknown;
   onGenerate: (options: GenerationOptions) => void;
   onPremiumRequired: (feature: string, requiredPlan: string) => void;
   isGenerating: boolean;
@@ -59,9 +50,7 @@ interface FormValidation {
 }
 
 export function AdvancedGenerationForm({
-  subscriptionStatus,
   onGenerate,
-  onPremiumRequired,
   isGenerating,
 }: AdvancedGenerationFormProps) {
   const searchParams = useSearchParams();
@@ -73,208 +62,95 @@ export function AdvancedGenerationForm({
   });
   const [isFormDirty, setIsFormDirty] = useState(false);
 
-  const featureAccess = getAdvancedFeatureAccess(subscriptionStatus);
-  const maxImageCount = getMaxImageCount(subscriptionStatus);
   const estimatedCost = calculateGenerationCost(options);
 
-  logger.debug("AdvancedGenerationForm rendered", {
-    isGenerating,
-    hasSubscription: !!subscriptionStatus,
-    estimatedCost,
-  });
-
-  // Validate form whenever options change
   const validateForm = useCallback(
     (currentOptions: GenerationOptions): FormValidation => {
       const errors: string[] = [];
       const warnings: string[] = [];
 
-      // Basic validation
       if (!currentOptions.prompt.trim()) {
         errors.push("Prompt is required");
       }
-
       if (currentOptions.prompt.length > 1000) {
         warnings.push("Very long prompts may not work as expected");
       }
-
-      // Subscription validation
-      const subscriptionValidation = validateGenerationOptions(
-        currentOptions,
-        subscriptionStatus
-      );
-      if (!subscriptionValidation.isValid) {
-        errors.push(...subscriptionValidation.errors);
-      }
-
-      // Technical validation
       if (currentOptions.steps < 10) {
-        warnings.push("Very low step count may produce poor quality images");
+        warnings.push("Very low step count may produce poor quality");
       }
-
+      if (currentOptions.steps > 80) {
+        warnings.push("High step count significantly increases generation time");
+      }
       if (currentOptions.cfg > 15) {
         warnings.push("Very high CFG scale may produce over-saturated images");
       }
 
-      if (currentOptions.width * currentOptions.height > 2048 * 2048) {
-        warnings.push(
-          "Very high resolution may take significantly longer to generate"
-        );
+      const subscriptionValidation = validateGenerationOptions(currentOptions, undefined);
+      if (!subscriptionValidation.isValid) {
+        errors.push(...subscriptionValidation.errors);
       }
 
-      const result = {
-        isValid: errors.length === 0,
-        errors,
-        warnings,
-      };
-
-      logger.debug("Form validation result", result);
-      return result;
+      return { isValid: errors.length === 0, errors, warnings };
     },
-    [subscriptionStatus]
+    []
   );
 
   // Initialize from URL params
   useEffect(() => {
     if (!searchParams) return;
-
-    logger.info("Initializing form from URL parameters");
     const urlOptions: Partial<GenerationOptions> = {};
 
-    // Parse all possible URL parameters
-    const paramKeys: (keyof GenerationOptions)[] = [
-      "prompt",
-      "negativePrompt",
-      "seed",
-      "modelId",
-      "steps",
-      "cfg",
-      "sampler",
-      "width",
-      "height",
-      "loraModel",
-      "loraStrength",
-      "enhanceStyle",
-      "count",
-      "scheduler",
-      "clipSkip",
-    ];
+    const stringKeys: (keyof GenerationOptions)[] = ["prompt", "negativePrompt", "seed", "modelId", "sampler"];
+    const numberKeys: (keyof GenerationOptions)[] = ["steps", "cfg", "width", "height", "count", "hiresScale", "hiresDenoise", "hiresSteps", "faceRestoreStrength"];
+    const boolKeys: (keyof GenerationOptions)[] = ["hiresFix", "faceRestore"];
 
-    paramKeys.forEach((key) => {
+    stringKeys.forEach((key) => {
       const value = searchParams.get(key);
-      if (value !== null) {
-        if (typeof DEFAULT_OPTIONS[key] === "number") {
-          urlOptions[key] = Number(value) as any;
-        } else {
-          urlOptions[key] = value as any;
-        }
-      }
+      if (value !== null) (urlOptions as Record<string, unknown>)[key] = value;
+    });
+    numberKeys.forEach((key) => {
+      const value = searchParams.get(key);
+      if (value !== null) (urlOptions as Record<string, unknown>)[key] = Number(value);
+    });
+    boolKeys.forEach((key) => {
+      const value = searchParams.get(key);
+      if (value !== null) (urlOptions as Record<string, unknown>)[key] = value === "true";
     });
 
     if (Object.keys(urlOptions).length > 0) {
-      logger.debug("URL parameters found", urlOptions);
       setOptions((prev) => ({ ...prev, ...urlOptions }));
       setIsFormDirty(true);
     }
   }, [searchParams]);
 
-  // Validate form whenever options change
   useEffect(() => {
-    const newValidation = validateForm(options);
-    setValidation(newValidation);
+    setValidation(validateForm(options));
   }, [options, validateForm]);
 
   const handleOptionChange = <K extends keyof GenerationOptions>(
     key: K,
-    value: GenerationOptions[K],
-    requiredFeature?: string,
-    requiredPlan?: string
+    value: GenerationOptions[K]
   ) => {
-    logger.debug("Option change requested", {
-      key,
-      value,
-      requiredFeature,
-      requiredPlan,
-    });
-
-    // Check if feature requires premium access
-    if (requiredFeature && requiredPlan) {
-      const featureAccessValue =
-        featureAccess[requiredFeature as keyof typeof featureAccess];
-      const hasAccess =
-        typeof featureAccessValue === "object"
-          ? featureAccessValue.hasAccess
-          : featureAccessValue;
-
-      if (!hasAccess) {
-        logger.warn("Premium feature access denied", {
-          feature: requiredFeature,
-          plan: requiredPlan,
-        });
-        onPremiumRequired(requiredFeature, requiredPlan);
-
-        toast.error("Premium Feature", {
-          description: `${requiredFeature} requires ${requiredPlan} plan`,
-        });
-        return;
-      }
-    }
-
-    setOptions((prev) => {
-      const newOptions = { ...prev, [key]: value };
-      logger.debug("Options updated", {
-        key,
-        oldValue: prev[key],
-        newValue: value,
-      });
-      return newOptions;
-    });
-
+    setOptions((prev) => ({ ...prev, [key]: value }));
     setIsFormDirty(true);
-
-    // Show success toast for certain changes
-    if (key === "modelId") {
-      const model = AVAILABLE_MODELS.find((m) => m.id === value);
-      if (model) {
-        toast.success("Model Changed", {
-          description: `Switched to ${model.name}`,
-        });
-      }
-    }
   };
 
   const handleSubmit = () => {
-    logger.info("Form submission requested", { options, validation });
-
     if (!validation.isValid) {
-      logger.warn(
-        "Form submission blocked due to validation errors",
-        validation.errors
-      );
-      toast.error("Validation Error", {
-        description: validation.errors[0],
-      });
+      toast.error("Please fix validation errors");
       return;
     }
-
     if (validation.warnings.length > 0) {
-      logger.info("Form has warnings", validation.warnings);
-      toast.warning("Generation Warning", {
-        description: validation.warnings[0],
-      });
+      toast.warning(validation.warnings[0]);
     }
-
     onGenerate(options);
     setIsFormDirty(false);
   };
 
   const resetForm = () => {
-    logger.info("Form reset requested");
     setOptions(DEFAULT_OPTIONS);
     setIsFormDirty(false);
-    toast.success("Form Reset", {
-      description: "All settings have been reset to defaults",
-    });
+    toast.success("Settings reset to defaults");
   };
 
   return (
@@ -283,16 +159,18 @@ export function AdvancedGenerationForm({
         {/* Header */}
         <div className="space-y-2">
           <div className="flex items-center justify-between">
-            <h2 className="text-2xl font-bold">Advanced Generation</h2>
+            <div>
+              <h2 className="text-2xl font-bold">Advanced Generation</h2>
+              <p className="text-sm text-muted-foreground">
+                SD 1.5 &mdash; uberRealisticPornMerge &mdash; RTX 3090
+              </p>
+            </div>
             {isFormDirty && (
               <Button variant="outline" size="sm" onClick={resetForm}>
-                Reset Form
+                Reset
               </Button>
             )}
           </div>
-          <p className="text-muted-foreground">
-            Fine-tune your image generation with advanced controls
-          </p>
         </div>
 
         {/* Validation Alerts */}
@@ -300,11 +178,9 @@ export function AdvancedGenerationForm({
           <Alert variant="destructive">
             <AlertCircle className="h-4 w-4" />
             <AlertDescription>
-              <div className="space-y-1">
-                {validation.errors.map((error, index) => (
-                  <div key={index}>• {error}</div>
-                ))}
-              </div>
+              {validation.errors.map((error, i) => (
+                <div key={i}>&bull; {error}</div>
+              ))}
             </AlertDescription>
           </Alert>
         )}
@@ -313,36 +189,28 @@ export function AdvancedGenerationForm({
           <Alert>
             <Info className="h-4 w-4" />
             <AlertDescription>
-              <div className="space-y-1">
-                {validation.warnings.map((warning, index) => (
-                  <div key={index}>• {warning}</div>
-                ))}
-              </div>
+              {validation.warnings.map((w, i) => (
+                <div key={i}>&bull; {w}</div>
+              ))}
             </AlertDescription>
           </Alert>
         )}
 
-        {/* Cost Estimation */}
+        {/* Cost */}
         <Card>
           <CardContent className="pt-6">
             <div className="flex items-center justify-between">
-              <div className="space-y-1">
+              <div>
                 <p className="text-sm font-medium">Estimated Cost</p>
-                <p className="text-2xl font-bold text-primary">
-                  {estimatedCost} TEMPT
-                </p>
+                <p className="text-2xl font-bold text-primary">{estimatedCost} TEMPT</p>
               </div>
               <div className="text-right space-y-1">
-                <p className="text-sm text-muted-foreground">
-                  Images: {options.count}
-                </p>
-                <p className="text-sm text-muted-foreground">
-                  Resolution: {options.width}×{options.height}
-                </p>
+                <p className="text-sm text-muted-foreground">Images: {options.count}</p>
+                <p className="text-sm text-muted-foreground">{options.width}&times;{options.height}</p>
                 {validation.isValid && (
                   <div className="flex items-center text-green-600 text-sm">
                     <CheckCircle className="w-4 h-4 mr-1" />
-                    Ready to generate
+                    Ready
                   </div>
                 )}
               </div>
@@ -351,160 +219,56 @@ export function AdvancedGenerationForm({
         </Card>
 
         <Tabs defaultValue="basic" className="space-y-6">
-          <TabsList className="grid w-full grid-cols-3">
+          <TabsList className="grid w-full grid-cols-2">
             <TabsTrigger value="basic">Basic</TabsTrigger>
             <TabsTrigger value="advanced">Advanced</TabsTrigger>
-            <TabsTrigger value="style">Style & Effects</TabsTrigger>
           </TabsList>
 
           {/* Basic Tab */}
           <TabsContent value="basic" className="space-y-6">
-            {/* Prompts */}
-            <div className="space-y-4">
-              <div>
-                <label className="block text-sm font-medium mb-2">
-                  Prompt *
-                </label>
-                <Textarea
-                  value={options.prompt}
-                  onChange={(e) => handleOptionChange("prompt", e.target.value)}
-                  className="min-h-[100px]"
-                  placeholder="Describe what you want to generate..."
-                />
-                <div className="flex justify-between text-xs text-muted-foreground mt-1">
-                  <span>{options.prompt.length}/1000 characters</span>
-                  {options.prompt.length > 800 && (
-                    <span className="text-amber-600">Approaching limit</span>
-                  )}
-                </div>
-              </div>
-
-              <div>
-                <div className="flex items-center gap-2 mb-2">
-                  <label className="text-sm font-medium">Negative Prompt</label>
-                  {!featureAccess.negativePrompts.hasAccess && (
-                    <Badge variant="secondary" className="text-xs">
-                      <Lock className="w-3 h-3 mr-1" />
-                      {featureAccess.negativePrompts.requiredPlan}
-                    </Badge>
-                  )}
-                </div>
-                <Textarea
-                  value={options.negativePrompt}
-                  onChange={(e) =>
-                    handleOptionChange(
-                      "negativePrompt",
-                      e.target.value,
-                      "negativePrompts",
-                      featureAccess.negativePrompts.requiredPlan
-                    )
-                  }
-                  className="min-h-[80px]"
-                  disabled={!featureAccess.negativePrompts.hasAccess}
-                  placeholder={
-                    featureAccess.negativePrompts.hasAccess
-                      ? "What you don't want to see..."
-                      : "Upgrade to use negative prompts"
-                  }
-                />
-              </div>
+            {/* Prompt */}
+            <div>
+              <label className="block text-sm font-medium mb-2">Prompt *</label>
+              <Textarea
+                value={options.prompt}
+                onChange={(e) => handleOptionChange("prompt", e.target.value)}
+                className="min-h-[100px]"
+                placeholder="Describe what you want to generate..."
+              />
+              <p className="text-xs text-muted-foreground mt-1">
+                Tip: Use (word:1.2) for emphasis, (word:0.8) to reduce weight
+              </p>
             </div>
 
-            {/* Model Selection */}
+            {/* Negative Prompt */}
             <div>
-              <label className="block text-sm font-medium mb-2">Model</label>
-              <Select
-                value={options.modelId}
-                onValueChange={(value) => {
-                  const model = AVAILABLE_MODELS.find((m) => m.id === value);
-                  if (model?.premium) {
-                    handleOptionChange(
-                      "modelId",
-                      value,
-                      "premiumModels",
-                      featureAccess.premiumModels.requiredPlan
-                    );
-                  } else {
-                    handleOptionChange("modelId", value);
-                  }
-                }}
-              >
-                <SelectTrigger>
-                  <SelectValue placeholder="Select a model" />
-                </SelectTrigger>
-                <SelectContent>
-                  {AVAILABLE_MODELS.map((model) => (
-                    <SelectItem key={model.id} value={model.id}>
-                      <div className="flex items-center gap-2">
-                        <span>{model.name}</span>
-                        {model.premium && (
-                          <Badge variant="secondary" className="text-xs">
-                            <Lock className="w-3 h-3 mr-1" />
-                            Pro
-                          </Badge>
-                        )}
-                      </div>
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-              <p className="text-xs text-muted-foreground mt-1">
-                {
-                  AVAILABLE_MODELS.find((m) => m.id === options.modelId)
-                    ?.description
-                }
-              </p>
+              <label className="block text-sm font-medium mb-2">Negative Prompt</label>
+              <Textarea
+                value={options.negativePrompt}
+                onChange={(e) => handleOptionChange("negativePrompt", e.target.value)}
+                className="min-h-[80px]"
+                placeholder="What you do not want to see (deformed, blurry, low quality...)"
+              />
             </div>
 
             {/* Dimensions */}
             <div>
-              <label className="block text-sm font-medium mb-2">
-                Dimensions
-              </label>
+              <label className="block text-sm font-medium mb-2">Dimensions</label>
               <Select
                 value={`${options.width}x${options.height}`}
                 onValueChange={(value) => {
                   const [width, height] = value.split("x").map(Number);
-                  const dimension = AVAILABLE_DIMENSIONS.find(
-                    (d) => d.width === width && d.height === height
-                  );
-
-                  if (dimension?.premium) {
-                    handleOptionChange(
-                      "width",
-                      width,
-                      "highResolution",
-                      featureAccess.highResolution.requiredPlan
-                    );
-                    handleOptionChange(
-                      "height",
-                      height,
-                      "highResolution",
-                      featureAccess.highResolution.requiredPlan
-                    );
-                  } else {
-                    setOptions((prev) => ({ ...prev, width, height }));
-                  }
+                  setOptions((prev) => ({ ...prev, width, height }));
+                  setIsFormDirty(true);
                 }}
               >
                 <SelectTrigger>
-                  <SelectValue placeholder="Select dimensions" />
+                  <SelectValue />
                 </SelectTrigger>
                 <SelectContent>
                   {AVAILABLE_DIMENSIONS.map((dim) => (
-                    <SelectItem
-                      key={dim.label}
-                      value={`${dim.width}x${dim.height}`}
-                    >
-                      <div className="flex items-center gap-2">
-                        <span>{dim.label}</span>
-                        {dim.premium && (
-                          <Badge variant="secondary" className="text-xs">
-                            <Lock className="w-3 h-3 mr-1" />
-                            Pro
-                          </Badge>
-                        )}
-                      </div>
+                    <SelectItem key={dim.label} value={`${dim.width}x${dim.height}`}>
+                      {dim.label}
                     </SelectItem>
                   ))}
                 </SelectContent>
@@ -514,30 +278,30 @@ export function AdvancedGenerationForm({
             {/* Image Count */}
             <div>
               <div className="flex items-center justify-between mb-2">
-                <label className="text-sm font-medium">
-                  Image Count: {options.count}
-                </label>
-                <span className="text-xs text-muted-foreground">
-                  Max: {maxImageCount}
-                </span>
+                <label className="text-sm font-medium">Images: {options.count}</label>
+                <span className="text-xs text-muted-foreground">Max: 4</span>
               </div>
               <Slider
                 value={[options.count]}
-                onValueChange={(value) => {
-                  const newCount = value[0];
-                  if (newCount > maxImageCount) {
-                    onPremiumRequired(
-                      "multiple images",
-                      featureAccess.multipleImages.requiredPlan || "basic"
-                    );
-                    return;
-                  }
-                  handleOptionChange("count", newCount);
-                }}
+                onValueChange={(v) => handleOptionChange("count", v[0])}
                 min={1}
-                max={Math.max(maxImageCount, 10)}
+                max={4}
                 step={1}
               />
+            </div>
+
+            {/* Seed */}
+            <div>
+              <label className="block text-sm font-medium mb-2">Seed</label>
+              <Input
+                type="text"
+                value={options.seed}
+                onChange={(e) => handleOptionChange("seed", e.target.value)}
+                placeholder="Random (leave empty)"
+              />
+              <p className="text-xs text-muted-foreground mt-1">
+                Same seed + same prompt = same image
+              </p>
             </div>
           </TabsContent>
 
@@ -547,408 +311,162 @@ export function AdvancedGenerationForm({
               {/* Steps */}
               <div>
                 <div className="flex items-center gap-2 mb-2">
-                  <label className="text-sm font-medium">
-                    Steps: {options.steps}
-                  </label>
+                  <label className="text-sm font-medium">Steps: {options.steps}</label>
                   <Tooltip>
-                    <TooltipTrigger>
-                      <Info className="w-4 h-4 text-muted-foreground" />
-                    </TooltipTrigger>
-                    <TooltipContent>
-                      <p>More steps = higher quality but slower generation</p>
-                    </TooltipContent>
+                    <TooltipTrigger><Info className="w-4 h-4 text-muted-foreground" /></TooltipTrigger>
+                    <TooltipContent><p>More steps = higher quality but slower</p></TooltipContent>
                   </Tooltip>
-                  {!featureAccess.advancedSettings.hasAccess && (
-                    <Badge variant="secondary" className="text-xs">
-                      <Lock className="w-3 h-3 mr-1" />
-                      Pro
-                    </Badge>
-                  )}
                 </div>
                 <Slider
                   value={[options.steps]}
-                  onValueChange={(value) =>
-                    handleOptionChange(
-                      "steps",
-                      value[0],
-                      "advancedSettings",
-                      featureAccess.advancedSettings.requiredPlan
-                    )
-                  }
+                  onValueChange={(v) => handleOptionChange("steps", v[0])}
                   min={10}
-                  max={150}
+                  max={100}
                   step={1}
-                  disabled={!featureAccess.advancedSettings.hasAccess}
                 />
                 <div className="flex justify-between text-xs text-muted-foreground mt-1">
                   <span>Fast (10)</span>
-                  <span>Balanced (30)</span>
-                  <span>Quality (150)</span>
+                  <span>Default (42)</span>
+                  <span>Max (100)</span>
                 </div>
               </div>
 
               {/* CFG Scale */}
               <div>
                 <div className="flex items-center gap-2 mb-2">
-                  <label className="text-sm font-medium">
-                    CFG Scale: {options.cfg}
-                  </label>
+                  <label className="text-sm font-medium">CFG Scale: {options.cfg}</label>
                   <Tooltip>
-                    <TooltipTrigger>
-                      <Info className="w-4 h-4 text-muted-foreground" />
-                    </TooltipTrigger>
-                    <TooltipContent>
-                      <p>How closely to follow the prompt (1-20)</p>
-                    </TooltipContent>
+                    <TooltipTrigger><Info className="w-4 h-4 text-muted-foreground" /></TooltipTrigger>
+                    <TooltipContent><p>How closely to follow the prompt</p></TooltipContent>
                   </Tooltip>
-                  {!featureAccess.advancedSettings.hasAccess && (
-                    <Badge variant="secondary" className="text-xs">
-                      <Lock className="w-3 h-3 mr-1" />
-                      Pro
-                    </Badge>
-                  )}
                 </div>
                 <Slider
                   value={[options.cfg]}
-                  onValueChange={(value) =>
-                    handleOptionChange(
-                      "cfg",
-                      value[0],
-                      "advancedSettings",
-                      featureAccess.advancedSettings.requiredPlan
-                    )
-                  }
+                  onValueChange={(v) => handleOptionChange("cfg", v[0])}
                   min={1}
                   max={20}
                   step={0.5}
-                  disabled={!featureAccess.advancedSettings.hasAccess}
                 />
                 <div className="flex justify-between text-xs text-muted-foreground mt-1">
                   <span>Creative (1)</span>
-                  <span>Balanced (7.5)</span>
+                  <span>Default (6.8)</span>
                   <span>Strict (20)</span>
                 </div>
               </div>
+            </div>
 
-              {/* CLIP Skip */}
-              <div>
-                <div className="flex items-center gap-2 mb-2">
-                  <label className="text-sm font-medium">
-                    CLIP Skip: {options.clipSkip}
-                  </label>
-                  <Tooltip>
-                    <TooltipTrigger>
-                      <Info className="w-4 h-4 text-muted-foreground" />
-                    </TooltipTrigger>
-                    <TooltipContent>
-                      <p>Skip layers in CLIP text encoder</p>
-                    </TooltipContent>
-                  </Tooltip>
-                  {!featureAccess.advancedSettings.hasAccess && (
-                    <Badge variant="secondary" className="text-xs">
-                      <Lock className="w-3 h-3 mr-1" />
-                      Pro
-                    </Badge>
-                  )}
-                </div>
-                <Slider
-                  value={[options.clipSkip]}
-                  onValueChange={(value) =>
-                    handleOptionChange(
-                      "clipSkip",
-                      value[0],
-                      "advancedSettings",
-                      featureAccess.advancedSettings.requiredPlan
-                    )
-                  }
-                  min={1}
-                  max={12}
-                  step={1}
-                  disabled={!featureAccess.advancedSettings.hasAccess}
-                />
-              </div>
-
-              {/* Seed */}
-              <div>
-                <label className="block text-sm font-medium mb-2">Seed</label>
-                <Input
-                  type="text"
-                  value={options.seed}
-                  onChange={(e) => handleOptionChange("seed", e.target.value)}
-                  placeholder="Random if empty"
-                />
-                <p className="text-xs text-muted-foreground mt-1">
-                  Use the same seed for reproducible results
-                </p>
-              </div>
+            {/* Sampler */}
+            <div>
+              <label className="block text-sm font-medium mb-2">Sampler</label>
+              <Select
+                value={options.sampler}
+                onValueChange={(v) => handleOptionChange("sampler", v)}
+              >
+                <SelectTrigger>
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  {AVAILABLE_SAMPLERS.map((s) => (
+                    <SelectItem key={s.id} value={s.id}>{s.name}</SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
             </div>
 
             <Separator />
 
-            {/* Sampler & Scheduler */}
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-              <div>
-                <div className="flex items-center gap-2 mb-2">
-                  <label className="text-sm font-medium">Sampler</label>
-                  {!featureAccess.advancedSettings.hasAccess && (
-                    <Badge variant="secondary" className="text-xs">
-                      <Lock className="w-3 h-3 mr-1" />
-                      Pro
-                    </Badge>
-                  )}
-                </div>
-                <Select
-                  value={options.sampler}
-                  onValueChange={(value) =>
-                    handleOptionChange(
-                      "sampler",
-                      value,
-                      "advancedSettings",
-                      featureAccess.advancedSettings.requiredPlan
-                    )
-                  }
-                  disabled={!featureAccess.advancedSettings.hasAccess}
-                >
-                  <SelectTrigger>
-                    <SelectValue placeholder="Select sampler" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {AVAILABLE_SAMPLERS.map((sampler) => (
-                      <SelectItem key={sampler.id} value={sampler.id}>
-                        <div className="flex items-center gap-2">
-                          <span>{sampler.name}</span>
-                          {sampler.premium && (
-                            <Badge variant="secondary" className="text-xs">
-                              <Lock className="w-3 h-3 mr-1" />
-                              Pro
-                            </Badge>
-                          )}
-                        </div>
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-              </div>
-
-              <div>
-                <div className="flex items-center gap-2 mb-2">
-                  <label className="text-sm font-medium">Scheduler</label>
-                  {!featureAccess.advancedSettings.hasAccess && (
-                    <Badge variant="secondary" className="text-xs">
-                      <Lock className="w-3 h-3 mr-1" />
-                      Pro
-                    </Badge>
-                  )}
-                </div>
-                <Select
-                  value={options.scheduler}
-                  onValueChange={(value) =>
-                    handleOptionChange(
-                      "scheduler",
-                      value,
-                      "advancedSettings",
-                      featureAccess.advancedSettings.requiredPlan
-                    )
-                  }
-                  disabled={!featureAccess.advancedSettings.hasAccess}
-                >
-                  <SelectTrigger>
-                    <SelectValue placeholder="Select scheduler" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {AVAILABLE_SCHEDULERS.map((scheduler) => (
-                      <SelectItem key={scheduler.id} value={scheduler.id}>
-                        <div className="flex items-center gap-2">
-                          <span>{scheduler.name}</span>
-                          {scheduler.premium && (
-                            <Badge variant="secondary" className="text-xs">
-                              <Lock className="w-3 h-3 mr-1" />
-                              Pro
-                            </Badge>
-                          )}
-                        </div>
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-              </div>
-            </div>
-          </TabsContent>
-
-          {/* Style & Effects Tab */}
-          <TabsContent value="style" className="space-y-6">
-            {/* LoRA Model */}
-            <div>
-              <div className="flex items-center gap-2 mb-2">
-                <label className="text-sm font-medium">LoRA Model</label>
-                <Tooltip>
-                  <TooltipTrigger>
-                    <Info className="w-4 h-4 text-muted-foreground" />
-                  </TooltipTrigger>
-                  <TooltipContent>
-                    <p>Low-Rank Adaptation models for specific styles</p>
-                  </TooltipContent>
-                </Tooltip>
-                {!featureAccess.advancedSettings.hasAccess && (
-                  <Badge variant="secondary" className="text-xs">
-                    <Lock className="w-3 h-3 mr-1" />
-                    Pro
-                  </Badge>
-                )}
-              </div>
-              <Select
-                value={options.loraModel}
-                onValueChange={(value) =>
-                  handleOptionChange(
-                    "loraModel",
-                    value,
-                    "advancedSettings",
-                    featureAccess.advancedSettings.requiredPlan
-                  )
-                }
-                disabled={!featureAccess.advancedSettings.hasAccess}
-              >
-                <SelectTrigger>
-                  <SelectValue placeholder="Select LoRA model" />
-                </SelectTrigger>
-                <SelectContent>
-                  {AVAILABLE_LORAS.map((lora) => (
-                    <SelectItem key={lora.id} value={lora.id}>
-                      <div className="flex items-center gap-2">
-                        <span>{lora.name}</span>
-                        {lora.premium && (
-                          <Badge variant="secondary" className="text-xs">
-                            <Lock className="w-3 h-3 mr-1" />
-                            Pro
-                          </Badge>
-                        )}
-                      </div>
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-            </div>
-
-            {/* LoRA Strength */}
-            {options.loraModel && options.loraModel !== "none" && (
-              <div>
-                <div className="flex items-center gap-2 mb-2">
-                  <label className="text-sm font-medium">
-                    LoRA Strength: {options.loraStrength}
-                  </label>
-                  {!featureAccess.advancedSettings.hasAccess && (
-                    <Badge variant="secondary" className="text-xs">
-                      <Lock className="w-3 h-3 mr-1" />
-                      Pro
-                    </Badge>
-                  )}
-                </div>
-                <Slider
-                  value={[options.loraStrength]}
-                  onValueChange={(value) =>
-                    handleOptionChange(
-                      "loraStrength",
-                      value[0],
-                      "advancedSettings",
-                      featureAccess.advancedSettings.requiredPlan
-                    )
-                  }
-                  min={0}
-                  max={1}
-                  step={0.05}
-                  disabled={!featureAccess.advancedSettings.hasAccess}
-                />
-                <div className="flex justify-between text-xs text-muted-foreground mt-1">
-                  <span>Subtle (0)</span>
-                  <span>Balanced (0.8)</span>
-                  <span>Strong (1)</span>
-                </div>
-              </div>
-            )}
-
-            {/* Enhance Style */}
-            <div>
-              <div className="flex items-center gap-2 mb-2">
-                <label className="text-sm font-medium">Enhance Style</label>
-                {!featureAccess.advancedSettings.hasAccess && (
-                  <Badge variant="secondary" className="text-xs">
-                    <Lock className="w-3 h-3 mr-1" />
-                    Pro
-                  </Badge>
-                )}
-              </div>
-              <Select
-                value={options.enhanceStyle}
-                onValueChange={(value) =>
-                  handleOptionChange(
-                    "enhanceStyle",
-                    value,
-                    "advancedSettings",
-                    featureAccess.advancedSettings.requiredPlan
-                  )
-                }
-                disabled={!featureAccess.advancedSettings.hasAccess}
-              >
-                <SelectTrigger>
-                  <SelectValue placeholder="Select enhancement style" />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="none">None</SelectItem>
-                  {ENHANCE_STYLES.map((style) => (
-                    <SelectItem key={style.id} value={style.id}>
-                      {style.name}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-            </div>
-
-            {/* Upscaling */}
+            {/* Hires Fix */}
             <div className="space-y-4">
               <div className="flex items-center justify-between">
                 <div className="flex items-center gap-2">
-                  <label className="text-sm font-medium">
-                    Enable Upscaling
-                  </label>
-                  {!featureAccess.upscaling.hasAccess && (
-                    <Badge variant="secondary" className="text-xs">
-                      <Lock className="w-3 h-3 mr-1" />
-                      Pro
-                    </Badge>
-                  )}
+                  <label className="text-sm font-medium">High-Res Fix</label>
+                  <Tooltip>
+                    <TooltipTrigger><Info className="w-4 h-4 text-muted-foreground" /></TooltipTrigger>
+                    <TooltipContent><p>Generates at base resolution then upscales with refinement pass</p></TooltipContent>
+                  </Tooltip>
                 </div>
                 <Switch
-                  checked={options.upscale}
-                  onCheckedChange={(checked) =>
-                    handleOptionChange(
-                      "upscale",
-                      checked,
-                      "upscaling",
-                      featureAccess.upscaling.requiredPlan
-                    )
-                  }
-                  disabled={!featureAccess.upscaling.hasAccess}
+                  checked={options.hiresFix}
+                  onCheckedChange={(v) => handleOptionChange("hiresFix", v)}
                 />
               </div>
 
-              {options.upscale && (
-                <div>
-                  <label className="block text-sm font-medium mb-2">
-                    Upscale Strength: {options.upscaleStrength}x
+              {options.hiresFix && (
+                <div className="grid grid-cols-1 md:grid-cols-3 gap-4 pl-4 border-l-2 border-muted">
+                  <div>
+                    <label className="text-sm font-medium mb-2 block">
+                      Scale: {options.hiresScale}x
+                    </label>
+                    <Slider
+                      value={[options.hiresScale]}
+                      onValueChange={(v) => handleOptionChange("hiresScale", v[0])}
+                      min={1}
+                      max={4}
+                      step={0.25}
+                    />
+                  </div>
+                  <div>
+                    <label className="text-sm font-medium mb-2 block">
+                      Denoise: {options.hiresDenoise}
+                    </label>
+                    <Slider
+                      value={[options.hiresDenoise]}
+                      onValueChange={(v) => handleOptionChange("hiresDenoise", v[0])}
+                      min={0.1}
+                      max={0.99}
+                      step={0.05}
+                    />
+                  </div>
+                  <div>
+                    <label className="text-sm font-medium mb-2 block">
+                      Steps: {options.hiresSteps}
+                    </label>
+                    <Slider
+                      value={[options.hiresSteps]}
+                      onValueChange={(v) => handleOptionChange("hiresSteps", v[0])}
+                      min={10}
+                      max={50}
+                      step={1}
+                    />
+                  </div>
+                </div>
+              )}
+            </div>
+
+            <Separator />
+
+            {/* Face Restore */}
+            <div className="space-y-4">
+              <div className="flex items-center justify-between">
+                <div className="flex items-center gap-2">
+                  <label className="text-sm font-medium">Face Restore (GFPGAN)</label>
+                  <Tooltip>
+                    <TooltipTrigger><Info className="w-4 h-4 text-muted-foreground" /></TooltipTrigger>
+                    <TooltipContent><p>Fix face details. Keep strength low (0.1-0.3) for realism.</p></TooltipContent>
+                  </Tooltip>
+                </div>
+                <Switch
+                  checked={options.faceRestore}
+                  onCheckedChange={(v) => handleOptionChange("faceRestore", v)}
+                />
+              </div>
+
+              {options.faceRestore && (
+                <div className="pl-4 border-l-2 border-muted">
+                  <label className="text-sm font-medium mb-2 block">
+                    Strength: {options.faceRestoreStrength}
                   </label>
                   <Slider
-                    value={[options.upscaleStrength]}
-                    onValueChange={(value) =>
-                      handleOptionChange("upscaleStrength", value[0])
-                    }
-                    min={1}
-                    max={4}
-                    step={0.1}
+                    value={[options.faceRestoreStrength]}
+                    onValueChange={(v) => handleOptionChange("faceRestoreStrength", v[0])}
+                    min={0}
+                    max={1}
+                    step={0.05}
                   />
                   <div className="flex justify-between text-xs text-muted-foreground mt-1">
-                    <span>1x (Original)</span>
-                    <span>2x (Double)</span>
-                    <span>4x (Quad)</span>
+                    <span>Subtle (0)</span>
+                    <span>Default (0.2)</span>
+                    <span>Strong (1)</span>
                   </div>
                 </div>
               )}
@@ -959,9 +477,7 @@ export function AdvancedGenerationForm({
         {/* Generate Button */}
         <Button
           onClick={handleSubmit}
-          disabled={
-            isGenerating || !validation.isValid || !options.prompt.trim()
-          }
+          disabled={isGenerating || !validation.isValid || !options.prompt.trim()}
           className="w-full"
           size="lg"
         >
@@ -973,17 +489,16 @@ export function AdvancedGenerationForm({
           ) : (
             <>
               <Zap className="w-4 h-4 mr-2" />
-              Generate Images ({estimatedCost} TEMPT)
+              Generate ({estimatedCost} TEMPT)
             </>
           )}
         </Button>
 
-        {/* Form Status */}
         <div className="text-center text-sm text-muted-foreground">
           {validation.isValid ? (
-            <span className="text-green-600">✓ Ready to generate</span>
+            <span className="text-green-600">Ready to generate</span>
           ) : (
-            <span className="text-red-600">✗ Please fix validation errors</span>
+            <span className="text-red-600">Please fix validation errors</span>
           )}
         </div>
       </div>

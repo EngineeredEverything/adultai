@@ -364,12 +364,6 @@ export function useAdvancedGeneration({
         const sanitizedOptions = {
           ...options,
           seed: options.seed || undefined,
-          loraModel:
-            options.loraModel === "none" ? undefined : options.loraModel,
-          loraStrength:
-            options.loraModel === "none" ? undefined : options.loraStrength,
-          enhanceStyle:
-            options.enhanceStyle === "none" ? undefined : options.enhanceStyle,
         };
 
         logger.debug("Sending generation request", { sanitizedOptions });

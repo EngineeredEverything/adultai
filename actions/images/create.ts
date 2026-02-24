@@ -639,11 +639,7 @@ export const createAdvancedGeneratedImageRAW = async (user: User, data: z.infer<
     width: data.options.width,
     height: data.options.height,
     steps: data.options.steps,
-    // upscale: data.options.upscale || false,
     modelId: data.options.modelId,
-    loraModel: data.options.loraModel,
-    loraStrength: data.options.loraStrength,
-    enhanceStyle: data.options.enhanceStyle,
   })
 
   const totalCost = usageResult.cost
@@ -678,12 +674,21 @@ export const createAdvancedGeneratedImageRAW = async (user: User, data: z.infer<
     model_id: data.options.modelId,
     num_inference_steps: data.options.steps,
     guidance_scale: data.options.cfg,
-    ...(data.options.loraModel && {
-      lora_model: data.options.loraModel,
-      lora_strength: data.options.loraStrength || 1,
+    ...(data.options.negativePrompt && {
+      negative_prompt: data.options.negativePrompt,
     }),
-    ...(data.options.enhanceStyle && {
-      enhance_style: data.options.enhanceStyle,
+    ...(data.options.sampler && {
+      sampler: data.options.sampler,
+    }),
+    ...(data.options.hiresFix !== undefined && {
+      hires_fix: data.options.hiresFix,
+      hires_scale: data.options.hiresScale || 1.75,
+      hires_denoise: data.options.hiresDenoise || 0.4,
+      hires_steps: data.options.hiresSteps || 28,
+    }),
+    ...(data.options.faceRestore !== undefined && {
+      face_restore: data.options.faceRestore,
+      face_restore_strength: data.options.faceRestoreStrength || 0.2,
     }),
   }
 

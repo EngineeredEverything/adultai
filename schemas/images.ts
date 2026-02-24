@@ -45,17 +45,21 @@ export const createGeneratedImagesBatchSchema = z.object({
 export const advancedGenerationSchema = z.object({
   options: z.object({
     prompt: z.string(),
+    negativePrompt: z.string().optional(),
     seed: z.string().optional(),
     modelId: z.string(),
-    steps: z.number().min(10).max(150),
+    steps: z.number().min(10).max(100),
     cfg: z.number().min(1).max(20),
     sampler: z.string(),
-    width: z.number().min(64).max(2048),
-    height: z.number().min(64).max(2048),
-    loraModel: z.string().optional(),
-    count: z.number().min(1).max(10),
-    loraStrength: z.number().min(0).max(1).optional(),
-    enhanceStyle: z.string().optional(),
+    width: z.number().min(256).max(1024),
+    height: z.number().min(256).max(1024),
+    count: z.number().min(1).max(4),
+    hiresFix: z.boolean().optional(),
+    hiresScale: z.number().min(1).max(4).optional(),
+    hiresDenoise: z.number().min(0.1).max(0.99).optional(),
+    hiresSteps: z.number().min(10).max(50).optional(),
+    faceRestore: z.boolean().optional(),
+    faceRestoreStrength: z.number().min(0).max(1).optional(),
   }),
 })
 
