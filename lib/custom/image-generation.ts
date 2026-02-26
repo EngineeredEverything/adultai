@@ -4,7 +4,7 @@ import {
   ModelConfig,
   ModelslabResponse,
 } from "./types";
-import { API_URL, MODEL_CONFIGS } from "./config";
+import { API_URL, MODEL_CONFIGS, GPU_COST_PER_HOUR_USD } from "./config";
 import { uploadBase64ToCdn } from "../cdn";
 import { v4 as uuidv4 } from "uuid";
 import { logger } from "@/lib/logger";
@@ -140,6 +140,8 @@ export async function generateSingleImage(
   };
 
   logDebug("Request body:", requestBody);
+
+  const genStart = Date.now();
   
   const response = await fetchWithRetry(`${API_URL}/generate`, {
     method: "POST",
@@ -147,8 +149,12 @@ export async function generateSingleImage(
     body: JSON.stringify(requestBody),
   });
 
+  const wallClockMs = Date.now() - genStart;
   const data = await response.json();
-  logDebug("Generation response received");
+
+  // Prefer server-reported generation time (excludes network) over wall clock
+  const generationMs = data.generation_time_ms ?? wallClockMs;
+  logDebug("Generation response received", { generationMs, wallClockMs });
 
   if (!data.image) {
     throw new ImageGenerationError(
@@ -157,6 +163,10 @@ export async function generateSingleImage(
       false
     );
   }
+
+  // Compute GPU cost: (seconds used / 3600) * $/hr
+  const gpuCostUsd = parseFloat(((generationMs / 1000 / 3600) * GPU_COST_PER_HOUR_USD).toFixed(6));
+  logDebug("GPU cost estimate", { generationMs, gpuCostUsd });
 
   const { path, cdnUrl } = await uploadBase64ImageToCDN(data.image);
 
@@ -168,8 +178,10 @@ export async function generateSingleImage(
     modelId: modelConfig.lora_model || "sdxl",
     steps: modelConfig.num_inference_steps,
     cfg: modelConfig.guidance_scale,
-    sampler: "DPM++ 2M Karras", // Default sampler
+    sampler: modelConfig.sampler || "DPM++ 2M Karras",
     path,
+    gpuCostUsd,
+    generationMs,
   };
 }
 

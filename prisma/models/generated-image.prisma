@@ -12,6 +12,7 @@ model GeneratedImage {
   cfg            Float?
   sampler        String?
   costNuts       Int            @default(50)
+  gpuCostUsd     Float?         // Actual GPU compute cost in USD (for margin tracking)
   createdAt      DateTime       @default(now())
   updatedAt      DateTime       @updatedAt
   isPublic       Boolean        @default(true)

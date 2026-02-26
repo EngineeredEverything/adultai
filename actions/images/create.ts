@@ -270,6 +270,7 @@ export async function createPendingImages(
   width: number,
   height: number,
   futureLinks: string[],
+  gpuCostUsdPerImage?: number,
 ) {
   logger.debug("Creating pending image records", {
     userId,
@@ -307,8 +308,9 @@ export async function createPendingImages(
           modelId: modelConfig.model_id,
           steps: modelConfig.num_inference_steps,
           cfg: modelConfig.guidance_scale,
-          sampler: "DPM++ 2M Karras",
+          sampler: modelConfig.sampler || "DPM++ 2M Karras",
           costNuts: NEXT_PUBLIC_NUTS_PER_IMAGE,
+          gpuCostUsd: gpuCostUsdPerImage ?? null,
           status: "processing",
           taskId,
           eta: null,

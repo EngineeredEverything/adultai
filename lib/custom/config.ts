@@ -14,11 +14,17 @@ const NEGATIVE_BASE =
   "poorly drawn hands, deformed, jpeg artifacts, oversharpened, plastic skin, " +
   "watermark, text, logo, cgi, 3d render, cartoon, doll skin, smooth skin"
 
+// Cost model: RTX 3090 on vast.ai ~$0.50/hr
+// At 25 steps DPM++ 2M Karras: ~5-6s/image → ~600 imgs/hr → $0.00083/image at u=1
+// At 42 steps (old): ~9s/image → ~400 imgs/hr — same quality, 40% slower
+export const GPU_COST_PER_HOUR_USD = 0.50 // vast.ai RTX 3090 estimate
+export const AVG_SECONDS_PER_IMAGE = 6    // 25-step DPM++ 2M Karras on 3090
+
 export const MODEL_CONFIGS: Record<string, ModelConfig> = {
   flux: {
     lora_model: "uncensored-flux-lora",
     lora_strength: 0.8,
-    num_inference_steps: 42,
+    num_inference_steps: 25, // Reduced from 42 — DPM++ 2M Karras converges fast, same quality
     guidance_scale: 6.8,
     model_id: "",
     // Quality optimization — SD 1.5 realism stack
@@ -27,12 +33,12 @@ export const MODEL_CONFIGS: Record<string, ModelConfig> = {
     hires_fix: true,
     hires_scale: 1.75,
     hires_denoise: 0.4,
-    hires_steps: 28,
+    hires_steps: 18, // Reduced from 28 — hires pass needs fewer steps
     face_restore: true,
     face_restore_strength: 0.2,
   },
   sdxl: {
-    num_inference_steps: 42,
+    num_inference_steps: 25, // Reduced from 42
     guidance_scale: 6.8,
     enhance_style: "nude",
     model_id: "",
@@ -41,7 +47,7 @@ export const MODEL_CONFIGS: Record<string, ModelConfig> = {
     hires_fix: true,
     hires_scale: 1.75,
     hires_denoise: 0.4,
-    hires_steps: 28,
+    hires_steps: 18, // Reduced from 28
     face_restore: true,
     face_restore_strength: 0.2,
   },

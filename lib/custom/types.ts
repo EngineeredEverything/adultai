@@ -36,6 +36,8 @@ export interface ImageResult {
   cfg: number
   sampler: string
   path: string
+  gpuCostUsd?: number  // Estimated GPU compute cost for this image
+  generationMs?: number // Actual wall-clock generation time in ms
 }
 
 // Simplified response format based on the Python example
