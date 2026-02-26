@@ -413,6 +413,10 @@ export function ImageDialog({
                       className="object-contain"
                       priority
                     />
+                    {/* Votes overlay — top-right of image */}
+                    <div className="absolute top-3 right-3 z-10 flex items-center gap-1 bg-black/50 backdrop-blur-sm rounded-full px-1 py-1">
+                      <ImageVotes votes={votes} disabled={!user} size="sm" variant="compact" className="[&_button]:text-white [&_button:hover]:bg-white/20 [&_button]:bg-transparent" />
+                    </div>
                   </div>
                 ) : (
                   <div className="w-full h-full flex items-center justify-center p-8">
@@ -627,17 +631,10 @@ export function ImageDialog({
                   />
                 )}
 
-                {/* Interaction Controls */}
-                <div className="flex items-center gap-6 py-2">
-                  {/* Votes */}
-                  <ImageVotes votes={votes} disabled={!user} size="md" />
-
-
-                  {/* Comments */}
-                  <div className="flex items-center gap-2 text-muted-foreground">
-                    <MessageCircle className="w-5 h-5" />
-                    <span className="font-medium">{comments.length}</span>
-                  </div>
+                {/* Comment count */}
+                <div className="flex items-center gap-2 text-muted-foreground py-1">
+                  <MessageCircle className="w-4 h-4" />
+                  <span className="text-sm font-medium">{comments.length} comments</span>
                 </div>
 
                 <Separator />
