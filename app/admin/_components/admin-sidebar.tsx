@@ -78,7 +78,7 @@ export default function AdminSidebar() {
             <div className="space-y-6">
               <div>
                 <div className="px-3 mb-2 text-xs font-semibold uppercase tracking-wider text-gray-500 dark:text-gray-400">
-                  A safer way to adult
+                  Think it. See it. Feel it.
                 </div>
                 <div className="space-y-1">
                   <NavItem href="/admin" icon={Home}>

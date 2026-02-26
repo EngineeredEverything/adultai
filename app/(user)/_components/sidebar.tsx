@@ -106,7 +106,7 @@ export function Sidebar({
               !expanded && "sr-only"
             )}
           >
-            A safer way to Adult
+            Think it. See it. Feel it.
           </div>
           <nav className="flex flex-col gap-1 px-2">
             {navItems.map((item) => (

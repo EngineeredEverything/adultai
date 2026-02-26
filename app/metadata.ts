@@ -3,7 +3,7 @@ import { Metadata } from "next";
 export const RootLayoutMetadata: Metadata = {
     title: {
         template: "%s | AdultAI - AI Image Generation",
-        default: "AdultAI - A Safer Way to Adult",
+        default: "AdultAI - Think it. See it. Feel it.",
         absolute: "AdultAI - Create Unique AI-Generated Images",
     },
     description:
