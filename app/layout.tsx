@@ -17,7 +17,7 @@ export default async function RootLayout({
 
   return (
     <html lang="en">
-      <body className={`${boldena.className} antialiased`}>
+      <body className={`${boldena.className} antialiased dark`}>
         <AgeVerificationProvider initialVerified={isVerified}>
           {children}
           <Toaster />
