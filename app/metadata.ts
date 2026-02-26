@@ -45,7 +45,7 @@ export const RootLayoutMetadata: Metadata = {
             "Create unique, customized AI-generated images with powerful controls and features",
         images: [
             {
-                url: "/og-image.jpg", // Replace with your actual OG image path
+                url: "https://adultai-com.b-cdn.net/og-image.jpg",
                 width: 1200,
                 height: 630,
                 alt: "AdultAI - AI Image Generation Platform",
@@ -57,7 +57,7 @@ export const RootLayoutMetadata: Metadata = {
         title: "AdultAI - Create Unique AI-Generated Images",
         description:
             "Powerful AI image generation with customizable parameters and styles",
-        images: ["/twitter-image.jpg"], // Replace with your actual Twitter image path
+        images: ["https://adultai-com.b-cdn.net/og-image.jpg"],
         creator: "@YourTwitterHandle", // Replace with actual handle if applicable
     },
     // viewport: "width=device-width, initial-scale=1",
