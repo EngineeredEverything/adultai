@@ -1,4 +1,4 @@
-import { AVAILABLE_LORAS, type LoraConfig } from "../advanced-generation-utils";
+import { AVAILABLE_LORAS, type LoraConfig } from "@/app/(user)/advanced-generate/advanced-generation-utils";
 
 export const computeLorasFromStyle = (selectedStyle: string): LoraConfig[] => {
   if (selectedStyle === "none") return [];
