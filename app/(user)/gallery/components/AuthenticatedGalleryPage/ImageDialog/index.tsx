@@ -395,34 +395,60 @@ export function ImageDialog({
           {/* Scrollable Content */}
           <ScrollArea className="flex-1 max-h-[calc(95vh-69px)]">
             <div className="p-4 space-y-6">
-              {/* Main Image */}
-              <div className="relative w-full max-w-2xl mx-auto bg-muted rounded-lg overflow-hidden">
-                {image.image.cdnUrl ? (
-                  <div
-                    className="relative w-full"
-                    style={{
-                      aspectRatio: `${image.image.width || 1} / ${
-                        image.image.height || 1
-                      }`,
-                    }}
-                  >
-                    <Image
-                      src={image.image.cdnUrl || "/placeholder.svg"}
-                      alt={image.image.prompt || "Generated image"}
-                      fill
-                      className="object-contain"
-                      priority
-                    />
-                    {/* Votes overlay — top-right of image */}
-                    <div className="absolute top-3 right-3 z-10 flex items-center gap-1 bg-black/50 backdrop-blur-sm rounded-full px-1 py-1">
-                      <ImageVotes votes={votes} disabled={!user} size="sm" variant="compact" className="[&_button]:text-white [&_button:hover]:bg-white/20 [&_button]:bg-transparent" />
+              {/* Main Image with votes overlay */}
+              <div className="relative w-full max-w-2xl mx-auto">
+                {/* Image container — rounded corners via inner div, not overflow-hidden on outer */}
+                <div className="bg-muted rounded-lg overflow-hidden">
+                  {image.image.cdnUrl ? (
+                    <div
+                      className="relative w-full"
+                      style={{
+                        aspectRatio: `${image.image.width || 1} / ${
+                          image.image.height || 1
+                        }`,
+                      }}
+                    >
+                      <Image
+                        src={image.image.cdnUrl || "/placeholder.svg"}
+                        alt={image.image.prompt || "Generated image"}
+                        fill
+                        className="object-contain"
+                        priority
+                      />
                     </div>
-                  </div>
-                ) : (
-                  <div className="w-full h-full flex items-center justify-center p-8">
-                    <p className="text-muted-foreground">Image not available</p>
-                  </div>
-                )}
+                  ) : (
+                    <div className="w-full h-full flex items-center justify-center p-8">
+                      <p className="text-muted-foreground">Image not available</p>
+                    </div>
+                  )}
+                </div>
+
+                {/* Votes overlay — top-right corner, outside overflow-hidden container */}
+                <div className="absolute top-3 right-3 z-20 flex items-center gap-1 bg-black/60 backdrop-blur-sm rounded-full px-2 py-1 shadow-lg">
+                  <button
+                    onClick={votes.handleUpvote}
+                    disabled={!user || votes.isLoading}
+                    className={`flex items-center gap-1 px-2 py-1 rounded-full text-sm font-medium transition-colors disabled:opacity-40 ${
+                      votes.userVote === "UPVOTE"
+                        ? "text-green-400"
+                        : "text-white/80 hover:text-green-400"
+                    }`}
+                  >
+                    👍 <span className="text-xs">{votes.voteStats.upvotes}</span>
+                  </button>
+                  <div className="w-px h-4 bg-white/20" />
+                  <button
+                    onClick={votes.handleDownvote}
+                    disabled={!user || votes.isLoading}
+                    className={`flex items-center gap-1 px-2 py-1 rounded-full text-sm font-medium transition-colors disabled:opacity-40 ${
+                      votes.userVote === "DOWNVOTE"
+                        ? "text-red-400"
+                        : "text-white/80 hover:text-red-400"
+                    }`}
+                  >
+                    👎 <span className="text-xs">{votes.voteStats.downvotes}</span>
+                  </button>
+                </div>
               </div>
 
               {/* Image Details */}
