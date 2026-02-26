@@ -41,10 +41,8 @@ interface PageProps {
 }
 
 export default async function CategoryGalleryPage(props: PageProps) {
-  // const user = await currentUser();
-  // if (!user) {
-  //   return redirect("/auth/login");
-  // }
+  // Fetch user but don't redirect — category gallery is public, voting requires auth
+  const user = await currentUser();
 
   const params = await props.params;
   const { category_name } = params;
@@ -73,7 +71,7 @@ export default async function CategoryGalleryPage(props: PageProps) {
 
   return (
     <AuthenticatedGalleryPage
-      // userId={user.id}
+      userId={user?.id}
       category_id={category.id}
       searchQuery={searchQuery}
     />
