@@ -8,8 +8,8 @@ const BUNNY_STORAGE_ZONE = process.env.BUNNY_STORAGE_ZONE || "storage-adultai"
 const BUNNY_STORAGE_HOST = process.env.BUNNY_STORAGE_HOST || "la.storage.bunnycdn.com"
 const BUNNY_CDN_URL = process.env.NEXT_PUBLIC_BUNNY_CDN_URL || "https://adultai-com.b-cdn.net"
 
-// Default voice — "Rachel" from ElevenLabs, warm and natural
-const DEFAULT_VOICE_ID = "21m00Tcm4TlvDq8ikWAM"
+// Default voice — "Jessica" from ElevenLabs, playful and bright
+const DEFAULT_VOICE_ID = "cgSgspJ2msm6clMCkdW9"
 
 async function uploadToBunny(buf: Buffer, ext = "mp3"): Promise<string> {
   const filename = `audio/animate_${Date.now()}_${Math.random().toString(36).slice(2)}.${ext}`
@@ -49,7 +49,7 @@ export async function POST(req: NextRequest) {
       },
       body: JSON.stringify({
         text: text.trim(),
-        model_id: "eleven_turbo_v2",
+        model_id: "eleven_turbo_v2_5",
         voice_settings: { stability: 0.5, similarity_boost: 0.8, style: 0.2 },
       }),
     })

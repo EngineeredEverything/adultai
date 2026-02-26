@@ -9,12 +9,14 @@ import Link from "next/link"
 
 // ElevenLabs voice options
 const VOICES = [
-  { id: "21m00Tcm4TlvDq8ikWAM", name: "Rachel", desc: "Warm & Natural", emoji: "🌸" },
-  { id: "EXAVITQu4vr4xnSDxMaL", name: "Bella",  desc: "Soft & Sensual", emoji: "💋" },
-  { id: "AZnzlk1XvdvUeBnXmlld", name: "Domi",   desc: "Bold & Confident", emoji: "🔥" },
-  { id: "MF3mGyEYCl7XYWbV9V6O", name: "Elli",   desc: "Young & Playful", emoji: "✨" },
-  { id: "jsCqWAovK2LkecY7zXl4", name: "Freya",  desc: "Raspy & Sultry",  emoji: "🌙" },
-  { id: "oWAxZDx7w5VEj9dCyTzz", name: "Grace",  desc: "Sweet & Gentle",  emoji: "🕊️" },
+  { id: "cgSgspJ2msm6clMCkdW9", name: "Jessica", desc: "Playful & Bright",    emoji: "✨" },
+  { id: "EXAVITQu4vr4xnSDxMaL", name: "Sarah",   desc: "Mature & Confident",  emoji: "👑" },
+  { id: "FGY2WhTYpPnrIDTdsKH5", name: "Laura",   desc: "Energetic & Fun",     emoji: "🔥" },
+  { id: "pFZP5JQG7iQjIQuC4Bku", name: "Lily",    desc: "Velvety & British",   emoji: "🌹" },
+  { id: "hpp4J3VqNfWAUOO0d1Us", name: "Bella",   desc: "Warm & Professional", emoji: "💋" },
+  { id: "Xb7hH8MSUJpSbSDYk0k2", name: "Alice",   desc: "Clear & Engaging",    emoji: "🎀" },
+  { id: "XrExE9yKIg1WjnnlVkGX", name: "Matilda", desc: "Confident & Poised",  emoji: "💎" },
+  { id: "SAz9YHcvj6GT2YYXdXww", name: "River",   desc: "Relaxed & Neutral",   emoji: "🌊" },
 ]
 
 const PHRASE_SUGGESTIONS = [
@@ -181,7 +183,7 @@ export function SpeakStudio({ user, initialImageUrl }: { user: any; initialImage
                 <p className="text-xs text-gray-500">Each voice has a different character</p>
               </div>
 
-              <div className="grid grid-cols-3 gap-2">
+              <div className="grid grid-cols-4 gap-2">
                 {VOICES.map((v) => (
                   <button
                     key={v.id}

@@ -1,5 +1,23 @@
 import type { SubscriptionStatus } from "../gallery/components/GenerationForm/subscription-utils";
 
+// LoRA configuration
+export interface LoraConfig {
+  id: string;
+  strength: number;
+}
+
+export const AVAILABLE_LORAS = [
+  { id: "more_details", name: "Add More Detail", category: "quality", description: "Enhances fine details and textures", defaultStrength: 0.7 },
+  { id: "detail_tweaker", name: "Detail Tweaker", category: "quality", description: "Fine detail control (+add / -smooth)", defaultStrength: 0.8 },
+  { id: "epi_noiseoffset", name: "Dramatic Lighting", category: "lighting", description: "Deeper shadows and dramatic contrast", defaultStrength: 0.5 },
+  { id: "clothing_adjuster", name: "Clothing Adjuster", category: "style", description: "Control clothing amount (+more / -less)", defaultStrength: 0.8 },
+  { id: "polaroid_style", name: "Polaroid / Vintage", category: "style", description: "Vintage instant camera aesthetic", defaultStrength: 0.7 },
+  { id: "ghibli_style", name: "Ghibli / Anime Art", category: "style", description: "Studio Ghibli-inspired art", defaultStrength: 0.7 },
+  { id: "cute_girl_mix4", name: "Soft / Cute", category: "style", description: "Soft, cute aesthetic", defaultStrength: 0.7 },
+  { id: "anime_lineart", name: "Anime Lineart", category: "style", description: "Manga / anime line-art style", defaultStrength: 0.8 },
+  { id: "hipoly_3d", name: "3D Rendered / CGI", category: "style", description: "High-poly 3D rendered look", defaultStrength: 0.7 },
+];
+
 // Advanced Generation Types
 export interface GenerationOptions {
   prompt: string;
@@ -18,6 +36,7 @@ export interface GenerationOptions {
   hiresSteps: number;
   faceRestore: boolean;
   faceRestoreStrength: number;
+  loras: LoraConfig[];
 }
 
 export const DEFAULT_OPTIONS: GenerationOptions = {
@@ -37,6 +56,7 @@ export const DEFAULT_OPTIONS: GenerationOptions = {
   hiresSteps: 28,
   faceRestore: true,
   faceRestoreStrength: 0.2,
+  loras: [],
 };
 
 // Model Configuration — single SD 1.5 model on our GPU

@@ -147,7 +147,7 @@ export async function POST(req: NextRequest) {
         // Generate TTS voice if requested
         if (withVoice && ELEVENLABS_API_KEY && fullText) {
           try {
-            const voiceId = character.voiceId || "EXAVITQu4vr4xnSDxMaL" // Sarah default
+            const voiceId = character.voiceId || "cgSgspJ2msm6clMCkdW9" // Jessica default — playful, bright
             const ttsRes = await fetch(
               `https://api.elevenlabs.io/v1/text-to-speech/${voiceId}`,
               {
@@ -158,7 +158,7 @@ export async function POST(req: NextRequest) {
                 },
                 body: JSON.stringify({
                   text: fullText,
-                  model_id: "eleven_turbo_v2", // Faster model
+                  model_id: "eleven_turbo_v2_5", // Fastest model
                   voice_settings: { stability: 0.45, similarity_boost: 0.8, style: 0.3 },
                 }),
               }

@@ -239,6 +239,7 @@ export function useImageGeneration(params: UseImageGenerationParams) {
         const results = await createGeneratedImage({
           count: state.count,
           prompt: state.prompt,
+          loras,
           width: state.ratio.width,
           height: state.ratio.height,
           isPublic: state.isPublic,

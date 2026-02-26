@@ -3,6 +3,7 @@
 import type React from "react";
 import { type Dispatch, type SetStateAction, useState, useEffect } from "react";
 import { AnimatePresence, motion } from "framer-motion";
+import { computeLorasFromStyle } from "../hooks/use-lora-utils";
 import { Textarea } from "@/components/ui/textarea";
 import { Button } from "@/components/ui/button";
 import { MoreHorizontal, AlertTriangle, Search, Wand2 } from "lucide-react";
@@ -175,6 +176,10 @@ export default function GenerationForm({
     if (!prompt.trim()) return;
     router.push(`/gallery?search=${encodeURIComponent(prompt.trim())}`);
   };
+
+  // Compute LoRAs from the selected style
+  const loras = computeLorasFromStyle(selectedStyle);
+
 
   return (
     <motion.form

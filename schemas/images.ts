@@ -60,6 +60,10 @@ export const advancedGenerationSchema = z.object({
     hiresSteps: z.number().min(10).max(50).optional(),
     faceRestore: z.boolean().optional(),
     faceRestoreStrength: z.number().min(0).max(1).optional(),
+    loras: z.array(z.object({
+      id: z.string(),
+      strength: z.number().min(-1).max(2),
+    })).optional(),
   }),
 })
 

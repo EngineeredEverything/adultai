@@ -13,7 +13,7 @@ import random
 GPU_API_URL = "http://localhost:8080"
 GPU_API_KEY = "Pd10V9L4ULaOxmq93oHTktk6Fa5FxjX2iASILCjWi1o"
 ELEVENLABS_API_KEY = "sk_2c720f3f7b100b591f59803b57c0df2ea7074b49aa6f8b8d"
-DEFAULT_VOICE_ID = "21m00Tcm4TlvDq8ikWAM"
+DEFAULT_VOICE_ID = "cgSgspJ2msm6clMCkdW9"  # Jessica — playful, bright
 BUNNY_API_KEY = "01584fa8-be3f-4f8d-bae3f5080e2c-9d54-41dc"
 BUNNY_STORAGE_ZONE = "storage-adultai"
 BUNNY_STORAGE_HOST = "la.storage.bunnycdn.com"

@@ -27,7 +27,7 @@ export function ImageActions({ image, onGenerateVariations, onSetPrompt }: Image
   // Talk state
   const [talkText, setTalkText] = useState("")
   const [talkLoading, setTalkLoading] = useState(false)
-  const [talkVoiceId, setTalkVoiceId] = useState("21m00Tcm4TlvDq8ikWAM")
+  const [talkVoiceId, setTalkVoiceId] = useState("cgSgspJ2msm6clMCkdW9")
   const [talkResult, setTalkResult] = useState<{ videoUrl?: string | null; audioUrl?: string | null; audioOnly?: boolean } | null>(null)
 
   // img2img state
@@ -305,10 +305,14 @@ export function ImageActions({ image, onGenerateVariations, onSetPrompt }: Image
             <p className="text-[10px] text-gray-500 uppercase tracking-widest mb-1.5">Voice</p>
             <div className="grid grid-cols-4 gap-1">
               {[
-                { id: "21m00Tcm4TlvDq8ikWAM", name: "Rachel", desc: "Warm" },
-                { id: "EXAVITQu4vr4xnSDxMaL", name: "Bella", desc: "Soft" },
-                { id: "AZnzlk1XvdvUeBnXmlld", name: "Domi", desc: "Bold" },
-                { id: "MF3mGyEYCl7XYWbV9V6O", name: "Elli", desc: "Bright" },
+                { id: "cgSgspJ2msm6clMCkdW9", name: "Jessica", desc: "Playful" },
+                { id: "EXAVITQu4vr4xnSDxMaL", name: "Sarah",   desc: "Mature" },
+                { id: "FGY2WhTYpPnrIDTdsKH5", name: "Laura",   desc: "Energetic" },
+                { id: "pFZP5JQG7iQjIQuC4Bku", name: "Lily",    desc: "Velvety" },
+                { id: "hpp4J3VqNfWAUOO0d1Us", name: "Bella",   desc: "Warm" },
+                { id: "Xb7hH8MSUJpSbSDYk0k2", name: "Alice",   desc: "British" },
+                { id: "XrExE9yKIg1WjnnlVkGX", name: "Matilda", desc: "Confident" },
+                { id: "SAz9YHcvj6GT2YYXdXww", name: "River",   desc: "Neutral" },
               ].map((v) => (
                 <button
                   key={v.id}

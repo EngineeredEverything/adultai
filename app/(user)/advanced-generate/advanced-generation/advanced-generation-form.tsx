@@ -30,9 +30,11 @@ import {
   DEFAULT_OPTIONS,
   AVAILABLE_SAMPLERS,
   AVAILABLE_DIMENSIONS,
+  AVAILABLE_LORAS,
   calculateGenerationCost,
   validateGenerationOptions,
   type GenerationOptions,
+  type LoraConfig,
 } from "../advanced-generation-utils";
 import { toast } from "sonner";
 
@@ -469,6 +471,92 @@ export function AdvancedGenerationForm({
                     <span>Strong (1)</span>
                   </div>
                 </div>
+              )}
+            </div>
+            <Separator />
+
+            {/* LoRA Styles */}
+            <div className="space-y-4">
+              <div className="flex items-center gap-2">
+                <label className="text-sm font-medium">Style LoRAs</label>
+                <Tooltip>
+                  <TooltipTrigger><Info className="w-4 h-4 text-muted-foreground" /></TooltipTrigger>
+                  <TooltipContent><p>Apply style modifiers to change the look of your generation. Stack multiple for unique effects.</p></TooltipContent>
+                </Tooltip>
+              </div>
+
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+                {AVAILABLE_LORAS.map((lora) => {
+                  const isActive = options.loras.some((l) => l.id === lora.id);
+                  const activeLora = options.loras.find((l) => l.id === lora.id);
+
+                  return (
+                    <Card
+                      key={lora.id}
+                      className={`cursor-pointer transition-all ${
+                        isActive ? "ring-2 ring-primary bg-primary/5" : "hover:bg-muted/50"
+                      }`}
+                      onClick={() => {
+                        if (isActive) {
+                          handleOptionChange(
+                            "loras",
+                            options.loras.filter((l) => l.id !== lora.id)
+                          );
+                        } else {
+                          handleOptionChange("loras", [
+                            ...options.loras,
+                            { id: lora.id, strength: lora.defaultStrength },
+                          ]);
+                        }
+                      }}
+                    >
+                      <CardContent className="p-3">
+                        <div className="flex items-center justify-between">
+                          <div>
+                            <p className="text-sm font-medium">{lora.name}</p>
+                            <p className="text-xs text-muted-foreground">{lora.description}</p>
+                          </div>
+                          {isActive && (
+                            <div className="text-xs text-primary font-medium">ON</div>
+                          )}
+                        </div>
+                        {isActive && activeLora && (
+                          <div className="mt-2" onClick={(e) => e.stopPropagation()}>
+                            <div className="flex items-center justify-between text-xs mb-1">
+                              <span>Strength: {activeLora.strength}</span>
+                            </div>
+                            <Slider
+                              value={[activeLora.strength]}
+                              onValueChange={(v) => {
+                                handleOptionChange(
+                                  "loras",
+                                  options.loras.map((l) =>
+                                    l.id === lora.id ? { ...l, strength: v[0] } : l
+                                  )
+                                );
+                              }}
+                              min={0.1}
+                              max={1.5}
+                              step={0.1}
+                            />
+                          </div>
+                        )}
+                      </CardContent>
+                    </Card>
+                  );
+                })}
+              </div>
+
+              {options.loras.length > 0 && (
+                <p className="text-xs text-muted-foreground">
+                  {options.loras.length} LoRA{options.loras.length > 1 ? "s" : ""} active &mdash;{" "}
+                  <button
+                    className="underline text-primary"
+                    onClick={() => handleOptionChange("loras", [])}
+                  >
+                    clear all
+                  </button>
+                </p>
               )}
             </div>
           </TabsContent>

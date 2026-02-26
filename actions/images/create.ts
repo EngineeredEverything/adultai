@@ -690,6 +690,13 @@ export const createAdvancedGeneratedImageRAW = async (user: User, data: z.infer<
       face_restore: data.options.faceRestore,
       face_restore_strength: data.options.faceRestoreStrength || 0.2,
     }),
+    ...(data.options.loras && data.options.loras.length > 0 && {
+      loras: data.options.loras,
+    }),
+    ...(data.options.loras && data.options.loras.length === 1 && {
+      lora_id: data.options.loras[0].id,
+      lora_strength: data.options.loras[0].strength,
+    }),
   }
 
   // Start image generation process with webhook
