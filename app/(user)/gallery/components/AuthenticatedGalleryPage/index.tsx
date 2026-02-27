@@ -349,9 +349,10 @@ export default function GalleryPage(props: GalleryPageProps) {
   } = useImageLoading(loadingParams);
 
   // Apply sorting to paginated images
+  // In category mode the server already returns votes_desc — skip client re-sort
   const paginatedImages = useMemo(
-    () => sortImages(unsortedPaginatedImages, sortBy),
-    [unsortedPaginatedImages, sortBy, sortImages]
+    () => isCategoryMode ? unsortedPaginatedImages : sortImages(unsortedPaginatedImages, sortBy),
+    [unsortedPaginatedImages, sortBy, sortImages, isCategoryMode]
   );
 
   // Memoize generation hook parameters (only in normal mode)
