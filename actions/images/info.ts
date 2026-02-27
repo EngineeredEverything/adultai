@@ -90,16 +90,20 @@ export const getImagesInfoRAW = async (
           : Promise.resolve({} as { [key: string]: { id: string; name: string; keywords: string[] }[] }),
       ])
 
-      const cdnLinks = generateLinksBatch(images.map((img) => ({ id: img.id, path: img.path || "" })))
-
+      // Only generate CDN links for images that have a proper path
+      // Discord-saved images have imageUrl but no path — fall back to imageUrl directly
+      const imagesWithPath = images.filter((img) => img.path && img.path.length > 0)
+      const cdnLinks = generateLinksBatch(imagesWithPath.map((img) => ({ id: img.id, path: img.path! })))
       const cdnMap = new Map(cdnLinks.map((l) => [l.id, l.link]))
+
       const commentMap = new Map(commentsInfo.map((c) => [c.imageId, c]))
       const voteMap = new Map(votesInfo.map((v) => [v.imageId, v]))
 
       const imagesInfo = images.map((image) => ({
         image: {
           ...image,
-          cdnUrl: cdnMap.get(image.id),
+          // Use CDN path-based URL if available, otherwise fall back to stored imageUrl
+          cdnUrl: cdnMap.get(image.id) || image.imageUrl || undefined,
         },
         comments: commentMap.get(image.id),
         votes: voteMap.get(image.id),
