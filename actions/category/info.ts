@@ -1,5 +1,4 @@
 "use server"
-import { unstable_noStore as noStore } from "next/cache"
 import { db } from "@/lib/db"
 import { logger } from "@/lib/logger"
 import { Prisma } from "@prisma/client"
@@ -35,7 +34,6 @@ export async function refreshCategoryThumbnail(categoryId: string) {
 }
 
 export async function getAllCategories() {
-  noStore()
   return trackPerformance("getAllCategories", async (tracker) => {
     const allCategories = await tracker.trackQuery("findAllCategories", () =>
       db.category.findMany({
@@ -66,7 +64,6 @@ export async function getAllCategories() {
 }
 
 export async function getTopCategories(limit = 6) {
-  noStore()
   return trackPerformance(
     "getTopCategories",
     async (tracker) => {
