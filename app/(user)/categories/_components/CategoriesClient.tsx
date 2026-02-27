@@ -188,6 +188,7 @@ export default function CategoriesClient() {
                 {category.sampleImage?.imageUrl ? (
                   <div className="aspect-[3/4] relative">
                     <Image
+                      unoptimized
                       src={category.sampleImage.imageUrl}
                       alt={category.name}
                       fill

@@ -1,11 +1,41 @@
 "use server"
+import { unstable_noStore as noStore } from "next/cache"
 import { db } from "@/lib/db"
 import { logger } from "@/lib/logger"
 import { Prisma } from "@prisma/client"
 import { searchImages } from "../images/info"
 import { trackPerformance } from "@/lib/performance"
 
+/**
+ * Recompute and store the best thumbnail for a category.
+ * Called after any vote so thumbnails stay current.
+ */
+export async function refreshCategoryThumbnail(categoryId: string) {
+  try {
+    const best = await db.generatedImage.findFirst({
+      where: {
+        categoryIds: { has: categoryId },
+        status: "completed",
+        imageUrl: { not: null },
+        isPublic: true,
+      },
+      select: { imageUrl: true },
+      orderBy: [{ voteScore: "desc" }, { upvotes: "desc" }, { createdAt: "desc" }],
+    })
+    if (best?.imageUrl) {
+      await db.category.update({
+        where: { id: categoryId },
+        data: { thumbnailUrl: best.imageUrl },
+      })
+    }
+  } catch (e) {
+    // Non-critical — don't let thumbnail refresh break vote flow
+    logger.warn("refreshCategoryThumbnail failed", { categoryId, error: e })
+  }
+}
+
 export async function getAllCategories() {
+  noStore()
   return trackPerformance("getAllCategories", async (tracker) => {
     const allCategories = await tracker.trackQuery("findAllCategories", () =>
       db.category.findMany({
@@ -13,57 +43,30 @@ export async function getAllCategories() {
           id: true,
           name: true,
           keywords: true,
-          imageIds: true, // Get the array directly instead of using _count
+          imageIds: true,
+          thumbnailUrl: true,
         },
       }),
     )
 
-    console.log("[v0] Found categories:", allCategories.length)
+    const filteredCategories = allCategories
+      .filter((category) => category.imageIds.length > 0)
+      .sort((a, b) => b.imageIds.length - a.imageIds.length)
 
-    // Filter categories that have images
-    const filteredCategories = allCategories.filter((category) => category.imageIds.length > 0)
-
-    console.log("[v0] Categories with images:", filteredCategories.length)
-
-    const categoryIds = filteredCategories.map((c) => c.id)
-
-    // Query the best thumbnail per category individually (sorted by voteScore desc)
-    const categoryImageMap = new Map<string, { id: string; imageUrl: string | null }>()
-    await tracker.trackQuery("findThumbnailsPerCategory", async () => {
-      await Promise.all(
-        categoryIds.map(async (catId) => {
-          const best = await db.generatedImage.findFirst({
-            where: {
-              categoryIds: { has: catId },
-              status: "completed",
-              imageUrl: { not: null },
-              isPublic: true,
-            },
-            select: { id: true, imageUrl: true },
-            orderBy: [{ voteScore: "desc" }, { upvotes: "desc" }, { createdAt: "desc" }],
-          })
-          if (best) {
-            categoryImageMap.set(catId, { id: best.id, imageUrl: best.imageUrl })
-          }
-        })
-      )
-    })
-
-    const categoriesWithSampleImages = filteredCategories.map((category) => ({
+    return filteredCategories.map((category) => ({
       id: category.id,
       name: category.name,
       keywords: category.keywords,
-      imageCount: category.imageIds.length, // Use array length instead of _count
-      sampleImage: categoryImageMap.get(category.id) || null,
+      imageCount: category.imageIds.length,
+      sampleImage: category.thumbnailUrl
+        ? { id: category.id, imageUrl: category.thumbnailUrl }
+        : null,
     }))
-
-    categoriesWithSampleImages.sort((a, b) => b.imageCount - a.imageCount)
-
-    return categoriesWithSampleImages
   })
 }
 
 export async function getTopCategories(limit = 6) {
+  noStore()
   return trackPerformance(
     "getTopCategories",
     async (tracker) => {
@@ -74,49 +77,25 @@ export async function getTopCategories(limit = 6) {
             name: true,
             keywords: true,
             imageIds: true,
+            thumbnailUrl: true,
           },
         }),
       )
 
-      // Sort by imageIds length and take top N
       const topCategories = allCategories
         .filter((cat) => cat.imageIds.length > 0)
         .sort((a, b) => b.imageIds.length - a.imageIds.length)
         .slice(0, limit)
 
-      const categoryIds = topCategories.map((c) => c.id)
-
-      // Query best thumbnail per category individually (sorted by voteScore desc)
-      const categoryImageMap = new Map<string, { id: string; imageUrl: string | null }>()
-      await tracker.trackQuery("findTopThumbnailsPerCategory", async () => {
-        await Promise.all(
-          categoryIds.map(async (catId) => {
-            const best = await db.generatedImage.findFirst({
-              where: {
-                categoryIds: { has: catId },
-                status: "completed",
-                imageUrl: { not: null },
-                isPublic: true,
-              },
-              select: { id: true, imageUrl: true },
-              orderBy: [{ voteScore: "desc" }, { upvotes: "desc" }, { createdAt: "desc" }],
-            })
-            if (best) {
-              categoryImageMap.set(catId, { id: best.id, imageUrl: best.imageUrl })
-            }
-          })
-        )
-      })
-
-      const categoriesWithSampleImages = topCategories.map((category) => ({
+      return topCategories.map((category) => ({
         id: category.id,
         name: category.name,
         keywords: category.keywords,
         imageCount: category.imageIds.length,
-        sampleImage: categoryImageMap.get(category.id) || null,
+        sampleImage: category.thumbnailUrl
+          ? { id: category.id, imageUrl: category.thumbnailUrl }
+          : null,
       }))
-
-      return categoriesWithSampleImages
     },
     { limit },
   )

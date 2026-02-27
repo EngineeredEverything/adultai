@@ -1,5 +1,6 @@
 model Category {
   id                String   @id @default(auto()) @map("_id") @db.ObjectId
+  thumbnailUrl      String?
   name              String
   keywords          String[]
   createdAt         DateTime @default(now())

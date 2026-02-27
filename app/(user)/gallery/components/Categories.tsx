@@ -89,6 +89,7 @@ export default function Categories({
                     src={category.sampleImage.imageUrl}
                     alt={category.name}
                     fill
+                    unoptimized
                     className="object-cover group-hover:scale-105 transition-transform duration-300"
                   />
                   {category.imageCount != null && (

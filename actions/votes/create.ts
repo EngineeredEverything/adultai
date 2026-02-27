@@ -4,6 +4,7 @@ import { db } from "@/lib/db"
 import { currentUser } from "@/utils/auth"
 import { logger } from "@/lib/logger"
 import type { VoteType } from "@prisma/client"
+import { refreshCategoryThumbnail } from "../category/info"
 
 export async function createVote(imageId: string, voteType: "UPVOTE" | "DOWNVOTE") {
     try {
@@ -253,6 +254,14 @@ export async function createVote(imageId: string, voteType: "UPVOTE" | "DOWNVOTE
                 userVote: result.userVote
             }
         })
+
+        // Refresh thumbnails for categories this image belongs to (fire-and-forget)
+        try {
+            const img = await db.generatedImage.findUnique({ where: { id: imageId }, select: { categoryIds: true } })
+            if (img?.categoryIds?.length) {
+                void Promise.all(img.categoryIds.map((cid) => refreshCategoryThumbnail(cid)))
+            }
+        } catch {}
 
         return result
     } catch (error: any) {
