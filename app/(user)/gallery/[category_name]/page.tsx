@@ -1,10 +1,10 @@
-import { redirect } from "next/navigation";
 import { currentUser } from "@/utils/auth";
 import { db } from "@/lib/db";
 import { notFound } from "next/navigation";
 import type { Metadata } from "next";
 import { logger } from "@/lib/logger";
 import AuthenticatedGalleryPage from "../components/AuthenticatedGalleryPage";
+import { searchImages } from "@/actions/images/info";
 
 export const metadata: Metadata = {
   title: {
@@ -69,11 +69,26 @@ export default async function CategoryGalleryPage(props: PageProps) {
     return notFound();
   }
 
+  // Prefetch first page server-side, sorted by votes
+  const prefetched = await searchImages({
+    filters: { category_id: category.id, isPublic: true, sort: "votes_desc" },
+    data: {
+      limit: { start: 0, end: 20 },
+      images: { comments: { count: true }, categories: true, votes: { count: true } },
+      count: true,
+    },
+  });
+
+  const prefetchedImages = !("error" in prefetched) ? prefetched.images : [];
+  const prefetchedCount = !("error" in prefetched) ? (prefetched.count ?? 0) : 0;
+
   return (
     <AuthenticatedGalleryPage
       userId={user?.id}
       category_id={category.id}
       searchQuery={searchQuery}
+      prefetchedImages={prefetchedImages}
+      prefetchedCount={prefetchedCount}
     />
   );
 }

@@ -1,6 +1,7 @@
 import { currentUser } from "@/utils/auth";
 import AuthenticatedGalleryPage from "./components/AuthenticatedGalleryPage";
 import { Metadata } from "next";
+import { searchImages } from "@/actions/images/info";
 
 export const metadata: Metadata = {
   title: {
@@ -38,11 +39,28 @@ export default async function page(props: PageProps) {
   const searchQuery =
     typeof searchParams.search === "string" ? searchParams.search : "";
 
-  // Only fetch user authentication status on server
   const user = await currentUser();
 
-  // Pass minimal data to client component - let it handle all data fetching
+  // Prefetch first page of images server-side to eliminate client waterfall
+  const prefetched = await searchImages({
+    query: searchQuery,
+    filters: { isPublic: true },
+    data: {
+      limit: { start: 0, end: 20 },
+      images: { comments: { count: true }, categories: true, votes: { count: true } },
+      count: true,
+    },
+  });
+
+  const prefetchedImages = !("error" in prefetched) ? prefetched.images : [];
+  const prefetchedCount = !("error" in prefetched) ? (prefetched.count ?? 0) : 0;
+
   return (
-    <AuthenticatedGalleryPage userId={user?.id} searchQuery={searchQuery} />
+    <AuthenticatedGalleryPage
+      userId={user?.id}
+      searchQuery={searchQuery}
+      prefetchedImages={prefetchedImages}
+      prefetchedCount={prefetchedCount}
+    />
   );
 }

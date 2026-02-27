@@ -40,21 +40,23 @@ interface GalleryPageProps {
   searchQuery: string;
   userMode?: boolean;
   category_id?: string;
+  prefetchedImages?: SearchImagesResponseSuccessType["images"];
+  prefetchedCount?: number;
 }
 
 export default function GalleryPage(props: GalleryPageProps) {
-  const { userId, searchQuery, userMode, category_id } = props;
+  const { userId, searchQuery, userMode, category_id, prefetchedImages, prefetchedCount } = props;
 
   // Determine the mode
   const isCategoryMode = !!category_id;
   const isUserMode = !!userMode;
   const isNormalMode = !isCategoryMode && !isUserMode;
 
-  // Data states
+  // Data states — seed with server-prefetched data if available
   const [user, setUser] = useState<GetCurrentUserInfoSuccessType | undefined>();
-  const [images, setImages] = useState<
-    SearchImagesResponseSuccessType["images"]
-  >([]);
+  const [images, setImages] = useState<SearchImagesResponseSuccessType["images"]>(
+    prefetchedImages ?? []
+  );
   const [generatedImages, setGeneratedImages] = useState<
     SearchImagesResponseSuccessType["images"]
   >([]);
@@ -150,8 +152,18 @@ export default function GalleryPage(props: GalleryPageProps) {
     };
   }, [userId]);
 
-  // Fetch initial images with abort support
+  // Track total count (seed from prefetch)
+  const [prefetchedTotalCount] = useState(prefetchedCount ?? 0);
+
+  // Fetch initial images with abort support — skipped if server already prefetched
   useEffect(() => {
+    // If we have server-prefetched images, skip the initial client fetch
+    if (prefetchedImages && prefetchedImages.length > 0) {
+      setTotalCount(prefetchedTotalCount);
+      setIsLoadingImages(false);
+      return;
+    }
+
     // Cancel previous request if exists
     if (abortControllerRef.current) {
       abortControllerRef.current.abort();
@@ -251,7 +263,7 @@ export default function GalleryPage(props: GalleryPageProps) {
     return () => {
       abortController.abort();
     };
-  }, [searchQuery, isUserMode, isCategoryMode, userId, category_id]);
+  }, [searchQuery, isUserMode, isCategoryMode, userId, category_id, prefetchedImages, prefetchedTotalCount]);
 
   // Fetch categories (only in normal mode)
   useEffect(() => {
