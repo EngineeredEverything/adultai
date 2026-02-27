@@ -1,7 +1,8 @@
 // app/admin/page.tsx or wherever your AdminDashboard lives
 import { db } from "@/lib/db";
 import { startOfMonth, endOfMonth, subMonths } from "date-fns";
-import DashboardOverview from "./_components/dashboard-overview";
+import dynamic from "next/dynamic";
+const DashboardOverview = dynamic(() => import("./_components/dashboard-overview"));
 
 export default async function AdminDashboard() {
   // Get stats data for the chart

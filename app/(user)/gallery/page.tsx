@@ -41,13 +41,13 @@ export default async function page(props: PageProps) {
 
   const user = await currentUser();
 
-  // Prefetch first page of images server-side to eliminate client waterfall
+  // Prefetch first page server-side — images only, no votes/comments (keeps HTML small)
   const prefetched = await searchImages({
     query: searchQuery,
     filters: { isPublic: true },
     data: {
       limit: { start: 0, end: 20 },
-      images: { comments: { count: true }, categories: true, votes: { count: true } },
+      images: { categories: false },
       count: true,
     },
   });

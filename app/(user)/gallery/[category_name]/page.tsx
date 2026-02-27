@@ -69,12 +69,12 @@ export default async function CategoryGalleryPage(props: PageProps) {
     return notFound();
   }
 
-  // Prefetch first page server-side, sorted by votes
+  // Prefetch first page server-side — images only, no votes/comments (keeps HTML small)
   const prefetched = await searchImages({
     filters: { category_id: category.id, isPublic: true, sort: "votes_desc" },
     data: {
       limit: { start: 0, end: 20 },
-      images: { comments: { count: true }, categories: true, votes: { count: true } },
+      images: { categories: false },
       count: true,
     },
   });
