@@ -12,12 +12,15 @@ import {
   Loader2,
   Play,
   X,
+  ThumbsUp,
+  ThumbsDown,
 } from "lucide-react";
 import Image from "next/image";
 import { useState, useEffect, useRef } from "react";
 import { motion } from "framer-motion";
 import { logger } from "@/lib/logger";
 import { toast } from "sonner";
+import { createVote } from "@/actions/votes/create";
 
 // Alternative compact version for smaller cards
 export function ImageCard({
@@ -46,6 +49,15 @@ export function ImageCard({
   const [isAnimating, setIsAnimating] = useState(false);
   const [animatedVideoUrl, setAnimatedVideoUrl] = useState<string | null>(null);
   const videoRef = useRef<HTMLVideoElement | null>(null);
+
+  // Inline vote state — seeded from props, updated optimistically
+  const [userVote, setUserVote] = useState<"UPVOTE" | "DOWNVOTE" | null>(
+    (image.votes as any)?.userVote || null
+  );
+  const [voteScore, setVoteScore] = useState(image.votes?.voteScore || 0);
+  const [upvotes, setUpvotes] = useState(image.votes?.upvoteCount || 0);
+  const [downvotes, setDownvotes] = useState(image.votes?.downvoteCount || 0);
+  const [isVoting, setIsVoting] = useState(false);
 
   useEffect(() => {
     logger.debug(`ImageCard mounted for image ID: ${image.image.id}`);
@@ -90,11 +102,50 @@ export function ImageCard({
     setAnimatedVideoUrl(null);
   };
 
-  // Get vote statistics
-  const voteScore = image.votes?.voteScore || 0;
-  const hasVotes =
-    (image.votes?.upvoteCount || 0) > 0 ||
-    (image.votes?.downvoteCount || 0) > 0;
+  const handleVote = async (e: React.MouseEvent, voteType: "UPVOTE" | "DOWNVOTE") => {
+    e.stopPropagation();
+    if (isVoting) return;
+    setIsVoting(true);
+
+    // Optimistic update
+    const prev = { userVote, voteScore, upvotes, downvotes };
+    if (userVote === voteType) {
+      // Toggle off
+      setUserVote(null);
+      if (voteType === "UPVOTE") { setUpvotes(u => Math.max(0, u - 1)); setVoteScore(s => s - 1); }
+      else { setDownvotes(d => Math.max(0, d - 1)); setVoteScore(s => s + 1); }
+    } else if (userVote && userVote !== voteType) {
+      // Switch
+      setUserVote(voteType);
+      if (voteType === "UPVOTE") { setUpvotes(u => u + 1); setDownvotes(d => Math.max(0, d - 1)); setVoteScore(s => s + 2); }
+      else { setDownvotes(d => d + 1); setUpvotes(u => Math.max(0, u - 1)); setVoteScore(s => s - 2); }
+    } else {
+      // New vote
+      setUserVote(voteType);
+      if (voteType === "UPVOTE") { setUpvotes(u => u + 1); setVoteScore(s => s + 1); }
+      else { setDownvotes(d => d + 1); setVoteScore(s => s - 1); }
+    }
+
+    try {
+      const res = await createVote(image.image.id, voteType);
+      if ("error" in res) throw new Error(res.error);
+      setUserVote(res.userVote);
+      setVoteScore(res.voteScore || 0);
+      setUpvotes(res.upvotes || 0);
+      setDownvotes(res.downvotes || 0);
+    } catch {
+      // Revert
+      setUserVote(prev.userVote);
+      setVoteScore(prev.voteScore);
+      setUpvotes(prev.upvotes);
+      setDownvotes(prev.downvotes);
+      toast.error("Failed to vote");
+    } finally {
+      setIsVoting(false);
+    }
+  };
+
+  const hasVotes = upvotes > 0 || downvotes > 0;
 
   return (
     <motion.div
@@ -190,17 +241,15 @@ export function ImageCard({
         </button>
       )}
 
-      {/* Vote Score Badge - Top Right */}
-      {hasVotes && Math.abs(voteScore) > 0 && (
+      {/* Vote Score Badge - Top Right (shown when not hovering) */}
+      {Math.abs(voteScore) > 0 && !hovering && (
         <div className="absolute top-2 right-2 z-10">
           <Badge
             variant="secondary"
             className={`text-xs px-1.5 py-0.5 flex items-center gap-1 ${
               voteScore > 0
                 ? "bg-green-500/80 text-white"
-                : voteScore < 0
-                ? "bg-red-500/80 text-white"
-                : "bg-gray-500/80 text-white"
+                : "bg-red-500/80 text-white"
             }`}
           >
             {voteScore > 0 ? (
@@ -215,85 +264,106 @@ export function ImageCard({
 
       {/* Hover overlay */}
       <div
-        className={`absolute bottom-0 left-0 right-0 p-3 bg-gradient-to-t from-black/50 via-black/70 to-transparent
-                   transition-all duration-300 ${
-                     hovering ? "opacity-100" : "opacity-0"
-                   }`}
+        className={`absolute inset-0 flex flex-col justify-between p-2 bg-gradient-to-t from-black/80 via-black/20 to-transparent
+                   transition-all duration-200 ${hovering ? "opacity-100" : "opacity-0"}`}
+        onClick={(e) => e.stopPropagation()}
       >
-        <div className="flex justify-between items-center mb-2">
-          <Badge
-            variant={image.image.isPublic ? "secondary" : "outline"}
-            className="flex gap-1 items-center"
-          >
-            {image.image.isPublic ? (
-              "Public"
-            ) : (
-              <>
-                <Lock className="w-3 h-3" />
-                Private
-              </>
-            )}
-          </Badge>
-
-          <div className="flex gap-2 items-center">
-            {/* Detailed vote info on hover */}
-            {hasVotes && (
-              <span className="text-white text-xs">
-                {image.votes?.upvoteCount || 0}↑{" "}
-                {image.votes?.downvoteCount || 0}↓
-              </span>
-            )}
-
-            {/* Comments */}
-            {image.comments && (
-              <span className="text-white flex items-center gap-1 text-xs">
+        {/* Top row: lock badge + comments */}
+        <div className="flex justify-between items-start">
+          {!image.image.isPublic && (
+            <Badge variant="outline" className="flex gap-1 items-center text-[10px] bg-black/40 border-white/20 text-white">
+              <Lock className="w-2.5 h-2.5" />
+              Private
+            </Badge>
+          )}
+          <div className="ml-auto flex items-center gap-1.5">
+            {image.comments && (image.comments.count || 0) > 0 && (
+              <span className="text-white/80 flex items-center gap-0.5 text-[10px]">
                 <MessageCircle className="w-3 h-3" />
-                {image.comments.count || 0}
+                {image.comments.count}
               </span>
             )}
           </div>
         </div>
 
-        {image.image.prompt && (
-          <p className="text-white text-sm line-clamp-2">
-            {image.image.prompt}
-          </p>
-        )}
+        {/* Bottom: vote buttons + prompt + actions */}
+        <div className="flex flex-col gap-1.5">
+          {/* Prompt */}
+          {image.image.prompt && (
+            <p className="text-white/90 text-[10px] line-clamp-2 leading-tight" onClick={onClick}>
+              {image.image.prompt}
+            </p>
+          )}
 
-        {/* Quick action buttons */}
-        {!animatedVideoUrl && (
-          <div className="flex gap-1.5 mt-2" onClick={(e) => e.stopPropagation()}>
+          {/* Vote buttons — prominent, always visible on hover */}
+          <div className="flex items-center gap-1.5">
             <button
-              onClick={handleQuickAnimate}
-              disabled={isAnimating}
-              className="flex items-center gap-1 px-2 py-1 bg-pink-600/80 hover:bg-pink-600 text-white rounded text-[10px] font-medium transition-colors disabled:opacity-60"
-              title="Animate this image"
+              onClick={(e) => handleVote(e, "UPVOTE")}
+              disabled={isVoting}
+              className={`flex items-center gap-1 px-2.5 py-1.5 rounded-lg text-xs font-semibold transition-all
+                ${userVote === "UPVOTE"
+                  ? "bg-green-500 text-white shadow-lg shadow-green-500/30 scale-105"
+                  : "bg-white/15 hover:bg-green-500/80 text-white backdrop-blur-sm"
+                } disabled:opacity-50`}
+              title="Upvote"
             >
-              {isAnimating ? <Loader2 className="w-3 h-3 animate-spin" /> : <Film className="w-3 h-3" />}
-              {isAnimating ? "Animating…" : "Animate"}
+              <ThumbsUp className="w-3.5 h-3.5" />
+              {upvotes > 0 && <span>{upvotes}</span>}
             </button>
+
             <button
-              onClick={onClick}
-              className="flex items-center gap-1 px-2 py-1 bg-white/20 hover:bg-white/30 text-white rounded text-[10px] font-medium transition-colors"
-              title="Open image"
+              onClick={(e) => handleVote(e, "DOWNVOTE")}
+              disabled={isVoting}
+              className={`flex items-center gap-1 px-2.5 py-1.5 rounded-lg text-xs font-semibold transition-all
+                ${userVote === "DOWNVOTE"
+                  ? "bg-red-500 text-white shadow-lg shadow-red-500/30 scale-105"
+                  : "bg-white/15 hover:bg-red-500/80 text-white backdrop-blur-sm"
+                } disabled:opacity-50`}
+              title="Downvote"
             >
-              <Play className="w-3 h-3" />
-              More
+              <ThumbsDown className="w-3.5 h-3.5" />
+              {downvotes > 0 && <span>{downvotes}</span>}
             </button>
+
+            {/* Net score */}
+            {Math.abs(voteScore) > 0 && (
+              <span className={`text-xs font-bold ml-0.5 ${voteScore > 0 ? "text-green-400" : "text-red-400"}`}>
+                {voteScore > 0 ? "+" : ""}{voteScore}
+              </span>
+            )}
+
+            {/* Spacer + More button */}
+            <div className="ml-auto flex gap-1">
+              {!animatedVideoUrl && (
+                <button
+                  onClick={handleQuickAnimate}
+                  disabled={isAnimating}
+                  className="flex items-center gap-1 px-2 py-1.5 bg-pink-600/80 hover:bg-pink-600 text-white rounded-lg text-[10px] font-medium transition-colors disabled:opacity-60"
+                  title="Animate"
+                >
+                  {isAnimating ? <Loader2 className="w-3 h-3 animate-spin" /> : <Film className="w-3 h-3" />}
+                </button>
+              )}
+              <button
+                onClick={onClick}
+                className="flex items-center gap-1 px-2 py-1.5 bg-white/15 hover:bg-white/25 text-white rounded-lg text-[10px] font-medium transition-colors backdrop-blur-sm"
+                title="Open"
+              >
+                <Play className="w-3 h-3" />
+              </button>
+            </div>
           </div>
-        )}
-        {animatedVideoUrl && (
-          <div className="flex gap-1.5 mt-2">
+
+          {animatedVideoUrl && (
             <a
               href={animatedVideoUrl}
               download="animation.mp4"
-              onClick={(e) => e.stopPropagation()}
-              className="flex items-center gap-1 px-2 py-1 bg-green-600/80 hover:bg-green-600 text-white rounded text-[10px] font-medium transition-colors"
+              className="flex items-center gap-1 px-2 py-1 bg-green-600/80 hover:bg-green-600 text-white rounded text-[10px] font-medium transition-colors w-fit"
             >
               ⬇ Download
             </a>
-          </div>
-        )}
+          )}
+        </div>
       </div>
 
       <div
