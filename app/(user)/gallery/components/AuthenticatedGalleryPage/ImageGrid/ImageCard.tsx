@@ -247,122 +247,109 @@ export function ImageCard({
           <Badge
             variant="secondary"
             className={`text-xs px-1.5 py-0.5 flex items-center gap-1 ${
-              voteScore > 0
-                ? "bg-green-500/80 text-white"
-                : "bg-red-500/80 text-white"
+              voteScore > 0 ? "bg-green-500/80 text-white" : "bg-red-500/80 text-white"
             }`}
           >
-            {voteScore > 0 ? (
-              <TrendingUp className="w-3 h-3" />
-            ) : (
-              <TrendingDown className="w-3 h-3" />
-            )}
+            {voteScore > 0 ? <TrendingUp className="w-3 h-3" /> : <TrendingDown className="w-3 h-3" />}
             {Math.abs(voteScore)}
           </Badge>
         </div>
       )}
 
-      {/* Hover overlay */}
-      <div
-        className={`absolute inset-0 flex flex-col justify-between p-2 bg-gradient-to-t from-black/80 via-black/20 to-transparent
-                   transition-all duration-200 ${hovering ? "opacity-100" : "opacity-0"}`}
-        onClick={(e) => e.stopPropagation()}
-      >
-        {/* Top row: lock badge + comments */}
-        <div className="flex justify-between items-start">
-          {!image.image.isPublic && (
-            <Badge variant="outline" className="flex gap-1 items-center text-[10px] bg-black/40 border-white/20 text-white">
-              <Lock className="w-2.5 h-2.5" />
-              Private
-            </Badge>
-          )}
-          <div className="ml-auto flex items-center gap-1.5">
-            {image.comments && (image.comments.count || 0) > 0 && (
-              <span className="text-white/80 flex items-center gap-0.5 text-[10px]">
-                <MessageCircle className="w-3 h-3" />
-                {image.comments.count}
-              </span>
-            )}
-          </div>
-        </div>
+      {/* Vote buttons — top right on hover */}
+      {hovering && (
+        <div
+          className="absolute top-2 right-2 z-20 flex flex-col items-end gap-1"
+          onClick={(e) => e.stopPropagation()}
+        >
+          <button
+            onClick={(e) => handleVote(e, "UPVOTE")}
+            disabled={isVoting}
+            className={`flex items-center gap-1 px-2 py-1 rounded-lg text-xs font-semibold transition-all shadow-lg
+              ${userVote === "UPVOTE"
+                ? "bg-green-500 text-white scale-105"
+                : "bg-black/60 hover:bg-green-500 text-white backdrop-blur-sm"
+              } disabled:opacity-50`}
+            title="Upvote"
+          >
+            <ThumbsUp className="w-3.5 h-3.5" />
+            {upvotes > 0 && <span>{upvotes}</span>}
+          </button>
 
-        {/* Bottom: vote buttons + prompt + actions */}
-        <div className="flex flex-col gap-1.5">
-          {/* Prompt */}
+          <button
+            onClick={(e) => handleVote(e, "DOWNVOTE")}
+            disabled={isVoting}
+            className={`flex items-center gap-1 px-2 py-1 rounded-lg text-xs font-semibold transition-all shadow-lg
+              ${userVote === "DOWNVOTE"
+                ? "bg-red-500 text-white scale-105"
+                : "bg-black/60 hover:bg-red-500 text-white backdrop-blur-sm"
+              } disabled:opacity-50`}
+            title="Downvote"
+          >
+            <ThumbsDown className="w-3.5 h-3.5" />
+            {downvotes > 0 && <span>{downvotes}</span>}
+          </button>
+
+          {Math.abs(voteScore) > 0 && (
+            <span className={`text-[10px] font-bold px-1 ${voteScore > 0 ? "text-green-400" : "text-red-400"}`}>
+              {voteScore > 0 ? "+" : ""}{voteScore}
+            </span>
+          )}
+        </div>
+      )}
+
+      {/* Hover overlay — bottom gradient with prompt + actions */}
+      <div
+        className={`absolute inset-0 flex flex-col justify-between p-2 bg-gradient-to-t from-black/75 via-transparent to-transparent
+                   transition-all duration-200 pointer-events-none ${hovering ? "opacity-100" : "opacity-0"}`}
+      >
+        <div /> {/* spacer */}
+
+        {/* Bottom: prompt + action buttons */}
+        <div className="flex flex-col gap-1.5 pointer-events-auto">
           {image.image.prompt && (
-            <p className="text-white/90 text-[10px] line-clamp-2 leading-tight" onClick={onClick}>
+            <p className="text-white/90 text-[10px] line-clamp-2 leading-tight cursor-pointer" onClick={onClick}>
               {image.image.prompt}
             </p>
           )}
 
-          {/* Vote buttons — prominent, always visible on hover */}
-          <div className="flex items-center gap-1.5">
-            <button
-              onClick={(e) => handleVote(e, "UPVOTE")}
-              disabled={isVoting}
-              className={`flex items-center gap-1 px-2.5 py-1.5 rounded-lg text-xs font-semibold transition-all
-                ${userVote === "UPVOTE"
-                  ? "bg-green-500 text-white shadow-lg shadow-green-500/30 scale-105"
-                  : "bg-white/15 hover:bg-green-500/80 text-white backdrop-blur-sm"
-                } disabled:opacity-50`}
-              title="Upvote"
-            >
-              <ThumbsUp className="w-3.5 h-3.5" />
-              {upvotes > 0 && <span>{upvotes}</span>}
-            </button>
-
-            <button
-              onClick={(e) => handleVote(e, "DOWNVOTE")}
-              disabled={isVoting}
-              className={`flex items-center gap-1 px-2.5 py-1.5 rounded-lg text-xs font-semibold transition-all
-                ${userVote === "DOWNVOTE"
-                  ? "bg-red-500 text-white shadow-lg shadow-red-500/30 scale-105"
-                  : "bg-white/15 hover:bg-red-500/80 text-white backdrop-blur-sm"
-                } disabled:opacity-50`}
-              title="Downvote"
-            >
-              <ThumbsDown className="w-3.5 h-3.5" />
-              {downvotes > 0 && <span>{downvotes}</span>}
-            </button>
-
-            {/* Net score */}
-            {Math.abs(voteScore) > 0 && (
-              <span className={`text-xs font-bold ml-0.5 ${voteScore > 0 ? "text-green-400" : "text-red-400"}`}>
-                {voteScore > 0 ? "+" : ""}{voteScore}
-              </span>
+          <div className="flex items-center gap-1" onClick={(e) => e.stopPropagation()}>
+            {!image.image.isPublic && (
+              <Badge variant="outline" className="flex gap-1 items-center text-[10px] bg-black/40 border-white/20 text-white py-0">
+                <Lock className="w-2.5 h-2.5" />
+                Private
+              </Badge>
             )}
-
-            {/* Spacer + More button */}
             <div className="ml-auto flex gap-1">
               {!animatedVideoUrl && (
                 <button
                   onClick={handleQuickAnimate}
                   disabled={isAnimating}
-                  className="flex items-center gap-1 px-2 py-1.5 bg-pink-600/80 hover:bg-pink-600 text-white rounded-lg text-[10px] font-medium transition-colors disabled:opacity-60"
+                  className="p-1.5 bg-pink-600/80 hover:bg-pink-600 text-white rounded-lg transition-colors disabled:opacity-60"
                   title="Animate"
                 >
                   {isAnimating ? <Loader2 className="w-3 h-3 animate-spin" /> : <Film className="w-3 h-3" />}
                 </button>
               )}
+              {animatedVideoUrl && (
+                <a
+                  href={animatedVideoUrl}
+                  download="animation.mp4"
+                  className="p-1.5 bg-green-600/80 hover:bg-green-600 text-white rounded-lg transition-colors"
+                  title="Download"
+                >
+                  ⬇
+                </a>
+              )}
               <button
                 onClick={onClick}
-                className="flex items-center gap-1 px-2 py-1.5 bg-white/15 hover:bg-white/25 text-white rounded-lg text-[10px] font-medium transition-colors backdrop-blur-sm"
+                className="p-1.5 bg-white/15 hover:bg-white/25 text-white rounded-lg transition-colors backdrop-blur-sm"
                 title="Open"
               >
                 <Play className="w-3 h-3" />
               </button>
             </div>
           </div>
-
-          {animatedVideoUrl && (
-            <a
-              href={animatedVideoUrl}
-              download="animation.mp4"
-              className="flex items-center gap-1 px-2 py-1 bg-green-600/80 hover:bg-green-600 text-white rounded text-[10px] font-medium transition-colors w-fit"
-            >
-              ⬇ Download
-            </a>
-          )}
         </div>
       </div>
 
