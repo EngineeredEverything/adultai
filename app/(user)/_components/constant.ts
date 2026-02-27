@@ -28,7 +28,7 @@ export const navItems = [
         href: "/video-gallery",
     },
     {
-        title: "Advanced Generate",
+        title: "Generate",
         icon: ImagePlus,
         href: "/advanced-generate",
     },
