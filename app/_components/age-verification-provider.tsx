@@ -1,6 +1,8 @@
 'use client';
 
-import { createContext, useContext, useEffect, useState } from 'react';
+import { createContext, useContext, useState } from 'react';
+import { AgeVerification } from './age-verification';
+import { usePathname } from 'next/navigation';
 
 type AgeVerificationContextType = {
   isVerified: boolean;
@@ -12,6 +14,9 @@ const AgeVerificationContext = createContext<AgeVerificationContextType>({
   setVerified: () => {},
 });
 
+// Pages that don't need the age gate overlay
+const PUBLIC_PATHS = ['/companions/demo', '/companions/showcase', '/companions/landing'];
+
 export function AgeVerificationProvider({
   children,
   initialVerified = false,
@@ -20,6 +25,10 @@ export function AgeVerificationProvider({
   initialVerified?: boolean;
 }) {
   const [isVerified, setIsVerified] = useState(initialVerified);
+  const pathname = usePathname();
+
+  const isPublicPath = pathname === '/' || PUBLIC_PATHS.some(p => pathname.startsWith(p));
+  const showGate = !isVerified && !isPublicPath;
 
   const setVerified = (value: boolean) => {
     setIsVerified(value);
@@ -28,6 +37,8 @@ export function AgeVerificationProvider({
   return (
     <AgeVerificationContext.Provider value={{ isVerified, setVerified }}>
       {children}
+      {/* Age gate rendered as overlay — no redirect, no round-trip */}
+      {showGate && <AgeVerification callbackUrl={pathname} />}
     </AgeVerificationContext.Provider>
   );
 }

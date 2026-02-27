@@ -33,8 +33,8 @@ export function AgeVerification({ callbackUrl }: { callbackUrl: string }) {
     }
     setLoading(true);
     await setAgeVerification();
-    setVerified(true);
-    window.location.href = callbackUrl;
+    setVerified(true); // Dismiss overlay — page content already loaded behind it
+    setLoading(false);
   };
 
   return (
