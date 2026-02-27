@@ -201,6 +201,7 @@ export function useImageLoading(params: UseImageLoadingParams) {
                 }
                 if (category_id) {
                     filters.category_id = category_id
+                    filters.sort = "votes_desc" // Category view: most upvoted first
                 }
 
                 // Make the fetch request

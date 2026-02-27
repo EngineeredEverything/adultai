@@ -169,6 +169,7 @@ export default function GalleryPage(props: GalleryPageProps) {
           private?: boolean;
           category_id?: string;
           isPublic?: boolean;
+          sort?: "newest" | "votes_desc" | "votes_asc";
         } = {};
 
         if (isUserMode && userId) {
@@ -181,6 +182,7 @@ export default function GalleryPage(props: GalleryPageProps) {
 
         if (isCategoryMode && category_id) {
           filters.category_id = category_id;
+          filters.sort = "votes_desc"; // Category view: most upvoted first
         }
 
         console.log("[Gallery] Fetching images with params:", {

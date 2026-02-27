@@ -26,39 +26,28 @@ export async function getAllCategories() {
     console.log("[v0] Categories with images:", filteredCategories.length)
 
     const categoryIds = filteredCategories.map((c) => c.id)
-    const sampleImages = await tracker.trackQuery("findManySampleImages", () =>
-      db.generatedImage.findMany({
-        where: {
-          categoryIds: {
-            hasSome: categoryIds,
-          },
-          status: "completed",
-          imageUrl: {
-            not: null,
-          },
-        },
-        select: {
-          id: true,
-          imageUrl: true,
-          categoryIds: true,
-        },
-        orderBy: {
-          upvotes: "desc",
-        },
-      }),
-    )
 
+    // Query the best thumbnail per category individually (sorted by voteScore desc)
     const categoryImageMap = new Map<string, { id: string; imageUrl: string | null }>()
-    for (const image of sampleImages) {
-      for (const catId of image.categoryIds) {
-        if (!categoryImageMap.has(catId)) {
-          categoryImageMap.set(catId, {
-            id: image.id,
-            imageUrl: image.imageUrl,
+    await tracker.trackQuery("findThumbnailsPerCategory", async () => {
+      await Promise.all(
+        categoryIds.map(async (catId) => {
+          const best = await db.generatedImage.findFirst({
+            where: {
+              categoryIds: { has: catId },
+              status: "completed",
+              imageUrl: { not: null },
+              isPublic: true,
+            },
+            select: { id: true, imageUrl: true },
+            orderBy: [{ voteScore: "desc" }, { upvotes: "desc" }, { createdAt: "desc" }],
           })
-        }
-      }
-    }
+          if (best) {
+            categoryImageMap.set(catId, { id: best.id, imageUrl: best.imageUrl })
+          }
+        })
+      )
+    })
 
     const categoriesWithSampleImages = filteredCategories.map((category) => ({
       id: category.id,
@@ -96,39 +85,28 @@ export async function getTopCategories(limit = 6) {
         .slice(0, limit)
 
       const categoryIds = topCategories.map((c) => c.id)
-      const sampleImages = await tracker.trackQuery("findTopSampleImages", () =>
-        db.generatedImage.findMany({
-          where: {
-            categoryIds: {
-              hasSome: categoryIds,
-            },
-            status: "completed",
-            imageUrl: {
-              not: null,
-            },
-          },
-          select: {
-            id: true,
-            imageUrl: true,
-            categoryIds: true,
-          },
-          orderBy: {
-            upvotes: "desc",
-          },
-        }),
-      )
 
+      // Query best thumbnail per category individually (sorted by voteScore desc)
       const categoryImageMap = new Map<string, { id: string; imageUrl: string | null }>()
-      for (const image of sampleImages) {
-        for (const catId of image.categoryIds) {
-          if (!categoryImageMap.has(catId)) {
-            categoryImageMap.set(catId, {
-              id: image.id,
-              imageUrl: image.imageUrl,
+      await tracker.trackQuery("findTopThumbnailsPerCategory", async () => {
+        await Promise.all(
+          categoryIds.map(async (catId) => {
+            const best = await db.generatedImage.findFirst({
+              where: {
+                categoryIds: { has: catId },
+                status: "completed",
+                imageUrl: { not: null },
+                isPublic: true,
+              },
+              select: { id: true, imageUrl: true },
+              orderBy: [{ voteScore: "desc" }, { upvotes: "desc" }, { createdAt: "desc" }],
             })
-          }
-        }
-      }
+            if (best) {
+              categoryImageMap.set(catId, { id: best.id, imageUrl: best.imageUrl })
+            }
+          })
+        )
+      })
 
       const categoriesWithSampleImages = topCategories.map((category) => ({
         id: category.id,
@@ -172,7 +150,7 @@ export async function getCategoryWithImages(categoryId: string, page = 1, limit 
         filters: {
           category_id: categoryId,
           status: "completed",
-          voteRatio: "positive",
+          sort: "votes_desc",
         },
         data: {
           limit: { start: skip, end: skip + limit },

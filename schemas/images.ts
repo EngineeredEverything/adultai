@@ -88,6 +88,7 @@ export const searchImagesSchema = z.object({
       private: z.boolean().optional(),
       category_id: z.string().optional(),
       status: z.string().optional(),
+      sort: z.enum(["newest", "votes_desc", "votes_asc"]).optional(),
       // Vote filters
       minUpvotes: z.number().min(0).optional(),
       maxUpvotes: z.number().min(0).optional(),

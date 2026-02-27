@@ -147,7 +147,7 @@ export const searchImagesInfoRAW = async (
       const searchQuery = await buildWeightedSearchQuery(searchTerm, categoryIds, filters, data, tracker)
 
       const [images, count] = await Promise.all([
-        tracker.trackQuery("executeRankedSearch", () => executeRankedSearch(searchQuery, data)),
+        tracker.trackQuery("executeRankedSearch", () => executeRankedSearch(searchQuery, data, filters?.sort)),
         data.count
           ? tracker.trackQuery("countImages", () => db.generatedImage.count({ where: searchQuery.where }))
           : Promise.resolve(undefined),
@@ -243,9 +243,22 @@ async function buildWeightedSearchQuery(
   }
 }
 
+function buildOrderBy(sort?: string): Prisma.GeneratedImageOrderByWithRelationInput[] {
+  switch (sort) {
+    case "votes_desc":
+      return [{ voteScore: "desc" }, { upvotes: "desc" }, { createdAt: "desc" }]
+    case "votes_asc":
+      return [{ voteScore: "asc" }, { upvotes: "asc" }, { createdAt: "desc" }]
+    case "newest":
+    default:
+      return [{ createdAt: "desc" }, { id: "desc" }]
+  }
+}
+
 async function executeRankedSearch(
   searchQuery: Awaited<ReturnType<typeof buildWeightedSearchQuery>>,
   data: z.infer<typeof searchImagesSchema>["data"],
+  sort?: string,
 ) {
   logger.debug("Executing ranked search", {
     limit: data.limit,
@@ -256,7 +269,7 @@ async function executeRankedSearch(
     where: searchQuery.where,
     skip: data.limit?.start,
     take: data.limit ? data.limit.end - data.limit.start : undefined,
-    orderBy: [{ createdAt: "desc" }, { id: "desc" }],
+    orderBy: buildOrderBy(sort),
   })
 
   return images
@@ -321,6 +334,8 @@ async function getFilteredImages(
     }
   logger.debug("searchQuery", searchQuery)
 
+  const orderBy = buildOrderBy(filters?.sort)
+
   const [count, images] = await Promise.all([
     data.count
       ? tracker
@@ -333,14 +348,14 @@ async function getFilteredImages(
           where: searchQuery,
           skip: data.limit?.start,
           take: data.limit ? data.limit.end - data.limit.start : undefined,
-          orderBy: [{ createdAt: "desc" }, { id: "desc" }],
+          orderBy,
         }),
       )
       : db.generatedImage.findMany({
         where: searchQuery,
         skip: data.limit?.start,
         take: data.limit ? data.limit.end - data.limit.start : undefined,
-        orderBy: [{ createdAt: "desc" }, { id: "desc" }],
+        orderBy,
       }),
   ])
 
