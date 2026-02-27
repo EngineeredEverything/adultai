@@ -1,13 +1,31 @@
 import type { NextConfig } from "next";
 
 const nextConfig: NextConfig = {
-  /* config options here */
-  output: 'standalone', // For Docker deployments
+  output: 'standalone',
+  compress: true, // Enable gzip compression on all responses
+  poweredByHeader: false,
   env: {
     PORT: process.env.PORT || "3569",
     NEXTAUTH_URL: new URL(
       `${process.env.APP_URL || "https://adultai.noerror.studio"}`
     ).href,
+  },
+  // Long-term cache headers for static assets (hashed filenames = safe to cache forever)
+  async headers() {
+    return [
+      {
+        source: "/_next/static/:path*",
+        headers: [
+          { key: "Cache-Control", value: "public, max-age=31536000, immutable" },
+        ],
+      },
+      {
+        source: "/fonts/:path*",
+        headers: [
+          { key: "Cache-Control", value: "public, max-age=31536000, immutable" },
+        ],
+      },
+    ];
   },
   images: {
     minimumCacheTTL: 60 * 60 * 24 * 7, // 7 days in seconds
