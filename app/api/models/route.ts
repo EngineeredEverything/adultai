@@ -22,9 +22,10 @@ export async function GET() {
         }
 
         const data = await response.json()
-        return NextResponse.json(data)
+        return NextResponse.json(data, {
+            headers: { "Cache-Control": "public, max-age=300, stale-while-revalidate=600" }
+        })
     } catch (error) {
-        console.error('Models API Error:', error)
         return NextResponse.json(
             { error: 'Service unavailable', models: [] },
             { status: 503 }

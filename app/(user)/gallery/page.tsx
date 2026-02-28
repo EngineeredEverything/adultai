@@ -3,6 +3,9 @@ import AuthenticatedGalleryPage from "./components/AuthenticatedGalleryPage";
 import { Metadata } from "next";
 import { searchImages } from "@/actions/images/info";
 
+// ISR: revalidate public gallery every 30 seconds
+export const revalidate = 30;
+
 export const metadata: Metadata = {
   title: {
     template: "%s | AdultAI - AI Image Gallery",

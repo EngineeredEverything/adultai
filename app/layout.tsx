@@ -17,6 +17,11 @@ export default async function RootLayout({
 
   return (
     <html lang="en">
+      <head>
+        {/* Preconnect to CDN for faster image loads */}
+        <link rel="preconnect" href="https://adultai-com.b-cdn.net" crossOrigin="anonymous" />
+        <link rel="dns-prefetch" href="https://adultai-com.b-cdn.net" />
+      </head>
       <body className={`${boldena.className} antialiased dark`}>
         <AgeVerificationProvider initialVerified={isVerified}>
           {children}

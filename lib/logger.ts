@@ -70,9 +70,18 @@ const formatMessage = (entry: LogEntry): string => {
     return `[${timestamp}] ${level.toUpperCase()}: ${message}${metadataString}`;
 };
 
+const isProduction = process.env.NODE_ENV === "production";
+// In production, only warn/error reach the browser console
+const PROD_CLIENT_MIN_LEVEL: LogLevel = "warn";
+
 const log = (level: LogLevel, message: string, metadata?: any) => {
     const currentLevel = getCurrentLogLevel();
     if (LOG_LEVELS[level] < LOG_LEVELS[currentLevel]) {
+        return;
+    }
+
+    // Client-side production: suppress debug + info to avoid console noise
+    if (isProduction && typeof window !== "undefined" && LOG_LEVELS[level] < LOG_LEVELS[PROD_CLIENT_MIN_LEVEL]) {
         return;
     }
 
@@ -84,8 +93,13 @@ const log = (level: LogLevel, message: string, metadata?: any) => {
         rawMetadata: metadata, // Preserve original data
     };
 
-    if (process.env.PRODUCTION === "true") {
-        console.log(formatMetadata([entry]));
+    if (isProduction) {
+        // Minimal production logging — no colours, no dir dump
+        if (level === "error") {
+            console.error(formatMessage(entry));
+        } else if (level === "warn") {
+            console.warn(formatMessage(entry));
+        }
     } else {
         const colors = {
             debug: "\x1b[36m",

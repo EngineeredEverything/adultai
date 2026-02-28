@@ -154,19 +154,13 @@ export function ImageCard({
       onMouseEnter={() => setHovering(true)}
       onMouseLeave={() => setHovering(false)}
       initial={{ opacity: 0 }}
-      animate={{
-        opacity: 1,
-        top: position.y,
-        left: position.x,
-      }}
-      transition={{
-        duration: 0.3,
-        top: { duration: 0 },
-        left: { duration: 0 },
-      }}
+      animate={{ opacity: 1 }}
+      transition={{ duration: 0.3 }}
       style={{
         width: `${width}px`,
         height: `${position.height}px`,
+        top: position.y,
+        left: position.x,
       }}
     >
       {debug && (
@@ -217,7 +211,8 @@ export function ImageCard({
               handleError(e);
             }}
             sizes={`${width}px`}
-            priority={false}
+            priority={index < 4}
+            loading={index < 4 ? "eager" : "lazy"}
           />
         )}
       </div>
