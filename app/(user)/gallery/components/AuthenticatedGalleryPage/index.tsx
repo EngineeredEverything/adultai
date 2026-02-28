@@ -51,7 +51,10 @@ interface GalleryPageProps {
 }
 
 export default function GalleryPage(props: GalleryPageProps) {
-  const { userId, searchQuery, userMode, category_id, prefetchedImages, prefetchedCount } = props;
+  const { userId: userIdProp, searchQuery, userMode, category_id, prefetchedImages, prefetchedCount } = props;
+  // userId may start undefined (SSR no longer reads session) and gets set after client user fetch
+  const [resolvedUserId, setResolvedUserId] = useState<string | undefined>(userIdProp);
+  const userId = resolvedUserId;
 
   // Determine the mode
   const isCategoryMode = !!category_id;
@@ -124,7 +127,7 @@ export default function GalleryPage(props: GalleryPageProps) {
   const isMountedRef = useRef(true);
   const abortControllerRef = useRef<AbortController | null>(null);
 
-  // Fetch user info
+  // Fetch user info — deferred 80ms so images paint first
   useEffect(() => {
     isMountedRef.current = true;
 
@@ -138,11 +141,11 @@ export default function GalleryPage(props: GalleryPageProps) {
         const result = await getCurrentUserInfo({});
         if (isMountedRef.current && isGetCurrentUserInfoSuccess(result)) {
           setUser(result);
+          setResolvedUserId(result.user.id);
         }
       } catch (error) {
         if (isMountedRef.current) {
           console.error("[Gallery] Failed to fetch user info:", error);
-          toast.error("Failed to load user information");
         }
       } finally {
         if (isMountedRef.current) {
@@ -151,9 +154,10 @@ export default function GalleryPage(props: GalleryPageProps) {
       }
     }
 
-    fetchUser();
+    const t = setTimeout(fetchUser, 80);
 
     return () => {
+      clearTimeout(t);
       isMountedRef.current = false;
     };
   }, [userId]);
@@ -264,7 +268,7 @@ export default function GalleryPage(props: GalleryPageProps) {
     };
   }, [searchQuery, isUserMode, isCategoryMode, userId, category_id, prefetchedImages, prefetchedTotalCount]);
 
-  // Fetch categories (only in normal mode)
+  // Fetch categories (only in normal mode) — deferred 200ms so image grid renders first
   useEffect(() => {
     if (!isNormalMode) {
       setIsLoadingCategories(false);
@@ -302,10 +306,11 @@ export default function GalleryPage(props: GalleryPageProps) {
       }
     }
 
-    fetchCategories();
+    const t = setTimeout(fetchCategories, 200);
+    return () => clearTimeout(t);
   }, [isNormalMode]);
 
-  // Fetch subscription info (only in normal mode)
+  // Fetch subscription info (only in normal mode) — deferred 300ms, not blocking render
   useEffect(() => {
     if (!isNormalMode || !userId) {
       setIsLoadingSubscription(false);
@@ -322,7 +327,6 @@ export default function GalleryPage(props: GalleryPageProps) {
       } catch (error) {
         if (isMountedRef.current) {
           console.error("[Gallery] Failed to fetch subscription:", error);
-          toast.error("Failed to load subscription status");
         }
       } finally {
         if (isMountedRef.current) {
@@ -331,7 +335,8 @@ export default function GalleryPage(props: GalleryPageProps) {
       }
     }
 
-    fetchSubscription();
+    const t = setTimeout(fetchSubscription, 300);
+    return () => clearTimeout(t);
   }, [isNormalMode, userId]);
 
   // Memoize loading params - only update when values actually change
@@ -440,11 +445,8 @@ export default function GalleryPage(props: GalleryPageProps) {
     setShowMobileSheet(isCreateModelOpen);
   }, [isNormalMode, searchParams]);
 
-  // Check if everything is still loading
-  const isInitialLoading =
-    isLoadingUser ||
-    isLoadingImages ||
-    (isNormalMode && (isLoadingCategories || isLoadingSubscription));
+  // Check if images are still loading — user/subscription/categories are deferred and non-blocking
+  const isInitialLoading = isLoadingImages;
 
   // Create skeleton array for initial loading
   const skeletonImages = useMemo(
@@ -522,26 +524,22 @@ export default function GalleryPage(props: GalleryPageProps) {
           <CompanionFeatureBanner />
 
           <div className="flex flex-col sm:flex-row gap-4 justify-between items-center h-full">
-            {isLoadingSubscription || isLoadingUser ? (
-              <div className="w-full h-[180px] animate-pulse rounded-xl bg-muted" />
-            ) : (
-              <InputSection
-                userNuts={user?.user?.nuts}
-                user={user}
-                isScrolled={isScrolled}
-                prompt={prompt}
-                setPrompt={setPrompt}
-                isGenerating={isGenerating}
-                handleSubmit={handleSubmit}
-                setRatio={setRatio}
-                ratio={ratio}
-                subscriptionStatus={subscriptionStatus}
-                isPublic={isPublic}
-                setIsPublic={setIsPublic}
-                count={count}
-                setCount={setCount}
-              />
-            )}
+            <InputSection
+              userNuts={user?.user?.nuts}
+              user={user}
+              isScrolled={isScrolled}
+              prompt={prompt}
+              setPrompt={setPrompt}
+              isGenerating={isGenerating}
+              handleSubmit={handleSubmit}
+              setRatio={setRatio}
+              ratio={ratio}
+              subscriptionStatus={subscriptionStatus}
+              isPublic={isPublic}
+              setIsPublic={setIsPublic}
+              count={count}
+              setCount={setCount}
+            />
           </div>
 
           {/* GENERATED IMAGES PREVIEW - Only in normal mode, limited to last 8 */}

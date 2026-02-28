@@ -1,9 +1,10 @@
-import { currentUser } from "@/utils/auth";
 import AuthenticatedGalleryPage from "./components/AuthenticatedGalleryPage";
 import { Metadata } from "next";
 import { searchImages } from "@/actions/images/info";
 
 // ISR: revalidate public gallery every 30 seconds
+// NOTE: Do NOT call currentUser() here — session reads force Cache-Control: private
+// and prevent Cloudflare from caching the page. userId is resolved client-side.
 export const revalidate = 30;
 
 export const metadata: Metadata = {
@@ -36,13 +37,11 @@ interface PageProps {
   searchParams: Promise<{ [key: string]: string | string[] | undefined }>;
 }
 
-// <CHANGE> Simplified SSR to only handle auth check and search params
+// Prefetch public images server-side for instant paint — no auth reads
 export default async function page(props: PageProps) {
   const searchParams = await props.searchParams;
   const searchQuery =
     typeof searchParams.search === "string" ? searchParams.search : "";
-
-  const user = await currentUser();
 
   // Prefetch first page server-side — images only, no votes/comments (keeps HTML small)
   const prefetched = await searchImages({
@@ -58,9 +57,10 @@ export default async function page(props: PageProps) {
   const prefetchedImages = !("error" in prefetched) ? prefetched.images : [];
   const prefetchedCount = !("error" in prefetched) ? (prefetched.count ?? 0) : 0;
 
+  // userId is intentionally NOT passed from SSR — resolved client-side via getCurrentUserInfo()
+  // This keeps the page HTML cacheable by Cloudflare (no session cookies in SSR = public cache headers)
   return (
     <AuthenticatedGalleryPage
-      userId={user?.id}
       searchQuery={searchQuery}
       prefetchedImages={prefetchedImages}
       prefetchedCount={prefetchedCount}

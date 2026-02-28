@@ -30,7 +30,9 @@ export async function GET() {
             uptime: response.headers.get('uptime') || null,
         }
 
-        return NextResponse.json(statusData)
+        return NextResponse.json(statusData, {
+            headers: { "Cache-Control": "public, max-age=15, stale-while-revalidate=30" }
+        })
     } catch (error) {
         console.error('Status API Error:', error)
 
