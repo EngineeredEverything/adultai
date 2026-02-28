@@ -13,7 +13,13 @@ export default async function RootLayout({
 }: Readonly<{
   children: React.ReactNode;
 }>) {
-  const isVerified = await getAgeVerification();
+  // Graceful fallback during static prerender (no request context = no cookies)
+  let isVerified = false;
+  try {
+    isVerified = await getAgeVerification();
+  } catch {
+    isVerified = false;
+  }
 
   return (
     <html lang="en">

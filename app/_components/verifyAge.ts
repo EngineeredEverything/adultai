@@ -1,6 +1,5 @@
 "use server";
 
-import { cache } from "react";
 import { cookies } from "next/headers";
 import { AGE_VERIFICATION_COOKIE, COOKIE_EXPIRY_DAYS } from "@/constants";
 
@@ -14,7 +13,6 @@ export async function setAgeVerification() {
     });
 }
 
-// Cached per-request — multiple calls in the same SSR pass only read cookies once
-export const getAgeVerification = cache(async () => {
+export async function getAgeVerification() {
     return (await cookies()).has(AGE_VERIFICATION_COOKIE);
-});
+}
