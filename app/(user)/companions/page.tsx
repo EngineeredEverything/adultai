@@ -3,6 +3,8 @@ import { redirect } from "next/navigation"
 import { getCharacters } from "@/actions/characters/create"
 import Link from "next/link"
 
+export const revalidate = 60;
+
 export default async function CompanionsPage() {
   const user = await currentUser()
   if (!user) redirect("/auth/login?callbackUrl=/companions")

@@ -17,6 +17,8 @@ export async function GET() {
             status: isHealthy ? 'healthy' : 'unhealthy',
             timestamp: new Date().toISOString(),
             responseTime: response.headers.get('response-time') || null,
+        }, {
+            headers: { "Cache-Control": "public, max-age=10, stale-while-revalidate=30" }
         })
     } catch (error) {
         return NextResponse.json({

@@ -9,7 +9,6 @@ import { getCurrentUserInfo } from "@/actions/user/info";
 import { getTopCategories } from "@/actions/category/info";
 import { getContentInterests } from "@/actions/user/interests";
 import { getKeywordsForInterests } from "@/lib/interests";
-import { InterestOnboardingModal } from "@/components/ui/interest-selector";
 import { getSubscriptionInfo } from "@/actions/subscriptions/info";
 import { isGetCurrentUserInfoSuccess } from "@/types/user";
 import { isGetSubscriptionInfoSuccess } from "@/types/subscriptions";
@@ -19,18 +18,25 @@ import type { GetSubscriptionInfoSuccessType } from "@/types/subscriptions";
 import type { Category } from "../types/image";
 import { AnimatePresence } from "framer-motion";
 import MobileBottomNav from "../mobile-bottom-nav";
-import MobileGenerateSheet from "../GenerationForm/mobile";
 import { useRouter, useSearchParams } from "next/navigation";
 import Categories from "../Categories";
 import { useImageGeneration } from "../hooks/use-image-generation";
 import { useImageLoading } from "../hooks/use-image-loading";
 import { ImageGrid } from "./ImageGrid";
-import { ImageDialog } from "./ImageDialog";
 import { toast } from "sonner";
 import InputSection from "../GenerationForm/destop";
 import { GeneratedImagePreview } from "../GeneratedImagePreview";
 import { CompanionFeatureBanner } from "../CompanionFeatureBanner";
 import { GallerySortMenu, type SortOption } from "../GallerySortMenu";
+import dynamic from "next/dynamic";
+
+// Heavy components — lazy loaded to keep initial bundle small
+const ImageDialog = dynamic(() => import("./ImageDialog").then((m) => ({ default: m.ImageDialog })), { ssr: false });
+const MobileGenerateSheet = dynamic(() => import("../GenerationForm/mobile"), { ssr: false });
+const InterestOnboardingModal = dynamic(
+  () => import("@/components/ui/interest-selector").then((m) => ({ default: m.InterestOnboardingModal })),
+  { ssr: false }
+);
 
 const ITEMS_PER_PAGE = 20;
 const SKELETON_COUNT = 12;
@@ -197,7 +203,7 @@ export default function GalleryPage(props: GalleryPageProps) {
           filters.sort = "votes_desc"; // Category view: most upvoted first
         }
 
-        console.log("[Gallery] Fetching images with params:", {
+        if (process.env.NODE_ENV !== "production") console.log("[Gallery] Fetching images with params:", {
           searchQuery,
           mode: isCategoryMode ? "category" : isUserMode ? "user" : "normal",
           category_id,
@@ -223,22 +229,16 @@ export default function GalleryPage(props: GalleryPageProps) {
 
         // Check if request was aborted
         if (abortController.signal.aborted) {
-          console.log("[Gallery] Request aborted");
           return;
         }
 
         if (!isMountedRef.current) return;
 
         if (!("error" in result)) {
-          console.log("[Gallery] Fetched images:", {
-            count: result.images.length,
-            total: result.count,
-          });
 
           setImages(result.images);
           setTotalCount(result.count || 0);
         } else {
-          console.error("[Gallery] Error fetching images:", result.error);
           toast.error("Failed to load images");
           setImages([]);
           setTotalCount(0);
@@ -247,7 +247,6 @@ export default function GalleryPage(props: GalleryPageProps) {
         if (abortController.signal.aborted) return;
         if (!isMountedRef.current) return;
 
-        console.error("[Gallery] Failed to fetch images:", error);
         toast.error("Failed to load images");
         setImages([]);
         setTotalCount(0);

@@ -69,6 +69,6 @@ export const RootLayoutMetadata: Metadata = {
     applicationName: "AdultAI",
     category: "technology",
     alternates: {
-        canonical: "https://yourdomain.com", // Replace with your actual domain
+        canonical: "https://adultai.com",
     },
 };

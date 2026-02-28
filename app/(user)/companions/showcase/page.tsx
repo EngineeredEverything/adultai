@@ -3,6 +3,8 @@ import { prisma } from '@/lib/prisma';
 import Image from 'next/image';
 import Link from 'next/link';
 
+export const revalidate = 60;
+
 export const metadata: Metadata = {
   title: 'AI Companion Showcase | AdultAI',
   description: 'Explore our diverse collection of AI companions. From angels to demons, catgirls to vampires - find your perfect digital companion.',
