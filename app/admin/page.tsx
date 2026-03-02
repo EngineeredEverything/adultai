@@ -14,7 +14,7 @@ export default async function AdminDashboard() {
     subMonths(new Date(), 5 - i)
   );
 
-  const transformedStats = !isBuildTime ? await Promise.all(
+  const transformedStats = isBuildTime ? [] : await Promise.all(
     months.map(async (date) => {
       const start = startOfMonth(date);
       const end = endOfMonth(date);
