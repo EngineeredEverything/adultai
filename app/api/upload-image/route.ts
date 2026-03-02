@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from "next/server"
-import { auth } from "@/auth"
+import { currentUser } from "@/utils/auth"
 
 const BUNNY_API_KEY = process.env.BUNNY_API_KEY || ""
 const BUNNY_STORAGE_ZONE = process.env.BUNNY_STORAGE_ZONE || "storage-adultai"
@@ -12,10 +12,11 @@ const ALLOWED_TYPES = ["image/jpeg", "image/png", "image/webp"]
 export async function POST(req: NextRequest) {
   try {
     // Must be authenticated
-    const session = await auth()
-    if (!session?.user?.id) {
+    const user = await currentUser()
+    if (!user?.id) {
       return NextResponse.json({ error: "Authentication required" }, { status: 401 })
     }
+    const session = { user }
 
     const formData = await req.formData()
     const file = formData.get("file") as File | null

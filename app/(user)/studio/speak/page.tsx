@@ -1,5 +1,5 @@
 import type { Metadata } from "next"
-import { auth } from "@/auth"
+import { currentUser } from "@/utils/auth"
 import { redirect } from "next/navigation"
 import { SpeakStudio } from "./SpeakStudio"
 
@@ -13,8 +13,8 @@ export default async function SpeakStudioPage({
 }: {
   searchParams: Promise<{ imageUrl?: string }>
 }) {
-  const session = await auth()
-  if (!session?.user) redirect("/")
+  const user = await currentUser()
+  if (!user) redirect("/")
   const { imageUrl } = await searchParams
-  return <SpeakStudio user={session} initialImageUrl={imageUrl} />
+  return <SpeakStudio user={user} initialImageUrl={imageUrl} />
 }
