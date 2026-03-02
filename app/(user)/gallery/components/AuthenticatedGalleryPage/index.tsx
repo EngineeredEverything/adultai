@@ -30,6 +30,7 @@ import { CompanionFeatureBanner } from "../CompanionFeatureBanner";
 import { GallerySortMenu, type SortOption } from "../GallerySortMenu";
 import { SubcategoryFilter } from "../SubcategoryFilter";
 import { PremiumModal } from "../premium-modal";
+import { GalleryGenderFilter, GenderOption } from "../GalleryGenderFilter";
 import dynamic from "next/dynamic";
 
 // Heavy components — lazy loaded to keep initial bundle small
@@ -101,7 +102,7 @@ export default function GalleryPage(props: GalleryPageProps) {
   const [categorySortBy, setCategorySortBy] = useState<"votes_desc" | "newest">("votes_desc");
   const [activeSubcategory, setActiveSubcategory] = useState<string | null>(null);
   // Gender/type filter — applies in normal gallery mode
-  const [genderFilter, setGenderFilter] = useState<"female" | "male" | "fantasy" | null>(null);
+  const [genderFilter, setGenderFilter] = useState<GenderOption>("all");
   // Upgrade modal — shown when user hits generation limit
   const [limitModalOpen, setLimitModalOpen] = useState(false);
 
@@ -377,7 +378,7 @@ export default function GalleryPage(props: GalleryPageProps) {
       category_id,
       subcategory_id: activeSubcategory ?? undefined,
       sort: isCategoryMode ? categorySortBy : (sortBy === "newest" ? "newest" : "votes_desc"),
-      gender: genderFilter ?? undefined,
+      gender: genderFilter !== "all" ? genderFilter : undefined,
     }),
     [images, totalCount, searchQuery, isUserMode, user, category_id, activeSubcategory, categorySortBy, isCategoryMode, genderFilter, sortBy]
   );
@@ -699,7 +700,8 @@ export default function GalleryPage(props: GalleryPageProps) {
           <h2 className="text-xl font-semibold">
             {isUserMode ? "Your Images" : "Public Gallery"}
           </h2>
-          <GallerySortMenu currentSort={sortBy} onSortChange={setSortBy} />
+          <GalleryGenderFilter currentGender={genderFilter} onGenderChange={setGenderFilter} />
+      <GallerySortMenu currentSort={sortBy} onSortChange={setSortBy} />
         </div>
       )}
 

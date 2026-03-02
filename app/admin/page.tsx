@@ -1,141 +1,21 @@
-const isBuildTime = typeof window === 'undefined';
-
 export const dynamic = "force-dynamic";
-// app/admin/page.tsx or wherever your AdminDashboard lives
+
 import { db } from "@/lib/db";
 import { startOfMonth, endOfMonth, subMonths } from "date-fns";
 import dynamic from "next/dynamic";
+
 const DashboardOverview = dynamic(() => import("./_components/dashboard-overview"));
 
 export default async function AdminDashboard() {
-  // Get stats data for the chart
-  // 6 months back from now
-  const months = Array.from({ length: 6 }, (_, i) =>
-    subMonths(new Date(), 5 - i)
-  );
+  const months = Array.from({ length: 6 }, (_, i) => subMonths(new Date(), 5 - i));
 
-  const transformedStats = isBuildTime ? [] : await Promise.all(
-    months.map(async (date) => {
-      const start = startOfMonth(date);
-      const end = endOfMonth(date);
-
-      const [imageCount, uniqueUsers, reportCount] = await Promise.all([
-        db.generatedImage.count({
-          where: {
-            createdAt: { gte: start, lte: end },
-          },
-        }),
-        db.generatedImage.groupBy({
-          by: ["userId"],
-          where: {
-            createdAt: { gte: start, lte: end },
-          },
-        }),
-        db.generatedImage.count({
-          where: {
-            createdAt: { gte: start, lte: end },
-            status: "flagged",
-          },
-        }),
-      ]);
-
-      return {
-        name: start.toLocaleString("default", { month: "short" }), // e.g., "Jan"
-        users: uniqueUsers.length,
-        images: imageCount,
-        reports: reportCount,
-      };
-    })
-  );
-
-  // Get categories with counts
-  const categories = await db.category.findMany({
-    include: {
-      _count: {
-        select: { generatedImages: true },
-      },
-    },
-    orderBy: {
-      generatedImages: {
-        _count: "desc",
-      },
-    },
-    take: 5,
-  });
-
-  // Get recent generated images
-  const recentImages = await db.generatedImage.findMany({
-    orderBy: { createdAt: "desc" },
-    take: 5,
-    select: {
-      id: true,
-      prompt: true,
-      imageUrl: true,
-      width: true,
-      height: true,
-      status: true,
-      user: {
-        select: {
-          name: true,
-          email: true,
-        },
-      },
-      categories: {
-        select: {
-          name: true,
-        },
-      },
-    },
-  });
-
-  const palette = [
-    "#6366F1",
-    "#06B6D4",
-    "#10B981",
-    "#F59E0B",
-    "#EF4444",
-    "#E879F9",
-    "#3B82F6",
-    "#F43F5E",
-    "#8B5CF6",
-    "#14B8A6",
-  ];
-
-  const categoryData = categories.map((category, index) => ({
-    name: category.name,
-    value: category._count.generatedImages,
-    color: palette[index % palette.length], // Loop through the palette
-  }));
-
-  const transformedImages = recentImages.map((img) => ({
-    id: img.id,
-    prompt: img.prompt,
-    category: img.categories[0]?.name ?? "Uncategorized",
-    user: img.user.name ?? img.user.email,
-    status: img.status,
-    views: 0, // Replace if you track views
-    link: img.imageUrl,
-    width: img.width,
-    height: img.height,
-  }));
-
-  const now = new Date();
-  const yesterday = new Date(now);
-  yesterday.setDate(now.getDate() - 1);
-
-  const lastMonth = new Date(now);
-  lastMonth.setMonth(now.getMonth() - 1);
-
-  // Optional: Normalize time (00:00:00) to avoid overlap issues
-  yesterday.setHours(0, 0, 0, 0);
-  lastMonth.setHours(0, 0, 0, 0);
-
-  // Fetch current & past counts
   const [
+    transformedStats,
+    categories,
+    recentImages,
     totalUsers,
     totalImages,
     flaggedReports,
-
     usersLastMonth,
     imagesLastMonth,
     reportsYesterday,
@@ -145,127 +25,98 @@ export default async function AdminDashboard() {
     imagesYesterday,
     imagesDayBeforeYesterday,
   ] = await Promise.all([
+    // Monthly stats
+    Promise.all(
+      months.map(async (date) => {
+        const start = startOfMonth(date);
+        const end = endOfMonth(date);
+        const [imageCount, uniqueUsers, reportCount] = await Promise.all([
+          db.generatedImage.count({ where: { createdAt: { gte: start, lte: end } } }),
+          db.generatedImage.groupBy({ by: ["userId"], where: { createdAt: { gte: start, lte: end } } }),
+          db.generatedImage.count({ where: { createdAt: { gte: start, lte: end }, status: "flagged" } }),
+        ]);
+        return {
+          name: start.toLocaleString("default", { month: "short" }),
+          users: uniqueUsers.length,
+          images: imageCount,
+          reports: reportCount,
+        };
+      })
+    ),
+    // Top categories
+    db.category.findMany({
+      include: { _count: { select: { generatedImages: true } } },
+      orderBy: { generatedImages: { _count: "desc" } },
+      take: 5,
+    }),
+    // Recent images
+    db.generatedImage.findMany({
+      orderBy: { createdAt: "desc" },
+      take: 5,
+      select: {
+        id: true, prompt: true, imageUrl: true, width: true, height: true, status: true,
+        user: { select: { name: true, email: true } },
+        categories: { select: { name: true } },
+      },
+    }),
+    // Counts
     db.user.count(),
     db.generatedImage.count(),
     db.generatedImage.count({ where: { status: "flagged" } }),
-
-    db.user.count({
-      where: {
-        createdAt: {
-          gte: lastMonth,
-          lt: now,
-        },
-      },
-    }),
-    db.generatedImage.count({
-      where: {
-        createdAt: {
-          gte: lastMonth,
-          lt: now,
-        },
-      },
-    }),
-    db.generatedImage.count({
-      where: {
-        status: "flagged",
-        createdAt: {
-          gte: yesterday,
-          lt: now,
-        },
-      },
-    }),
-    db.generatedImage.count({
-      where: {
-        status: "flagged",
-        createdAt: {
-          gte: new Date(yesterday.getTime() - 86400000),
-          lt: yesterday,
-        },
-      },
-    }),
-    db.user.count({
-      where: {
-        createdAt: {
-          gte: yesterday,
-          lt: now,
-        },
-      },
-    }),
-    db.user.count({
-      where: {
-        createdAt: {
-          gte: new Date(yesterday.getTime() - 86400000),
-          lt: yesterday,
-        },
-      },
-    }),
-    db.generatedImage.count({
-      where: {
-        createdAt: {
-          gte: yesterday,
-          lt: now,
-        },
-      },
-    }),
-    db.generatedImage.count({
-      where: {
-        createdAt: {
-          gte: new Date(yesterday.getTime() - 86400000),
-          lt: yesterday,
-        },
-      },
-    }),
+    db.user.count({ where: { createdAt: { gte: (() => { const d = new Date(); d.setMonth(d.getMonth() - 1); d.setHours(0,0,0,0); return d; })(), lt: new Date() } } }),
+    db.generatedImage.count({ where: { createdAt: { gte: (() => { const d = new Date(); d.setMonth(d.getMonth() - 1); d.setHours(0,0,0,0); return d; })(), lt: new Date() } } }),
+    db.generatedImage.count({ where: { status: "flagged", createdAt: { gte: (() => { const d = new Date(); d.setDate(d.getDate() - 1); d.setHours(0,0,0,0); return d; })(), lt: new Date() } } }),
+    db.generatedImage.count({ where: { status: "flagged", createdAt: { gte: (() => { const d = new Date(); d.setDate(d.getDate() - 2); d.setHours(0,0,0,0); return d; })(), lt: (() => { const d = new Date(); d.setDate(d.getDate() - 1); d.setHours(0,0,0,0); return d; })() } } }),
+    db.user.count({ where: { createdAt: { gte: (() => { const d = new Date(); d.setDate(d.getDate() - 1); d.setHours(0,0,0,0); return d; })(), lt: new Date() } } }),
+    db.user.count({ where: { createdAt: { gte: (() => { const d = new Date(); d.setDate(d.getDate() - 2); d.setHours(0,0,0,0); return d; })(), lt: (() => { const d = new Date(); d.setDate(d.getDate() - 1); d.setHours(0,0,0,0); return d; })() } } }),
+    db.generatedImage.count({ where: { createdAt: { gte: (() => { const d = new Date(); d.setDate(d.getDate() - 1); d.setHours(0,0,0,0); return d; })(), lt: new Date() } } }),
+    db.generatedImage.count({ where: { createdAt: { gte: (() => { const d = new Date(); d.setDate(d.getDate() - 2); d.setHours(0,0,0,0); return d; })(), lt: (() => { const d = new Date(); d.setDate(d.getDate() - 1); d.setHours(0,0,0,0); return d; })() } } }),
   ]);
+
+  const palette = ["#6366F1","#06B6D4","#10B981","#F59E0B","#EF4444","#E879F9","#3B82F6","#F43F5E","#8B5CF6","#14B8A6"];
+
+  const categoryData = categories.map((cat, i) => ({
+    name: cat.name,
+    value: cat._count.generatedImages,
+    color: palette[i % palette.length],
+  }));
+
+  const transformedImages = recentImages.map((img) => ({
+    id: img.id,
+    prompt: img.prompt,
+    category: img.categories[0]?.name ?? "Uncategorized",
+    user: img.user.name ?? img.user.email,
+    status: img.status,
+    views: 0,
+    link: img.imageUrl,
+    width: img.width,
+    height: img.height,
+  }));
+
   function getPercentChange(current: number, previous: number) {
     if (previous === 0) return current > 0 ? 100 : 0;
     return Math.round(((current - previous) / previous) * 100);
   }
 
-  const stats = {
-    users: {
-      total: totalUsers,
-      changeFromYesterday: getPercentChange(
-        usersYesterday,
-        usersDayBeforeYesterday
-      ),
-      changeFromLastMonth: getPercentChange(totalUsers, usersLastMonth),
-    },
-    images: {
-      total: totalImages,
-      changeFromYesterday: getPercentChange(
-        imagesYesterday,
-        imagesDayBeforeYesterday
-      ),
-      changeFromLastMonth: getPercentChange(totalImages, imagesLastMonth),
-    },
-    reports: {
-      total: flaggedReports,
-      changeFromYesterday: getPercentChange(
-        reportsYesterday,
-        reportsDayBeforeYesterday
-      ),
-    },
-  };
-  
   const counts = {
-    users: stats.users.total,
-    images: stats.images.total,
-    reports: stats.reports.total,
+    users: totalUsers,
+    images: totalImages,
+    reports: flaggedReports,
     deltas: {
       users: {
-        day: stats.users.changeFromYesterday,
-        month: stats.users.changeFromLastMonth,
+        day: getPercentChange(usersYesterday, usersDayBeforeYesterday),
+        month: getPercentChange(totalUsers, usersLastMonth),
       },
       images: {
-        day: stats.images.changeFromYesterday,
-        month: stats.images.changeFromLastMonth,
+        day: getPercentChange(imagesYesterday, imagesDayBeforeYesterday),
+        month: getPercentChange(totalImages, imagesLastMonth),
       },
       reports: {
-        day: stats.reports.changeFromYesterday,
+        day: getPercentChange(reportsYesterday, reportsDayBeforeYesterday),
       },
     },
   };
-  
+
   return (
     <DashboardOverview
       statsData={transformedStats}
