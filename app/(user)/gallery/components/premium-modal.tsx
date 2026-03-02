@@ -185,11 +185,14 @@ export function PremiumModal({
 
               {/* Action Buttons */}
               <div className="space-y-2 pt-2">
-                <Link href="/subscription" onClick={onClose} className="block">
+                <Link href={`/pricing?plan=${targetPlan.name.toLowerCase()}`} onClick={onClose} className="block">
                   <Button className="w-full bg-gradient-to-r from-purple-500 to-pink-500 hover:from-purple-600 hover:to-pink-600">
-                    Upgrade Now
+                    Get Early Access →
                   </Button>
                 </Link>
+                <p className="text-center text-xs text-muted-foreground">
+                  Payments launching soon — join the waitlist for an early bird discount
+                </p>
                 <Button
                   variant="outline"
                   className="w-full bg-transparent"

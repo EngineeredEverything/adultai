@@ -119,10 +119,8 @@ export function SubscriptionPlans({
         return;
       }
 
-      // For new subscriptions, redirect to checkout
-      setTimeout(() => {
-        router.push(`/checkout?plan=${planId}&billing=${billingInterval}`);
-      }, 1500);
+      // Payments not yet live — send to waitlist/pricing page
+      router.push(`/pricing?plan=${planId}`);
     } catch (error) {
       toast.error("Error", {
         description: "An unexpected error occurred. Please try again.",

@@ -27,7 +27,7 @@ export function AgeVerificationProvider({
   const [isVerified, setIsVerified] = useState(initialVerified);
   const pathname = usePathname();
 
-  const isPublicPath = pathname === '/' || PUBLIC_PATHS.some(p => pathname.startsWith(p));
+  const isPublicPath = PUBLIC_PATHS.some(p => pathname.startsWith(p));
   const showGate = !isVerified && !isPublicPath;
 
   const setVerified = (value: boolean) => {

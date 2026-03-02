@@ -21,6 +21,7 @@ interface UseImageGenerationParams {
   setImages: (
     updater: (prev: SearchImagesResponseSuccessType["images"]) => SearchImagesResponseSuccessType["images"],
   ) => void
+  onLimitReached?: () => void
 }
 
 interface GenerationState {
@@ -33,7 +34,7 @@ interface GenerationState {
 }
 
 export function useImageGeneration(params: UseImageGenerationParams) {
-  const { initialImages, searchQuery, userMode, category_id, user, setImages } = params
+  const { initialImages, searchQuery, userMode, category_id, user, setImages, onLimitReached } = params
 
   // Consolidated state for better management
   const [state, setState] = useState<GenerationState>({
@@ -262,14 +263,26 @@ export function useImageGeneration(params: UseImageGenerationParams) {
         updateState({ prompt: "" })
       } catch (error) {
         logger.error("Error generating images:", error)
-        toast.error("Error", {
-          description: error instanceof Error ? error.message : "Failed to generate images",
-        })
+        const msg = error instanceof Error ? error.message : "Failed to generate images"
+        // Detect limit errors and show upgrade modal instead of a plain toast
+        if (msg.toLowerCase().includes("tempt limit exceeded") || msg.toLowerCase().includes("limit exceeded")) {
+          if (onLimitReached) {
+            onLimitReached()
+          } else {
+            toast.error("Monthly limit reached", {
+              description: "You&apos;ve used all your free generations. Upgrade to keep creating.",
+              action: { label: "Upgrade", onClick: () => window.location.href = "/pricing" },
+              duration: 8000,
+            })
+          }
+        } else {
+          toast.error("Error", { description: msg })
+        }
       } finally {
         updateState({ isGenerating: false })
       }
     },
-    [user, state, updateState, addPending],
+    [user, state, updateState, addPending, onLimitReached],
   )
 
   // Retry: re-generate with the same prompt but new seed (server generates random seeds)

@@ -29,6 +29,7 @@ import { GeneratedImagePreview } from "../GeneratedImagePreview";
 import { CompanionFeatureBanner } from "../CompanionFeatureBanner";
 import { GallerySortMenu, type SortOption } from "../GallerySortMenu";
 import { SubcategoryFilter } from "../SubcategoryFilter";
+import { PremiumModal } from "../premium-modal";
 import dynamic from "next/dynamic";
 
 // Heavy components — lazy loaded to keep initial bundle small
@@ -99,6 +100,8 @@ export default function GalleryPage(props: GalleryPageProps) {
   // Category-mode specific state
   const [categorySortBy, setCategorySortBy] = useState<"votes_desc" | "newest">("votes_desc");
   const [activeSubcategory, setActiveSubcategory] = useState<string | null>(null);
+  // Upgrade modal — shown when user hits generation limit
+  const [limitModalOpen, setLimitModalOpen] = useState(false);
 
   const searchParams = useSearchParams();
   const router = useRouter();
@@ -397,6 +400,7 @@ export default function GalleryPage(props: GalleryPageProps) {
       category_id,
       user,
       setImages: setGeneratedImages, // Use separate state for generated images
+      onLimitReached: () => setLimitModalOpen(true),
     }),
     [generatedImages, searchQuery, isUserMode, category_id, user, setGeneratedImages]
   );
@@ -745,6 +749,14 @@ export default function GalleryPage(props: GalleryPageProps) {
           <></>
         </LoginButton>
       )}
+
+      {/* Upgrade modal — triggered when generation limit is hit */}
+      <PremiumModal
+        isOpen={limitModalOpen}
+        onClose={() => setLimitModalOpen(false)}
+        feature="unlimited image generation"
+        requiredPlan="basic"
+      />
 
       {/* Mobile Bottom Nav - Only in normal mode */}
       {isNormalMode && (
