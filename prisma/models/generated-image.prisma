@@ -33,6 +33,8 @@ model GeneratedImage {
   downvotes      Int            @default(0)
   voteScore      Int            @default(0) // upvotes - downvotes
 
+  gender         String?        // "female" | "male" | "fantasy" | "other"
+
   futureLinks    String[]
 
   // Many-to-many style association: store category IDs (ObjectId strings).
@@ -53,6 +55,8 @@ model GeneratedImage {
   @@index([categoryIds])
   @@index([userId, createdAt])
   @@index([isPublic, verified, voteScore])
+  @@index([gender])
+  @@index([gender, isPublic, voteScore])
 }
 
 model ImageComment {
