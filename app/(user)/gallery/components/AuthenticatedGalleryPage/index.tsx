@@ -101,7 +101,7 @@ export default function GalleryPage(props: GalleryPageProps) {
   const [categorySortBy, setCategorySortBy] = useState<"votes_desc" | "newest">("votes_desc");
   const [activeSubcategory, setActiveSubcategory] = useState<string | null>(null);
   // Gender/type filter — applies in normal gallery mode
-  const [genderFilter, setGenderFilter] = useState<"female" | "male" | "fantasy" | null>(null);
+  const [genderFilter, setGenderFilter] = useState<"female" | "male" | null>(null);
   // Upgrade modal — shown when user hits generation limit
   const [limitModalOpen, setLimitModalOpen] = useState(false);
 
@@ -377,7 +377,7 @@ export default function GalleryPage(props: GalleryPageProps) {
       category_id,
       subcategory_id: activeSubcategory ?? undefined,
       sort: isCategoryMode ? categorySortBy : (sortBy === "newest" ? "newest" : "votes_desc"),
-      gender: genderFilter ?? undefined,
+      gender: (genderFilter as any) ?? undefined,
     }),
     [images, totalCount, searchQuery, isUserMode, user, category_id, activeSubcategory, categorySortBy, isCategoryMode, genderFilter, sortBy]
   );
@@ -668,24 +668,23 @@ export default function GalleryPage(props: GalleryPageProps) {
         </div>
       )}
 
-      {/* GENDER / TYPE FILTER — normal gallery mode */}
+      {/* GENDER FILTER — normal gallery mode */}
       {isNormalMode && (
-        <div className="flex flex-wrap gap-2 mb-4">
+        <div className="flex gap-2 mb-4">
           {(
             [
-              { label: "👩 Women",  value: "female"  },
-              { label: "👨 Men",    value: "male"    },
-              { label: "🐉 Fantasy",value: "fantasy" },
-              { label: "🌈 All",    value: null      },
-            ] as { label: string; value: "female" | "male" | "fantasy" | null }[]
+              { label: "All",   value: null     },
+              { label: "Women", value: "female" },
+              { label: "Men",   value: "male"   },
+            ] as { label: string; value: "female" | "male" | null }[]
           ).map(({ label, value }) => (
             <button
               key={label}
               onClick={() => setGenderFilter(value)}
-              className={`rounded-full px-3 py-1.5 text-xs font-medium border transition-colors
+              className={`rounded-full px-4 py-1.5 text-sm font-medium border transition-colors
                 ${genderFilter === value
                   ? "bg-pink-500 text-white border-pink-500"
-                  : "border-border hover:bg-muted text-muted-foreground hover:text-foreground"}`}
+                  : "border-gray-700 text-gray-400 hover:border-gray-500 hover:text-white"}`}
             >
               {label}
             </button>
