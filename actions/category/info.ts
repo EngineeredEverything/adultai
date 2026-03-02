@@ -154,6 +154,56 @@ export async function getCategoryWithImages(categoryId: string, page = 1, limit 
   )
 }
 
+/**
+ * Find categories that frequently co-occur with the given category.
+ * Used to populate subcategory filter chips on the category gallery page.
+ */
+export async function getRelatedCategories(categoryId: string, limit = 12) {
+  try {
+    // Sample up to 200 images in this category to find co-occurring categories
+    const images = await db.generatedImage.findMany({
+      where: {
+        categoryIds: { has: categoryId },
+        status: "completed",
+        isPublic: true,
+      },
+      select: { categoryIds: true },
+      take: 200,
+      orderBy: [{ voteScore: "desc" }, { createdAt: "desc" }],
+    })
+
+    // Count occurrences of each co-occurring category
+    const counts = new Map<string, number>()
+    for (const img of images) {
+      for (const cid of img.categoryIds) {
+        if (cid === categoryId) continue
+        counts.set(cid, (counts.get(cid) ?? 0) + 1)
+      }
+    }
+
+    if (counts.size === 0) return []
+
+    // Sort by count, take top N
+    const topIds = [...counts.entries()]
+      .sort((a, b) => b[1] - a[1])
+      .slice(0, limit)
+      .map(([id]) => id)
+
+    const categories = await db.category.findMany({
+      where: { id: { in: topIds } },
+      select: { id: true, name: true },
+    })
+
+    // Return in frequency order
+    return topIds
+      .map((id) => categories.find((c) => c.id === id))
+      .filter(Boolean) as { id: string; name: string }[]
+  } catch (e) {
+    logger.warn("getRelatedCategories failed", { categoryId, error: e })
+    return []
+  }
+}
+
 export async function findMatchingCategories(searchTerm: string) {
   const searchWords = searchTerm.toLowerCase().split(/\s+/)
 

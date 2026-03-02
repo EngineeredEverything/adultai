@@ -28,6 +28,7 @@ import InputSection from "../GenerationForm/destop";
 import { GeneratedImagePreview } from "../GeneratedImagePreview";
 import { CompanionFeatureBanner } from "../CompanionFeatureBanner";
 import { GallerySortMenu, type SortOption } from "../GallerySortMenu";
+import { SubcategoryFilter } from "../SubcategoryFilter";
 import dynamic from "next/dynamic";
 
 // Heavy components — lazy loaded to keep initial bundle small
@@ -92,6 +93,9 @@ export default function GalleryPage(props: GalleryPageProps) {
   >(null);
   const [showMobileSheet, setShowMobileSheet] = useState(false);
   const [sortBy, setSortBy] = useState<SortOption>("newest");
+  // Category-mode specific state
+  const [categorySortBy, setCategorySortBy] = useState<"votes_desc" | "newest">("votes_desc");
+  const [activeSubcategory, setActiveSubcategory] = useState<string | null>(null);
 
   const searchParams = useSearchParams();
   const router = useRouter();
@@ -165,10 +169,16 @@ export default function GalleryPage(props: GalleryPageProps) {
   // Track total count (seed from prefetch)
   const [prefetchedTotalCount] = useState(prefetchedCount ?? 0);
 
-  // Fetch initial images with abort support — skipped if server already prefetched
+  // Track whether the category-mode filters have changed from the server-prefetched state
+  // (sort changed from default votes_desc, or subcategory selected)
+  const categoryFiltersChanged = isCategoryMode && (categorySortBy !== "votes_desc" || activeSubcategory !== null);
+
+  // Fetch initial images with abort support
+  // In category mode: skipped on first load if server prefetched (default sort, no sub).
+  // Re-runs whenever category sort or subcategory changes.
   useEffect(() => {
-    // If we have server-prefetched images, skip the initial client fetch
-    if (prefetchedImages && prefetchedImages.length > 0) {
+    // Skip client fetch only on first load with default settings (SSR already handled it)
+    if (prefetchedImages && prefetchedImages.length > 0 && !categoryFiltersChanged) {
       setTotalCount(prefetchedTotalCount);
       setIsLoadingImages(false);
       return;
@@ -203,14 +213,17 @@ export default function GalleryPage(props: GalleryPageProps) {
         }
 
         if (isCategoryMode && category_id) {
-          filters.category_id = category_id;
-          filters.sort = "votes_desc"; // Category view: most upvoted first
+          // If subcategory selected, filter by that (it's a co-occurring category)
+          filters.category_id = activeSubcategory ?? category_id;
+          filters.sort = categorySortBy;
         }
 
         if (process.env.NODE_ENV !== "production") console.log("[Gallery] Fetching images with params:", {
           searchQuery,
           mode: isCategoryMode ? "category" : isUserMode ? "user" : "normal",
           category_id,
+          activeSubcategory,
+          categorySortBy,
           filters,
         });
 
@@ -239,7 +252,6 @@ export default function GalleryPage(props: GalleryPageProps) {
         if (!isMountedRef.current) return;
 
         if (!("error" in result)) {
-
           setImages(result.images);
           setTotalCount(result.count || 0);
         } else {
@@ -266,7 +278,7 @@ export default function GalleryPage(props: GalleryPageProps) {
     return () => {
       abortController.abort();
     };
-  }, [searchQuery, isUserMode, isCategoryMode, userId, category_id, prefetchedImages, prefetchedTotalCount]);
+  }, [searchQuery, isUserMode, isCategoryMode, userId, category_id, prefetchedImages, prefetchedTotalCount, categorySortBy, activeSubcategory, categoryFiltersChanged]);
 
   // Fetch categories (only in normal mode) — deferred 200ms so image grid renders first
   useEffect(() => {
@@ -348,8 +360,10 @@ export default function GalleryPage(props: GalleryPageProps) {
       userMode: isUserMode,
       user,
       category_id,
+      subcategory_id: activeSubcategory ?? undefined,
+      sort: isCategoryMode ? categorySortBy : undefined,
     }),
-    [images, totalCount, searchQuery, isUserMode, user, category_id]
+    [images, totalCount, searchQuery, isUserMode, user, category_id, activeSubcategory, categorySortBy, isCategoryMode]
   );
 
   // Use image loading hook for infinite scroll
@@ -602,28 +616,48 @@ export default function GalleryPage(props: GalleryPageProps) {
         </>
       )}
 
-      {/* SORT MENU */}
-      {paginatedImages.length > 0 && (
+      {/* CATEGORY CONTROLS: subcategory filter chips + sort */}
+      {isCategoryMode && category_id && (
+        <div className="mb-5 space-y-3">
+          {/* Subcategory filter pills */}
+          <SubcategoryFilter
+            categoryId={category_id}
+            activeSub={activeSubcategory}
+            onSelect={(id) => {
+              setActiveSubcategory(id);
+            }}
+          />
+          {/* Sort pills for category mode */}
+          <div className="flex gap-2">
+            <button
+              onClick={() => setCategorySortBy("votes_desc")}
+              className={`rounded-full px-3 py-1.5 text-xs font-medium border transition-colors flex items-center gap-1.5
+                ${categorySortBy === "votes_desc"
+                  ? "bg-pink-500 text-white border-pink-500"
+                  : "border-border hover:bg-muted text-muted-foreground"}`}
+            >
+              🔥 Most Popular
+            </button>
+            <button
+              onClick={() => setCategorySortBy("newest")}
+              className={`rounded-full px-3 py-1.5 text-xs font-medium border transition-colors flex items-center gap-1.5
+                ${categorySortBy === "newest"
+                  ? "bg-pink-500 text-white border-pink-500"
+                  : "border-border hover:bg-muted text-muted-foreground"}`}
+            >
+              ✨ Newest
+            </button>
+          </div>
+        </div>
+      )}
+
+      {/* SORT MENU — normal / user mode */}
+      {!isCategoryMode && paginatedImages.length > 0 && (
         <div className="flex justify-between items-center mb-6">
           <h2 className="text-xl font-semibold">
-            {isUserMode
-              ? "Your Images"
-              : isCategoryMode
-              ? "Top Images"
-              : "Public Gallery"}
+            {isUserMode ? "Your Images" : "Public Gallery"}
           </h2>
-          {/* Category mode is always sorted by top votes server-side; hide sort UI */}
-          {!isCategoryMode && (
-            <GallerySortMenu currentSort={sortBy} onSortChange={setSortBy} />
-          )}
-          {isCategoryMode && (
-            <span className="text-sm text-muted-foreground flex items-center gap-1">
-              <svg className="w-3.5 h-3.5 text-pink-500" fill="currentColor" viewBox="0 0 20 20">
-                <path d="M2 10.5a1.5 1.5 0 113 0v6a1.5 1.5 0 01-3 0v-6zM6 10.333v5.43a2 2 0 001.106 1.79l.05.025A4 4 0 008.943 18h5.416a2 2 0 001.962-1.608l1.2-6A2 2 0 0015.56 8H12V4a2 2 0 00-2-2 1 1 0 00-1 1v.667a4 4 0 01-.8 2.4L6.8 7.933a4 4 0 00-.8 2.4z" />
-              </svg>
-              Sorted by top votes
-            </span>
-          )}
+          <GallerySortMenu currentSort={sortBy} onSortChange={setSortBy} />
         </div>
       )}
 

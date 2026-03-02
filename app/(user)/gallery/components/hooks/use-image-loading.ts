@@ -15,10 +15,12 @@ interface UseImageLoadingParams {
     userMode?: boolean
     user: GetCurrentUserInfoSuccessType | undefined
     category_id?: string
+    subcategory_id?: string
+    sort?: "votes_desc" | "newest"
 }
 
 export function useImageLoading(params: UseImageLoadingParams) {
-    const { initialImages, totalCount, searchQuery, userMode, user, category_id } = params
+    const { initialImages, totalCount, searchQuery, userMode, user, category_id, subcategory_id, sort } = params
 
     // Core state
     const [images, setImages] = useState<SearchImagesResponseSuccessType["images"]>([])
@@ -41,6 +43,8 @@ export function useImageLoading(params: UseImageLoadingParams) {
         userMode: userMode || false,
         userId: user?.user.id,
         category_id: category_id,
+        subcategory_id: subcategory_id,
+        sort: sort,
     })
 
     // Intersection observer with optimized settings
@@ -57,9 +61,11 @@ export function useImageLoading(params: UseImageLoadingParams) {
             prev.query !== searchQuery ||
             prev.userMode !== (userMode || false) ||
             prev.userId !== user?.user.id ||
-            prev.category_id !== category_id
+            prev.category_id !== category_id ||
+            prev.subcategory_id !== subcategory_id ||
+            prev.sort !== sort
         )
-    }, [searchQuery, userMode, user?.user.id, category_id])
+    }, [searchQuery, userMode, user?.user.id, category_id, subcategory_id, sort])
 
     // Initialize state with initial images
     useEffect(() => {
@@ -73,6 +79,8 @@ export function useImageLoading(params: UseImageLoadingParams) {
             userMode: userMode || false,
             userId: user?.user.id,
             category_id: category_id,
+            subcategory_id: subcategory_id,
+            sort: sort,
         }
 
         // Only reset if params changed or initial load
@@ -111,7 +119,7 @@ export function useImageLoading(params: UseImageLoadingParams) {
                 timeoutRef.current = null
             }
         }
-    }, [initialImages, totalCount, searchQuery, userMode, user?.user.id, category_id])
+    }, [initialImages, totalCount, searchQuery, userMode, user?.user.id, category_id, subcategory_id, sort])
 
     // Generate page key for tracking
     const getPageKey = (start: number, end: number) => `${start}-${end}`
@@ -200,8 +208,9 @@ export function useImageLoading(params: UseImageLoadingParams) {
                     filters.isPublic = true
                 }
                 if (category_id) {
-                    filters.category_id = category_id
-                    filters.sort = "votes_desc" // Category view: most upvoted first
+                    // If subcategory is selected, filter by that instead (subcategory is a co-occurring category)
+                    filters.category_id = subcategory_id ?? category_id
+                    filters.sort = sort ?? "votes_desc"
                 }
 
                 // Make the fetch request
@@ -317,7 +326,7 @@ export function useImageLoading(params: UseImageLoadingParams) {
                 timeoutRef.current = null
             }
         }
-    }, [images.length, hasMore, searchQuery, userMode, user?.user.id, category_id, totalCount])
+    }, [images.length, hasMore, searchQuery, userMode, user?.user.id, category_id, subcategory_id, sort, totalCount])
 
     // Handle infinite scroll trigger - STRICT CONTROL
     useEffect(() => {
