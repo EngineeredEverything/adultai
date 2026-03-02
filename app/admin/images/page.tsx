@@ -1,3 +1,4 @@
+export const dynamic = "force-dynamic";
 import { Suspense } from "react";
 import { searchImages } from "@/actions/images/info";
 import { getAllCategories } from "@/actions/category/info";

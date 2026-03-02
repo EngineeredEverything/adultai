@@ -1,3 +1,4 @@
+export const dynamic = "force-dynamic";
 import { searchUsers } from "@/actions/user/info";
 import { Suspense } from "react";
 import { Card, CardContent } from "@/components/ui/card";

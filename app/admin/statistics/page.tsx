@@ -1,3 +1,4 @@
+export const dynamic = "force-dynamic";
 import Statistics from "../_components/statistics";
 import { logger } from "@/lib/logger";
 

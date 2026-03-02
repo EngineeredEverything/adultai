@@ -1,3 +1,4 @@
+export const dynamic = "force-dynamic";
 // app/admin/page.tsx or wherever your AdminDashboard lives
 import { db } from "@/lib/db";
 import { startOfMonth, endOfMonth, subMonths } from "date-fns";
