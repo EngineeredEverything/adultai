@@ -2,6 +2,7 @@
 
 import { useState, useRef, useEffect, useCallback } from "react"
 import Link from "next/link"
+import { getChatHistory } from "@/actions/characters/chat"
 
 interface Message {
   id: string
@@ -30,6 +31,7 @@ interface Props {
 
 export default function ChatInterface({ character, initialMessages, userId }: Props) {
   const [messages, setMessages] = useState<Message[]>(initialMessages)
+  const [historyLoading, setHistoryLoading] = useState(true)
   const [input, setInput] = useState("")
   const [isSending, setIsSending] = useState(false)
   const [inputMode, setInputMode] = useState<"text" | "voice">("text")
@@ -50,6 +52,19 @@ export default function ChatInterface({ character, initialMessages, userId }: Pr
   const typedCountRef = useRef(0)
 
   const shouldAutoPlayAudio = inputMode === "voice" || voiceEnabled
+
+  // Load history client-side after mount (fast initial render)
+  useEffect(() => {
+    let cancelled = false
+    getChatHistory(character.id).then((result) => {
+      if (cancelled) return
+      if ("messages" in result && result.messages.length > 0) {
+        setMessages(result.messages as Message[])
+      }
+      setHistoryLoading(false)
+    }).catch(() => setHistoryLoading(false))
+    return () => { cancelled = true }
+  }, [character.id])
 
   useEffect(() => {
     if (showHistory) messagesEndRef.current?.scrollIntoView({ behavior: "smooth" })
@@ -382,9 +397,16 @@ export default function ChatInterface({ character, initialMessages, userId }: Pr
               </button>
             </div>
             <div className="overflow-y-auto px-4 py-3 space-y-2 flex-1">
-              {messages.length === 0 && (
+              {historyLoading ? (
+                <div className="flex justify-center py-8">
+                  <svg className="w-5 h-5 animate-spin text-purple-400" fill="none" viewBox="0 0 24 24">
+                    <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
+                    <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z" />
+                  </svg>
+                </div>
+              ) : messages.length === 0 ? (
                 <p className="text-gray-500 text-sm text-center py-8">Say hello to {character.name}</p>
-              )}
+              ) : null}
               {messages.map((msg) => (
                 <div key={msg.id} className={`flex gap-2 ${msg.role === "user" ? "justify-end" : "justify-start"}`}>
                   {msg.role === "assistant" && character.portraitUrl && (

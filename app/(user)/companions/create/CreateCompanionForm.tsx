@@ -4,6 +4,11 @@ import { useState, useTransition } from "react"
 import { useRouter } from "next/navigation"
 import { createCharacter } from "@/actions/characters/create"
 
+const GENDERS = [
+  { id: "woman", label: "Woman", emoji: "👩", desc: "Female companion" },
+  { id: "man", label: "Man", emoji: "👨", desc: "Male companion" },
+]
+
 const PERSONALITIES = [
   { id: "playful", label: "Playful", emoji: "😏", desc: "Flirty, fun, and spontaneous" },
   { id: "romantic", label: "Romantic", emoji: "💕", desc: "Passionate, poetic, and intimate" },
@@ -19,9 +24,12 @@ const APPEARANCES = [
   { id: "anime", label: "Anime", emoji: "✨", desc: "Anime / manga style" },
 ]
 
+const TOTAL_STEPS = 5
+
 export default function CreateCompanionForm() {
   const router = useRouter()
   const [isPending, startTransition] = useTransition()
+  const [gender, setGender] = useState("")
   const [name, setName] = useState("")
   const [personality, setPersonality] = useState("")
   const [appearance, setAppearance] = useState("")
@@ -30,9 +38,10 @@ export default function CreateCompanionForm() {
   const [step, setStep] = useState(1)
 
   const canProceed = () => {
-    if (step === 1) return name.trim().length > 0
-    if (step === 2) return personality !== ""
-    if (step === 3) return appearance !== ""
+    if (step === 1) return gender !== ""
+    if (step === 2) return name.trim().length > 0
+    if (step === 3) return personality !== ""
+    if (step === 4) return appearance !== ""
     return true
   }
 
@@ -41,6 +50,7 @@ export default function CreateCompanionForm() {
     startTransition(async () => {
       const result = await createCharacter({
         name: name.trim(),
+        gender: gender as any,
         personality: personality as any,
         appearance: appearance as any,
         description: description.trim() || undefined,
@@ -61,18 +71,44 @@ export default function CreateCompanionForm() {
     <div className="space-y-8">
       {/* Progress bar */}
       <div className="flex gap-2">
-        {[1, 2, 3, 4].map((s) => (
+        {Array.from({ length: TOTAL_STEPS }).map((_, i) => (
           <div
-            key={s}
+            key={i}
             className={`h-1 flex-1 rounded-full transition-colors duration-300 ${
-              s <= step ? "bg-gradient-to-r from-purple-500 to-pink-500" : "bg-gray-800"
+              i + 1 <= step ? "bg-gradient-to-r from-purple-500 to-pink-500" : "bg-gray-800"
             }`}
           />
         ))}
       </div>
 
-      {/* Step 1: Name */}
+      {/* Step 1: Gender */}
       {step === 1 && (
+        <div className="space-y-6 animate-in fade-in duration-300">
+          <label className="block text-sm font-medium text-gray-300">
+            Who are you looking for?
+          </label>
+          <div className="grid grid-cols-2 gap-4">
+            {GENDERS.map((g) => (
+              <button
+                key={g.id}
+                onClick={() => setGender(g.id)}
+                className={`p-6 rounded-xl border text-center transition-all duration-200 ${
+                  gender === g.id
+                    ? "border-purple-500 bg-purple-500/10 shadow-lg shadow-purple-500/20"
+                    : "border-gray-800 bg-gray-900 hover:border-gray-700"
+                }`}
+              >
+                <div className="text-5xl mb-3">{g.emoji}</div>
+                <div className="font-semibold text-lg">{g.label}</div>
+                <div className="text-xs text-gray-400 mt-1">{g.desc}</div>
+              </button>
+            ))}
+          </div>
+        </div>
+      )}
+
+      {/* Step 2: Name */}
+      {step === 2 && (
         <div className="space-y-6 animate-in fade-in duration-300">
           <div>
             <label className="block text-sm font-medium text-gray-300 mb-2">
@@ -86,13 +122,14 @@ export default function CreateCompanionForm() {
               maxLength={50}
               className="w-full bg-gray-900 border border-gray-700 rounded-xl px-4 py-3 text-white placeholder-gray-500 focus:outline-none focus:border-purple-500 focus:ring-1 focus:ring-purple-500 transition-all"
               autoFocus
+              onKeyDown={(e) => { if (e.key === "Enter" && canProceed()) setStep(step + 1) }}
             />
           </div>
         </div>
       )}
 
-      {/* Step 2: Personality */}
-      {step === 2 && (
+      {/* Step 3: Personality */}
+      {step === 3 && (
         <div className="space-y-6 animate-in fade-in duration-300">
           <label className="block text-sm font-medium text-gray-300">
             Choose a personality
@@ -117,8 +154,8 @@ export default function CreateCompanionForm() {
         </div>
       )}
 
-      {/* Step 3: Appearance */}
-      {step === 3 && (
+      {/* Step 4: Appearance */}
+      {step === 4 && (
         <div className="space-y-6 animate-in fade-in duration-300">
           <label className="block text-sm font-medium text-gray-300">
             Choose an appearance style
@@ -143,8 +180,8 @@ export default function CreateCompanionForm() {
         </div>
       )}
 
-      {/* Step 4: Description (optional) + Confirm */}
-      {step === 4 && (
+      {/* Step 5: Description (optional) + Confirm */}
+      {step === 5 && (
         <div className="space-y-6 animate-in fade-in duration-300">
           <div>
             <label className="block text-sm font-medium text-gray-300 mb-2">
@@ -165,6 +202,10 @@ export default function CreateCompanionForm() {
           <div className="bg-gray-900 border border-gray-800 rounded-xl p-6">
             <h3 className="font-semibold mb-3">Summary</h3>
             <div className="space-y-2 text-sm">
+              <div className="flex justify-between">
+                <span className="text-gray-400">Gender</span>
+                <span className="capitalize">{gender}</span>
+              </div>
               <div className="flex justify-between">
                 <span className="text-gray-400">Name</span>
                 <span>{name}</span>
@@ -199,7 +240,7 @@ export default function CreateCompanionForm() {
             Back
           </button>
         )}
-        {step < 4 ? (
+        {step < TOTAL_STEPS ? (
           <button
             onClick={() => setStep(step + 1)}
             disabled={!canProceed()}

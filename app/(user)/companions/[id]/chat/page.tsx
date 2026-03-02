@@ -1,7 +1,6 @@
 import { currentUser } from "@/utils/auth"
 import { redirect } from "next/navigation"
 import { getCharacter } from "@/actions/characters/create"
-import { getChatHistory } from "@/actions/characters/chat"
 import ChatInterface from "./ChatInterface"
 
 interface Props {
@@ -13,18 +12,17 @@ export default async function ChatPage({ params }: Props) {
   const user = await currentUser()
   if (!user) redirect(`/auth/login?callbackUrl=/companions/${id}/chat`)
 
+  // Only fetch character metadata — no history load on server
+  // History is loaded client-side after mount for fast initial render
   const charResult = await getCharacter(id)
   if ("error" in charResult || !charResult.character) {
     redirect("/companions")
   }
 
-  const historyResult = await getChatHistory(id)
-  const initialMessages = "messages" in historyResult ? historyResult.messages : []
-
   return (
     <ChatInterface
       character={charResult.character}
-      initialMessages={initialMessages}
+      initialMessages={[]}
       userId={user.id}
     />
   )

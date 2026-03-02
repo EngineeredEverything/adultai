@@ -31,7 +31,7 @@ export async function createCharacter(data: CreateCharacterInput) {
     return { error: validated.error.issues.map(e => e.message).join(", ") }
   }
 
-  const { name, personality, appearance, description } = validated.data
+  const { name, gender, personality, appearance, description } = validated.data
 
   // Check character limit (max 5 per user on free plan)
   const existingCount = await db.character.count({
@@ -43,7 +43,7 @@ export async function createCharacter(data: CreateCharacterInput) {
   }
 
   // Build system prompt
-  const systemPrompt = buildSystemPrompt(name, personality, description)
+  const systemPrompt = buildSystemPrompt(name, gender || "woman", personality, description)
 
   // Generate portrait seed
   const portraitSeed = Math.floor(Math.random() * 999999)
@@ -53,6 +53,7 @@ export async function createCharacter(data: CreateCharacterInput) {
       data: {
         userId: user.id,
         name,
+        gender: gender || "woman",
         personality,
         appearance,
         description: description || null,
@@ -70,10 +71,13 @@ export async function createCharacter(data: CreateCharacterInput) {
   }
 }
 
-function buildSystemPrompt(name: string, personality: string, description?: string): string {
+function buildSystemPrompt(name: string, gender: string, personality: string, description?: string): string {
+  const genderContext = gender === "man"
+    ? "You present as male."
+    : "You present as female."
   const base = PERSONALITY_PROMPTS[personality] || PERSONALITY_PROMPTS.playful
 
-  return `Your name is ${name}. ${base}${description ? `\n\nAdditional context about you: ${description}` : ""}
+  return `Your name is ${name}. ${genderContext} ${base}${description ? `\n\nAdditional context about you: ${description}` : ""}
 
 Important rules:
 - Stay in character at all times

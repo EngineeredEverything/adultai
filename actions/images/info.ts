@@ -40,17 +40,19 @@ export const getImagesInfoRAW = async (
         }),
       )
 
-      if (!images.length) throw new Error("No images found")
+      // Filter out images with null users (orphaned from deleted accounts)
+      // This prevents Prisma from crashing on "Field user is required, got null"
+      const validImages = images.filter((img) => img.user !== null)
+
+      if (!validImages.length) throw new Error("No images found")
 
       const [commentsInfo, votesInfo, categoriesMap] = await Promise.all([
         data.comments ? getImagesCommentsInfoCORE(query, data.comments, tracker) : Promise.resolve([]),
         data.votes ? getImagesVotesInfoCORE(query, data.votes, tracker) : Promise.resolve([]),
         data.categories
           ? tracker.trackQuery("findManyCategories", async () => {
-            // MongoDB uses array fields, not junction tables
-            // Find all unique category IDs from the images
             const categoryIdsSet = new Set<string>()
-            for (const image of images) {
+            for (const image of validImages) {
               if (image.categoryIds && Array.isArray(image.categoryIds)) {
                 image.categoryIds.forEach((id) => categoryIdsSet.add(id))
               }
@@ -62,7 +64,6 @@ export const getImagesInfoRAW = async (
               return {}
             }
 
-            // Fetch all categories in one query
             const categories = await db.category.findMany({
               where: { id: { in: categoryIds } },
               select: {
@@ -72,12 +73,10 @@ export const getImagesInfoRAW = async (
               },
             })
 
-            // Build category map for quick lookup
             const categoryMap = new Map(categories.map((c) => [c.id, c]))
 
-            // Group categories by image ID
             const map: { [key: string]: { id: string; name: string; keywords: string[] }[] } = {}
-            for (const image of images) {
+            for (const image of validImages) {
               if (image.categoryIds && Array.isArray(image.categoryIds)) {
                 map[image.id] = image.categoryIds
                   .map((catId) => categoryMap.get(catId))
@@ -90,19 +89,17 @@ export const getImagesInfoRAW = async (
           : Promise.resolve({} as { [key: string]: { id: string; name: string; keywords: string[] }[] }),
       ])
 
-      // Only generate CDN links for images that have a proper path
-      // Discord-saved images have imageUrl but no path — fall back to imageUrl directly
-      const imagesWithPath = images.filter((img) => img.path && img.path.length > 0)
+      const imagesWithPath = validImages.filter((img) => img.path && img.path.length > 0)
       const cdnLinks = generateLinksBatch(imagesWithPath.map((img) => ({ id: img.id, path: img.path! })))
       const cdnMap = new Map(cdnLinks.map((l) => [l.id, l.link]))
 
       const commentMap = new Map(commentsInfo.map((c) => [c.imageId, c]))
       const voteMap = new Map(votesInfo.map((v) => [v.imageId, v]))
 
-      const imagesInfo = images.map((image) => ({
+      const imagesInfo = validImages.map((image) => ({
         image: {
           ...image,
-          // Use CDN path-based URL if available, otherwise fall back to stored imageUrl
+          user: image.user ?? { id: "", name: "Unknown" },
           cdnUrl: cdnMap.get(image.id) || image.imageUrl || undefined,
         },
         comments: commentMap.get(image.id),

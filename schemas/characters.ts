@@ -2,6 +2,7 @@ import { z } from "zod"
 
 export const createCharacterSchema = z.object({
   name: z.string().min(1, "Name is required").max(50, "Name must be 50 characters or less"),
+  gender: z.enum(["woman", "man"]).optional().default("woman"),
   personality: z.enum(["playful", "romantic", "mysterious", "confident", "submissive", "dominant"]),
   appearance: z.enum(["realistic", "artistic", "anime"]),
   description: z.string().max(500).optional(),
