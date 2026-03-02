@@ -187,12 +187,15 @@ export default function CategoriesClient() {
               <div className="rounded-xl overflow-hidden border border-border transition-all duration-300 hover:shadow-lg hover:-translate-y-0.5">
                 {category.sampleImage?.imageUrl ? (
                   <div className="aspect-[3/4] relative">
-                    <Image
-                      unoptimized
-                      src={category.sampleImage.imageUrl}
+                    {/* eslint-disable-next-line @next/next/no-img-element */}
+                    <img
+                      src={category.sampleImage.imageUrl?.includes("b-cdn.net")
+                        ? `${category.sampleImage.imageUrl.split("?")[0]}?width=400&format=webp&quality=80`
+                        : category.sampleImage.imageUrl}
                       alt={category.name}
-                      fill
-                      className="object-cover group-hover:scale-105 transition-transform duration-300"
+                      className="absolute inset-0 w-full h-full object-cover group-hover:scale-105 transition-transform duration-300"
+                      loading="lazy"
+                      decoding="async"
                     />
                     {/* Image count badge */}
                     <div className="absolute top-2 right-2 bg-black/60 text-white text-xs px-2 py-0.5 rounded-full font-medium">

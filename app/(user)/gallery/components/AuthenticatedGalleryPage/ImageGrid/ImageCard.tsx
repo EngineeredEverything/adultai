@@ -15,7 +15,21 @@ import {
   ThumbsUp,
   ThumbsDown,
 } from "lucide-react";
-import Image from "next/image";
+// next/image removed — using Bunny CDN optimizer directly for edge caching
+
+const BUNNY_CDN = "adultai-com.b-cdn.net"
+
+/**
+ * Build a Bunny CDN optimized image URL.
+ * Bunny serves WebP from edge cache — much faster than routing through /_next/image.
+ * Falls back to original URL if it's not a Bunny CDN URL.
+ */
+function optimizeBunnyUrl(url: string, width: number, quality = 80): string {
+  if (!url || !url.includes(BUNNY_CDN)) return url
+  // Strip existing query params then add optimizer params
+  const base = url.split("?")[0]
+  return `${base}?width=${width}&format=webp&quality=${quality}`
+}
 import { useState, useEffect, useRef } from "react";
 import { motion } from "framer-motion";
 import { logger } from "@/lib/logger";
@@ -190,29 +204,21 @@ export function ImageCard({
             playsInline
           />
         ) : (
-          <Image
-            src={image.image.cdnUrl || "/placeholder.png"}
+          // eslint-disable-next-line @next/next/no-img-element
+          <img
+            src={optimizeBunnyUrl(image.image.cdnUrl || "", width, 80) || "/placeholder.png"}
             alt={image.image.prompt || "Generated image"}
-            fill
-            className={`object-cover transition-all duration-300 ${
+            className={`absolute inset-0 w-full h-full object-cover transition-all duration-300 ${
               imageLoaded ? "opacity-100" : "opacity-0"
             }`}
+            loading={index < 4 ? "eager" : "lazy"}
+            decoding="async"
             onLoad={() => {
-              logger.debug(
-                `Image element onLoad triggered for ${image.image.cdnUrl}`
-              );
-              handleLoad();
+              handleLoad()
             }}
             onError={(e) => {
-              logger.error(
-                `Image element onError triggered for ${image.image.cdnUrl}`,
-                e
-              );
-              handleError(e);
+              handleError(e as any)
             }}
-            sizes={`${width}px`}
-            priority={index < 4}
-            loading={index < 4 ? "eager" : "lazy"}
           />
         )}
       </div>

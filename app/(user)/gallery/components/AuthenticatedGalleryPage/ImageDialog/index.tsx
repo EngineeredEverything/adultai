@@ -408,12 +408,13 @@ export function ImageDialog({
                         }`,
                       }}
                     >
-                      <Image
-                        src={image.image.cdnUrl || "/placeholder.svg"}
+                      {/* eslint-disable-next-line @next/next/no-img-element */}
+                      <img
+                        src={image.image.cdnUrl?.includes("b-cdn.net")
+                          ? `${image.image.cdnUrl.split("?")[0]}?width=1200&format=webp&quality=90`
+                          : image.image.cdnUrl || "/placeholder.svg"}
                         alt={image.image.prompt || "Generated image"}
-                        fill
-                        className="object-contain"
-                        priority
+                        className="absolute inset-0 w-full h-full object-contain"
                       />
                     </div>
                   ) : (
