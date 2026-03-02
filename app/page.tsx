@@ -1,10 +1,8 @@
 import { redirect } from "next/navigation";
-import { getAgeVerification } from "./_components/verifyAge";
 
-export default async function Home() {
-  const isVerified = await getAgeVerification();
-  // Verified users on homepage → send to gallery
-  if (isVerified) redirect("/gallery");
-  // Unverified: AgeVerificationProvider in layout shows the overlay automatically
-  return null;
+// Always send root / → /gallery
+// AgeVerificationProvider in layout handles the age gate overlay client-side
+// No cookie read here — avoids blocking server round-trip on every homepage visit
+export default function Home() {
+  redirect("/gallery");
 }

@@ -96,7 +96,7 @@ export default function GalleryPage(props: GalleryPageProps) {
     SearchImagesResponseSuccessType["images"][number] | null
   >(null);
   const [showMobileSheet, setShowMobileSheet] = useState(false);
-  const [sortBy, setSortBy] = useState<SortOption>("newest");
+  const [sortBy, setSortBy] = useState<SortOption>("popular-week");
   // Category-mode specific state
   const [categorySortBy, setCategorySortBy] = useState<"votes_desc" | "newest">("votes_desc");
   const [activeSubcategory, setActiveSubcategory] = useState<string | null>(null);
@@ -224,6 +224,9 @@ export default function GalleryPage(props: GalleryPageProps) {
           // If subcategory selected, filter by that (it's a co-occurring category)
           filters.category_id = activeSubcategory ?? category_id;
           filters.sort = categorySortBy;
+        } else if (!isUserMode) {
+          // Map UI sort option → DB sort param
+          filters.sort = sortBy === "newest" ? "newest" : "votes_desc";
         }
 
         if (genderFilter) {
@@ -290,7 +293,7 @@ export default function GalleryPage(props: GalleryPageProps) {
     return () => {
       abortController.abort();
     };
-  }, [searchQuery, isUserMode, isCategoryMode, userId, category_id, prefetchedImages, prefetchedTotalCount, categorySortBy, activeSubcategory, categoryFiltersChanged, genderFilter]);
+  }, [searchQuery, isUserMode, isCategoryMode, userId, category_id, prefetchedImages, prefetchedTotalCount, categorySortBy, activeSubcategory, categoryFiltersChanged, genderFilter, sortBy]);
 
   // Fetch categories (only in normal mode) — deferred 200ms so image grid renders first
   useEffect(() => {
@@ -373,10 +376,10 @@ export default function GalleryPage(props: GalleryPageProps) {
       user,
       category_id,
       subcategory_id: activeSubcategory ?? undefined,
-      sort: isCategoryMode ? categorySortBy : undefined,
+      sort: isCategoryMode ? categorySortBy : (sortBy === "newest" ? "newest" : "votes_desc"),
       gender: genderFilter ?? undefined,
     }),
-    [images, totalCount, searchQuery, isUserMode, user, category_id, activeSubcategory, categorySortBy, isCategoryMode, genderFilter]
+    [images, totalCount, searchQuery, isUserMode, user, category_id, activeSubcategory, categorySortBy, isCategoryMode, genderFilter, sortBy]
   );
 
   // Use image loading hook for infinite scroll
