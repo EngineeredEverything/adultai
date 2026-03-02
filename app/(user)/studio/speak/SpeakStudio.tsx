@@ -6,6 +6,7 @@ import { Button } from "@/components/ui/button"
 import { Textarea } from "@/components/ui/textarea"
 import { toast } from "sonner"
 import Link from "next/link"
+import { UploadImageModal } from "@/components/ui/upload-image-modal"
 
 // ElevenLabs voice options
 const VOICES = [
@@ -40,6 +41,7 @@ export function SpeakStudio({ user, initialImageUrl }: { user: any; initialImage
   const [text, setText] = useState("")
   const [result, setResult] = useState<{ videoUrl?: string | null; audioUrl?: string | null; audioOnly?: boolean } | null>(null)
   const fileInputRef = useRef<HTMLInputElement | null>(null)
+  const [showUploadModal, setShowUploadModal] = useState(false)
 
   const selectedVoice = VOICES.find((v) => v.id === voiceId) || VOICES[0]
 
@@ -126,7 +128,7 @@ export function SpeakStudio({ user, initialImageUrl }: { user: any; initialImage
               {/* Preview box */}
               <div
                 className="relative w-full aspect-[3/4] rounded-xl overflow-hidden bg-gray-900 border border-gray-800 flex items-center justify-center cursor-pointer group"
-                onClick={() => !imagePreview && fileInputRef.current?.click()}
+                onClick={() => !imagePreview && setShowUploadModal(true)}
               >
                 {imagePreview || imageUrl ? (
                   <img
@@ -138,18 +140,10 @@ export function SpeakStudio({ user, initialImageUrl }: { user: any; initialImage
                 ) : (
                   <div className="text-center text-gray-600 group-hover:text-gray-500 transition">
                     <ImageIcon className="w-10 h-10 mx-auto mb-2" />
-                    <p className="text-sm">Click to upload or paste URL below</p>
+                    <p className="text-sm">Click to upload an image</p>
                   </div>
                 )}
               </div>
-
-              <input
-                ref={fileInputRef}
-                type="file"
-                accept="image/*"
-                className="hidden"
-                onChange={handleImageFile}
-              />
 
               <div className="flex gap-2">
                 <input
@@ -163,11 +157,24 @@ export function SpeakStudio({ user, initialImageUrl }: { user: any; initialImage
                   size="sm"
                   variant="outline"
                   className="border-gray-700 text-gray-400 hover:text-white text-xs"
-                  onClick={() => fileInputRef.current?.click()}
+                  onClick={() => setShowUploadModal(true)}
                 >
                   <Upload className="w-3.5 h-3.5 mr-1" /> Upload
                 </Button>
               </div>
+
+              {/* Upload modal with consent gates */}
+              <UploadImageModal
+                isOpen={showUploadModal}
+                onClose={() => setShowUploadModal(false)}
+                onUploadComplete={(url) => {
+                  setImageUrl(url)
+                  setImagePreview(url)
+                  setShowUploadModal(false)
+                }}
+                title="Upload Image"
+                description="Upload an image to create a talking avatar. You must confirm consent before proceeding."
+              />
 
               <Link href="/gallery">
                 <Button variant="outline" size="sm" className="w-full border-gray-700 text-gray-400 hover:text-white text-xs">
