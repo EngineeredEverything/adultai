@@ -79,7 +79,10 @@ export default function GalleryPage(props: GalleryPageProps) {
 
   // Loading states
   const [isLoadingUser, setIsLoadingUser] = useState(true);
-  const [isLoadingImages, setIsLoadingImages] = useState(true);
+  // Start in non-loading state if SSR already prefetched images — avoids skeleton flash
+  const [isLoadingImages, setIsLoadingImages] = useState(
+    !(prefetchedImages && prefetchedImages.length > 0)
+  );
   const [isLoadingCategories, setIsLoadingCategories] = useState(
     isNormalMode // Only load categories in normal mode
   );
