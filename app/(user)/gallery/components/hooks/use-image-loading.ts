@@ -17,10 +17,11 @@ interface UseImageLoadingParams {
     category_id?: string
     subcategory_id?: string
     sort?: "votes_desc" | "newest"
+    gender?: "female" | "male" | "fantasy" | "other"
 }
 
 export function useImageLoading(params: UseImageLoadingParams) {
-    const { initialImages, totalCount, searchQuery, userMode, user, category_id, subcategory_id, sort } = params
+    const { initialImages, totalCount, searchQuery, userMode, user, category_id, subcategory_id, sort, gender } = params
 
     // Core state
     const [images, setImages] = useState<SearchImagesResponseSuccessType["images"]>([])
@@ -211,6 +212,10 @@ export function useImageLoading(params: UseImageLoadingParams) {
                     // If subcategory is selected, filter by that instead (subcategory is a co-occurring category)
                     filters.category_id = subcategory_id ?? category_id
                     filters.sort = sort ?? "votes_desc"
+                }
+
+                if (gender) {
+                    (filters as any).gender = gender
                 }
 
                 // Make the fetch request

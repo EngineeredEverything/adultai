@@ -295,6 +295,10 @@ async function getFilteredImages(
       }
     : {}
 
+  const genderFilter: Prisma.GeneratedImageWhereInput = filters?.gender
+    ? { gender: filters.gender }
+    : {}
+
   const voteFilters = await buildVoteFilters(filters)
 
   const searchQuery: Prisma.GeneratedImageWhereInput = filters?.private
@@ -307,6 +311,7 @@ async function getFilteredImages(
         }
         : {}),
       ...categoryFilter,
+      ...genderFilter,
       ...(voteFilters.length > 0 && { AND: voteFilters }),
     }
     : {
@@ -335,6 +340,7 @@ async function getFilteredImages(
         }
         : {}),
       ...categoryFilter,
+      ...genderFilter,
     }
   logger.debug("searchQuery", searchQuery)
 

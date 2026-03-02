@@ -106,3 +106,41 @@ export function analyzePromptForCategories(
   const best = analyzePromptForCategory(prompt)
   return best ? [best] : []
 }
+
+// ─── Gender / content-type detection ───────────────────────────────────────
+
+const MALE_KEYWORDS = [
+  "male","man ","men ","guy ","boy ","dude","masculine",
+  "muscular man","gay ","bisexual man","male companion",
+  "mike hawk","ben dover","dick ","oliver ","seymour","yuri nator","willie",
+  "him ","his body","bulge","cock","penis","erect","daddy","hunk",
+]
+
+const FANTASY_KEYWORDS = [
+  "elf ","elven","demon","angel","vampire","witch","dragon","orc ",
+  "alien","robot","cyborg","mermaid","furry","anthro","hentai","anime",
+  "fantasy","magical","mythical","monster","creature","tentacle",
+  "celestial","succubus","neko ","catgirl","wolf girl",
+]
+
+/**
+ * Detect the content gender/type from a prompt.
+ * Returns: "male" | "female" | "fantasy" | "other"
+ */
+export function detectGender(prompt: string): "male" | "female" | "fantasy" | "other" {
+  if (!prompt) return "other"
+  const text = prompt.toLowerCase()
+
+  // Fantasy check first (overrides gender)
+  for (const kw of FANTASY_KEYWORDS) {
+    if (text.includes(kw)) return "fantasy"
+  }
+
+  // Male check
+  for (const kw of MALE_KEYWORDS) {
+    if (text.includes(kw)) return "male"
+  }
+
+  // Default to female for all remaining (platform is female-dominant)
+  return "female"
+}

@@ -7,7 +7,7 @@ import { getImagesInfoRAW } from "./info"
 import { logger } from "@/lib/logger"
 import { getImageProvider } from "./provider"
 import type { ModelslabResponse } from "@/lib/modelsLab/types"
-import { analyzePromptForCategory } from "@/lib/category-analyzer"
+import { analyzePromptForCategory, detectGender } from "@/lib/category-analyzer"
 import { calculateGenerationCost } from "@/app/(user)/advanced-generate/advanced-generation-utils"
 import {
   createGeneratedImageSchema,
@@ -297,6 +297,10 @@ export async function createPendingImages(
     }
   }
 
+  // Detect gender/content type from prompt
+  const gender = detectGender(prompt)
+  logger.debug("Gender detected", { gender, prompt: prompt.slice(0, 60) })
+
   try {
     // Create an array of create operations
     const createOperations = seeds.map((seed, index) =>
@@ -320,6 +324,7 @@ export async function createPendingImages(
           futureLinks: futureLinks.length > index ? [futureLinks[index]] : [],
           imageUrl: null, // Will be filled when generation completes
           path: null, // Will be filled when generation completes
+          gender,
           // Add category connection if a category was found
           ...(categoryId
             ? {

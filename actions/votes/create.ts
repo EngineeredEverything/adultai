@@ -257,11 +257,32 @@ export async function createVote(imageId: string, voteType: "UPVOTE" | "DOWNVOTE
 
         // Refresh thumbnails for categories this image belongs to (fire-and-forget)
         try {
-            const img = await db.generatedImage.findUnique({ where: { id: imageId }, select: { categoryIds: true } })
+            const img = await db.generatedImage.findUnique({
+                where: { id: imageId },
+                select: { categoryIds: true, path: true, upvotes: true, downvotes: true, voteScore: true, isPublic: true },
+            })
             if (img?.categoryIds?.length) {
                 void Promise.all(img.categoryIds.map((cid) => refreshCategoryThumbnail(cid)))
             }
-        } catch {}
+
+            // Auto-hide bot images with net negative votes after at least 3 total votes
+            const totalVotes = (img?.upvotes ?? 0) + (img?.downvotes ?? 0)
+            const isBotImage = img?.path?.includes("bot")
+            const isNetNegative = (img?.voteScore ?? 0) < 0
+            if (isBotImage && img?.isPublic && totalVotes >= 3 && isNetNegative) {
+                await db.generatedImage.update({
+                    where: { id: imageId },
+                    data: { isPublic: false },
+                })
+                logger.info("Auto-hidden bot image with net negative votes", {
+                    imageId,
+                    voteScore: img?.voteScore,
+                    totalVotes,
+                })
+            }
+        } catch (e) {
+            logger.warn("Post-vote cleanup failed", { imageId, error: e })
+        }
 
         return result
     } catch (error: any) {

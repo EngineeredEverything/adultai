@@ -100,6 +100,8 @@ export default function GalleryPage(props: GalleryPageProps) {
   // Category-mode specific state
   const [categorySortBy, setCategorySortBy] = useState<"votes_desc" | "newest">("votes_desc");
   const [activeSubcategory, setActiveSubcategory] = useState<string | null>(null);
+  // Gender/type filter — applies in normal gallery mode
+  const [genderFilter, setGenderFilter] = useState<"female" | "male" | "fantasy" | null>(null);
   // Upgrade modal — shown when user hits generation limit
   const [limitModalOpen, setLimitModalOpen] = useState(false);
 
@@ -224,6 +226,10 @@ export default function GalleryPage(props: GalleryPageProps) {
           filters.sort = categorySortBy;
         }
 
+        if (genderFilter) {
+          (filters as any).gender = genderFilter;
+        }
+
         if (process.env.NODE_ENV !== "production") console.log("[Gallery] Fetching images with params:", {
           searchQuery,
           mode: isCategoryMode ? "category" : isUserMode ? "user" : "normal",
@@ -284,7 +290,7 @@ export default function GalleryPage(props: GalleryPageProps) {
     return () => {
       abortController.abort();
     };
-  }, [searchQuery, isUserMode, isCategoryMode, userId, category_id, prefetchedImages, prefetchedTotalCount, categorySortBy, activeSubcategory, categoryFiltersChanged]);
+  }, [searchQuery, isUserMode, isCategoryMode, userId, category_id, prefetchedImages, prefetchedTotalCount, categorySortBy, activeSubcategory, categoryFiltersChanged, genderFilter]);
 
   // Fetch categories (only in normal mode) — deferred 200ms so image grid renders first
   useEffect(() => {
@@ -368,8 +374,9 @@ export default function GalleryPage(props: GalleryPageProps) {
       category_id,
       subcategory_id: activeSubcategory ?? undefined,
       sort: isCategoryMode ? categorySortBy : undefined,
+      gender: genderFilter ?? undefined,
     }),
-    [images, totalCount, searchQuery, isUserMode, user, category_id, activeSubcategory, categorySortBy, isCategoryMode]
+    [images, totalCount, searchQuery, isUserMode, user, category_id, activeSubcategory, categorySortBy, isCategoryMode, genderFilter]
   );
 
   // Use image loading hook for infinite scroll
@@ -655,6 +662,31 @@ export default function GalleryPage(props: GalleryPageProps) {
               ✨ Newest
             </button>
           </div>
+        </div>
+      )}
+
+      {/* GENDER / TYPE FILTER — normal gallery mode */}
+      {isNormalMode && (
+        <div className="flex flex-wrap gap-2 mb-4">
+          {(
+            [
+              { label: "👩 Women",  value: "female"  },
+              { label: "👨 Men",    value: "male"    },
+              { label: "🐉 Fantasy",value: "fantasy" },
+              { label: "🌈 All",    value: null      },
+            ] as { label: string; value: "female" | "male" | "fantasy" | null }[]
+          ).map(({ label, value }) => (
+            <button
+              key={label}
+              onClick={() => setGenderFilter(value)}
+              className={`rounded-full px-3 py-1.5 text-xs font-medium border transition-colors
+                ${genderFilter === value
+                  ? "bg-pink-500 text-white border-pink-500"
+                  : "border-border hover:bg-muted text-muted-foreground hover:text-foreground"}`}
+            >
+              {label}
+            </button>
+          ))}
         </div>
       )}
 
