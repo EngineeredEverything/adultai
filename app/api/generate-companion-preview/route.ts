@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { getServerSession } from 'next-auth';
-import { authOptions } from '@/lib/auth';
+import { authOptions } from '@/auth';
 
 const GPU_API_URL = process.env.GPU_API_URL || 'http://213.224.31.105:29612';
 const GPU_API_KEY = process.env.GPU_API_KEY || 'Pd10V9L4ULaOxmq93oHTktk6Fa5FxjX2iASILCjWi1o';

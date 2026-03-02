@@ -1,6 +1,6 @@
 import { NextRequest } from "next/server"
 import { getServerSession } from "next-auth"
-import { authOptions } from "@/lib/auth"
+import { authOptions } from "@/auth"
 import { db } from "@/lib/db"
 
 const OPENAI_API_KEY = process.env.OPENAI_API_KEY || ""

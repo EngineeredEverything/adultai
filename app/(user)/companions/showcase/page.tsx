@@ -1,6 +1,6 @@
 export const dynamic = "force-dynamic";
 import { Metadata } from 'next';
-import { prisma } from '@/lib/prisma';
+import { db as prisma } from '@/lib/db';
 import Link from 'next/link';
 import { Star } from 'lucide-react';
 
