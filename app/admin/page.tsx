@@ -2,9 +2,9 @@ export const dynamic = "force-dynamic";
 
 import { db } from "@/lib/db";
 import { startOfMonth, endOfMonth, subMonths } from "date-fns";
-import dynamic from "next/dynamic";
+import nextDynamic from "next/dynamic";
 
-const DashboardOverview = dynamic(() => import("./_components/dashboard-overview"));
+const DashboardOverview = nextDynamic(() => import("./_components/dashboard-overview"));
 
 export default async function AdminDashboard() {
   const months = Array.from({ length: 6 }, (_, i) => subMonths(new Date(), 5 - i));

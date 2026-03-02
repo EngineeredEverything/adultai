@@ -1,6 +1,6 @@
 export const dynamic = "force-dynamic";
-import dynamic from "next/dynamic";
-const SystemDashboard = dynamic(() => import("../_components/system-monitoring/SystemDashboard"));
+import nextDynamic from "next/dynamic";
+const SystemDashboard = nextDynamic(() => import("../_components/system-monitoring/SystemDashboard"));
 
 export default function Page() {
   return <SystemDashboard />;
