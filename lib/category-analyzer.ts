@@ -20,7 +20,7 @@ const CATEGORY_MAP: [string, string[]][] = [
   ["Erotic",       ["erotic","sensual","intimate","seductive","teasing","provocative","alluring","sultry"]],
 
   // === CHARACTER ===
-  ["Sofonda Cox",  ["sofonda","sofondacox"]],
+  ["Sofanda Cox",  ["sofanda","sofandacox","sofonda","sofondacox"]],
 
   // === FANTASY / COSTUME ===
   ["Witch",        ["witch","sorceress","witchcraft","coven","spell casting"]],
