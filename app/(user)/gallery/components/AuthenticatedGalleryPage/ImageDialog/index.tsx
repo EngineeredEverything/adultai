@@ -50,6 +50,7 @@ import { zodResolver } from "@hookform/resolvers/zod";
 import { logger } from "@/lib/logger";
 import type { GetCurrentUserInfoSuccessType } from "@/types/user";
 import { toast } from "sonner";
+import { showAuthToast, isAuthError } from "@/lib/auth-toast";
 import type { GetSubscriptionInfoSuccessType } from "@/types/subscriptions";
 import { checkFeatureAccess } from "../../GenerationForm/subscription-utils";
 import { getRelatedImages } from "@/actions/images/info";
@@ -241,12 +242,14 @@ export function ImageDialog({
 
   const handleComment = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!user || !image || !newComment.trim() || isLoading) return;
+    if (!image || !newComment.trim() || isLoading) return;
+    if (!user) { showAuthToast("comment"); return; }
 
     setIsLoading(true);
     try {
       const response = await createComment(image.image.id, newComment.trim());
       if ("error" in response) {
+        if (isAuthError(response.error)) { showAuthToast("comment"); return; }
         throw new Error(response.error);
       }
 

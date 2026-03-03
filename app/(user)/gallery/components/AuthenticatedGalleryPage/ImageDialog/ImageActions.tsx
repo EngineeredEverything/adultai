@@ -10,6 +10,7 @@ import { Button } from "@/components/ui/button"
 import { Textarea } from "@/components/ui/textarea"
 import { Slider } from "@/components/ui/slider"
 import { toast } from "sonner"
+import { showAuthToast } from "@/lib/auth-toast"
 import type { SearchImagesResponseSuccessType } from "@/types/images"
 
 type Panel = "talk" | "img2img" | "video" | "upscale" | null

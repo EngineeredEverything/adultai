@@ -5,6 +5,7 @@ import { createVote } from "@/actions/votes/create"
 import { getUserVote, getImageVoteStats } from "@/actions/votes/info"
 import { logger } from "@/lib/logger"
 import { toast } from "sonner"
+import { showAuthToast, isAuthError } from "@/lib/auth-toast"
 import type { GetCurrentUserInfoSuccessType } from "@/types/user"
 
 export interface VoteStats {
@@ -104,7 +105,8 @@ export function useImageVotes(
     }, [imageId, user, refreshVotes])
 
     const handleVote = async (voteType: "UPVOTE" | "DOWNVOTE") => {
-        if (!user || !imageId || isLoading) return
+        if (!imageId || isLoading) return
+        if (!user) { showAuthToast("vote"); return }
 
         const previousUserVote = userVote
         const previousStats = { ...voteStats }
@@ -166,6 +168,12 @@ export function useImageVotes(
             // Make API call
             const response = await createVote(imageId, voteType)
             if ("error" in response) {
+                if (isAuthError(response.error)) {
+                    setUserVote(previousUserVote)
+                    setVoteStats(previousStats)
+                    showAuthToast("vote")
+                    return
+                }
                 throw new Error(response.error)
             }
 

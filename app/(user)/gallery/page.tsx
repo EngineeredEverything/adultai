@@ -18,16 +18,52 @@ export const metadata: Metadata = {
   ],
 };
 
-// No SSR DB fetch — render shell immediately, let client load images
-// This eliminates the blocking DB query that was causing slow initial loads
-export default function GalleryPageServer() {
-  return (
-    <Suspense fallback={null}>
+// SSR prefetch — runs on the server while HTML is being streamed.
+// The client skips the initial fetch when it receives prefetched data,
+// eliminating one full client-server round-trip before images appear.
+async function GalleryLoader() {
+  try {
+    const result = await searchImages({
+      query: "",
+      data: {
+        limit: { start: 0, end: 20 },
+        images: {
+          votes: { count: true },
+        },
+        count: true,
+      },
+      filters: {
+        isPublic: true,
+        sort: "newest",
+      },
+    });
+
+    const prefetchedImages = "error" in result ? [] : result.images;
+    const prefetchedCount = "error" in result ? 0 : (result.count ?? 0);
+
+    return (
+      <AuthenticatedGalleryPage
+        searchQuery=""
+        prefetchedImages={prefetchedImages}
+        prefetchedCount={prefetchedCount}
+      />
+    );
+  } catch {
+    // Fallback to client-side fetch if SSR fails
+    return (
       <AuthenticatedGalleryPage
         searchQuery=""
         prefetchedImages={[]}
         prefetchedCount={0}
       />
+    );
+  }
+}
+
+export default function GalleryPageServer() {
+  return (
+    <Suspense fallback={null}>
+      <GalleryLoader />
     </Suspense>
   );
 }

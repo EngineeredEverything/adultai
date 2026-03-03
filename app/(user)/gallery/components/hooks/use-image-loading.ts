@@ -55,18 +55,21 @@ export function useImageLoading(params: UseImageLoadingParams) {
         triggerOnce: false,
     })
 
-    // Check if search params changed
+    // Check if search params changed.
+    // NOTE: userId is intentionally excluded from change detection.
+    // The user object loads ~80ms after hydration; including it caused a spurious
+    // full gallery re-fetch on every page load even when SSR already prefetched the data.
+    // userId is only relevant for userMode (My Images) filtering — handled separately below.
     const hasSearchParamsChanged = useCallback(() => {
         const prev = searchParamsRef.current
         return (
             prev.query !== searchQuery ||
             prev.userMode !== (userMode || false) ||
-            prev.userId !== user?.user.id ||
             prev.category_id !== category_id ||
             prev.subcategory_id !== subcategory_id ||
             prev.sort !== sort
         )
-    }, [searchQuery, userMode, user?.user.id, category_id, subcategory_id, sort])
+    }, [searchQuery, userMode, category_id, subcategory_id, sort])
 
     // Initialize state with initial images
     useEffect(() => {
@@ -227,8 +230,6 @@ export function useImageLoading(params: UseImageLoadingParams) {
                             end: pageEnd,
                         },
                         images: {
-                            comments: { count: true },
-                            categories: true,
                             votes: { count: true },
                         },
                         count: true,

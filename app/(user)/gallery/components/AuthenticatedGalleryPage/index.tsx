@@ -96,7 +96,7 @@ export default function GalleryPage(props: GalleryPageProps) {
     SearchImagesResponseSuccessType["images"][number] | null
   >(null);
   const [showMobileSheet, setShowMobileSheet] = useState(false);
-  const [sortBy, setSortBy] = useState<SortOption>("popular-week");
+  const [sortBy, setSortBy] = useState<SortOption>("newest");
   // Category-mode specific state
   const [categorySortBy, setCategorySortBy] = useState<"votes_desc" | "newest">("votes_desc");
   const [activeSubcategory, setActiveSubcategory] = useState<string | null>(null);
@@ -250,8 +250,6 @@ export default function GalleryPage(props: GalleryPageProps) {
               end: ITEMS_PER_PAGE,
             },
             images: {
-              comments: { count: true },
-              categories: true,
               votes: { count: true },
             },
             count: true,
@@ -366,7 +364,10 @@ export default function GalleryPage(props: GalleryPageProps) {
     return () => clearTimeout(t);
   }, [isNormalMode, userId]);
 
-  // Memoize loading params - only update when values actually change
+  // Memoize loading params - only update when values actually change.
+  // `user` is intentionally excluded from deps: user loads 80ms after hydration and
+  // including it caused a spurious gallery re-fetch on every page load.
+  // useImageLoading reads user via ref internally for userMode filtering.
   const loadingParams = useMemo(
     () => ({
       initialImages: images,
@@ -379,7 +380,8 @@ export default function GalleryPage(props: GalleryPageProps) {
       sort: isCategoryMode ? categorySortBy : (sortBy === "newest" ? "newest" : "votes_desc"),
       gender: (genderFilter as any) ?? undefined,
     }),
-    [images, totalCount, searchQuery, isUserMode, user, category_id, activeSubcategory, categorySortBy, isCategoryMode, genderFilter, sortBy]
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    [images, totalCount, searchQuery, isUserMode, category_id, activeSubcategory, categorySortBy, isCategoryMode, genderFilter, sortBy]
   );
 
   // Use image loading hook for infinite scroll
