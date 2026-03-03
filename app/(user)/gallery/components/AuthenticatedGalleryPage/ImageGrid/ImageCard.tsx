@@ -154,8 +154,8 @@ export function ImageCard({
         <img
           src={optimizeBunnyUrl(image.image.cdnUrl || image.image.imageUrl || "", 600, 80) || image.image.imageUrl || "/placeholder.png"}
           alt={image.image.prompt || "Generated image"}
-          width={image.image.width || 512}
-          height={image.image.height || 768}
+          width={Number(image.image.width) || 512}
+          height={Number(image.image.height) || 768}
           className="w-full h-auto block"
           style={{ display: "block" }}
           loading={index < 6 ? "eager" : "lazy"}
