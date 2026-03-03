@@ -272,22 +272,26 @@ function transformImagesToResponse(
   const cdnLinks = generateLinksBatch(imagesWithPath.map((img) => ({ id: img.id, path: img.path! })))
   const cdnMap = new Map(cdnLinks.map((l) => [l.id, l.link]))
 
-  return validImages.map((image) => ({
-    image: {
-      ...image,
-      user: image.user ?? { id: "", name: "Unknown" },
-      cdnUrl: cdnMap.get(image.id) || image.imageUrl || undefined,
-    },
-    comments: undefined,
-    votes: {
-      imageId: image.id,
-      voteScore: Number(image.voteScore) || 0,
-      upvoteCount: Number(image.upvotes) || 0,
-      downvoteCount: Number(image.downvotes) || 0,
-      userVote: null,
-    },
-    categories: undefined,
-  }))
+  return validImages.map((image) => {
+    // Destructure out the user relation so it doesn't pollute the spread
+    const { user: _user, ...imageFields } = image as any
+    return {
+      image: {
+        ...imageFields,
+        user: _user ?? { id: "", name: "Unknown" },
+        cdnUrl: cdnMap.get(image.id) || image.imageUrl || undefined,
+      },
+      comments: undefined,
+      votes: {
+        imageId: image.id,
+        voteScore: Number(image.voteScore) || 0,
+        upvoteCount: Number(image.upvotes) || 0,
+        downvoteCount: Number(image.downvotes) || 0,
+        userVote: null,
+      },
+      categories: undefined,
+    }
+  })
 }
 
 async function executeRankedSearch(
