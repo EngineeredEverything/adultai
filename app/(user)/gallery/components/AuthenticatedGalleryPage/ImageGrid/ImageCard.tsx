@@ -23,7 +23,6 @@ function optimizeBunnyUrl(url: string, width: number, quality = 80): string {
 }
 
 import { useState, useRef } from "react";
-import { motion } from "framer-motion";
 import { toast } from "sonner";
 import { createVote } from "@/actions/votes/create";
 import { showAuthToast, isAuthError } from "@/lib/auth-toast";
@@ -133,14 +132,12 @@ export function ImageCard({
   };
 
   return (
-    <motion.div
+    <div
       className="relative group cursor-pointer rounded-lg overflow-hidden shadow-sm hover:shadow-md transition-shadow duration-300 w-full"
+      style={{ breakInside: "avoid", marginBottom: "12px" }}
       onClick={onClick}
       onMouseEnter={() => setHovering(true)}
       onMouseLeave={() => setHovering(false)}
-      initial={{ opacity: 0 }}
-      animate={{ opacity: 1 }}
-      transition={{ duration: 0.3 }}
     >
       {/* Image / Video — drives container height naturally */}
       {animatedVideoUrl ? (
@@ -301,6 +298,6 @@ export function ImageCard({
       <div
         className={`absolute inset-0 bg-black transition-opacity duration-300 ${hovering ? "opacity-10" : "opacity-0"}`}
       />
-    </motion.div>
+    </div>
   );
 }
