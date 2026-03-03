@@ -162,14 +162,11 @@ export const searchImagesInfoRAW = async (
       ])
 
       if (!images || images.length === 0) {
-        logger.warn("No images found for search", { searchTerm, filters })
-        throw new Error("No images found")
+        logger.info("No images found for search", { searchTerm, filters })
+        return { images: [], count: count ?? 0 }
       }
 
-      const imagesInfo = await getImagesInfoRAW(
-        images.map((image) => ({ imageId: image.id })),
-        data.images,
-      )
+      const imagesInfo = transformImagesToResponse(images as any)
 
       return { images: imagesInfo, count }
     },
@@ -263,6 +260,36 @@ function buildOrderBy(sort?: string): Prisma.GeneratedImageOrderByWithRelationIn
   }
 }
 
+/**
+ * Transform already-fetched images (with user included) into the API response format.
+ * Avoids the second findMany that getImagesInfoRAW does.
+ */
+function transformImagesToResponse(
+  images: (Awaited<ReturnType<typeof db.generatedImage.findMany>> extends (infer T)[] ? T & { user: { id: string; name: string | null } | null } : never)[],
+) {
+  const validImages = images.filter((img) => img.user !== null)
+  const imagesWithPath = validImages.filter((img) => img.path && img.path.length > 0)
+  const cdnLinks = generateLinksBatch(imagesWithPath.map((img) => ({ id: img.id, path: img.path! })))
+  const cdnMap = new Map(cdnLinks.map((l) => [l.id, l.link]))
+
+  return validImages.map((image) => ({
+    image: {
+      ...image,
+      user: image.user ?? { id: "", name: "Unknown" },
+      cdnUrl: cdnMap.get(image.id) || image.imageUrl || undefined,
+    },
+    comments: undefined,
+    votes: {
+      imageId: image.id,
+      voteScore: Number(image.voteScore) || 0,
+      upvoteCount: Number(image.upvotes) || 0,
+      downvoteCount: Number(image.downvotes) || 0,
+      userVote: null,
+    },
+    categories: undefined,
+  }))
+}
+
 async function executeRankedSearch(
   searchQuery: Awaited<ReturnType<typeof buildWeightedSearchQuery>>,
   data: z.infer<typeof searchImagesSchema>["data"],
@@ -278,6 +305,7 @@ async function executeRankedSearch(
     skip: data.limit?.start,
     take: data.limit ? data.limit.end - data.limit.start : undefined,
     orderBy: buildOrderBy(sort),
+    include: { user: { select: { name: true, id: true } } },
   })
 
   return images
@@ -363,6 +391,7 @@ async function getFilteredImages(
           skip: data.limit?.start,
           take: data.limit ? data.limit.end - data.limit.start : undefined,
           orderBy,
+          include: { user: { select: { name: true, id: true } } },
         }),
       )
       : db.generatedImage.findMany({
@@ -370,18 +399,16 @@ async function getFilteredImages(
         skip: data.limit?.start,
         take: data.limit ? data.limit.end - data.limit.start : undefined,
         orderBy,
+        include: { user: { select: { name: true, id: true } } },
       }),
   ])
 
   if (!images || images.length === 0) {
-    logger.warn("No images found with filters", { filters })
-    throw new Error("No images found")
+    logger.info("No images found with filters", { filters })
+    return { images: [], count: count ?? 0 }
   }
 
-  const imagesInfo = await getImagesInfoRAW(
-    images.map((image) => ({ imageId: image.id })),
-    data.images,
-  )
+  const imagesInfo = transformImagesToResponse(images as any)
 
   logger.info("Filtered images retrieved with vote filters", {
     resultCount: imagesInfo.length,

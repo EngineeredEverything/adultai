@@ -104,10 +104,27 @@ export function ImageGrid({
     );
   }
 
-  // Distribute items round-robin across columns
+  // Distribute items to shortest column first (by estimated height)
   const columns: Item[][] = Array.from({ length: colCount }, () => []);
-  items.forEach((item, i) => {
-    columns[i % colCount].push(item);
+  const colHeights: number[] = new Array(colCount).fill(0);
+
+  function estimateHeight(item: Item): number {
+    if (item.kind === "image") {
+      const w = Number(item.item.image.width) || 512;
+      const h = Number(item.item.image.height) || 768;
+      return h / w; // aspect ratio as relative height
+    }
+    return 1.5; // default portrait ratio for placeholders/skeletons
+  }
+
+  items.forEach((item) => {
+    // Find the shortest column
+    let minIdx = 0;
+    for (let c = 1; c < colCount; c++) {
+      if (colHeights[c] < colHeights[minIdx]) minIdx = c;
+    }
+    columns[minIdx].push(item);
+    colHeights[minIdx] += estimateHeight(item);
   });
 
   return (

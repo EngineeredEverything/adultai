@@ -51,7 +51,7 @@ export function useImageLoading(params: UseImageLoadingParams) {
     // Intersection observer with optimized settings
     const { ref, inView } = useInView({
         threshold: 0,
-        rootMargin: '200px',
+        rootMargin: '800px',
         triggerOnce: false,
     })
 
@@ -360,7 +360,7 @@ export function useImageLoading(params: UseImageLoadingParams) {
                 logger.debug('[useImageLoading] Debounce completed, loading more')
                 loadMoreImages()
             }
-        }, 300) // Increased debounce to 300ms
+        }, 150) // Balanced debounce — fast enough to feel smooth
 
         return () => clearTimeout(debounceTimer)
     }, [inView, hasMore, images.length]) // Removed loadMoreImages from deps to prevent recreation
