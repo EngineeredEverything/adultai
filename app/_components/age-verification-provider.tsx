@@ -1,6 +1,6 @@
 'use client';
 
-import { createContext, useContext, useState } from 'react';
+import { createContext, useContext, useState, useEffect } from 'react';
 import { AgeVerification } from './age-verification';
 import { usePathname } from 'next/navigation';
 
@@ -17,23 +17,34 @@ const AgeVerificationContext = createContext<AgeVerificationContextType>({
 // Pages that don't need the age gate overlay
 const PUBLIC_PATHS = ['/companions/demo', '/companions/showcase', '/companions/landing'];
 
+function checkCookie(): boolean {
+  if (typeof document === 'undefined') return false;
+  return document.cookie.split(';').some(c => c.trim().startsWith('age_verified='));
+}
+
 export function AgeVerificationProvider({
   children,
   initialVerified = false,
-  initialShowGate = false,
 }: {
   children: React.ReactNode;
   initialVerified?: boolean;
-  // Server-computed: show gate immediately (pre-hydration) based on SSR cookie check
-  initialShowGate?: boolean;
 }) {
+  // Start with initialVerified (from SSR cookie check) OR check client cookie
   const [isVerified, setIsVerified] = useState(initialVerified);
+  const [mounted, setMounted] = useState(false);
   const pathname = usePathname();
 
+  useEffect(() => {
+    // On mount, check client cookie in case SSR didn't have it
+    if (!isVerified) {
+      setIsVerified(checkCookie());
+    }
+    setMounted(true);
+  }, []);
+
   const isPublicPath = PUBLIC_PATHS.some(p => pathname.startsWith(p));
-  // After hydration: re-evaluate based on client state
-  // Before hydration: use server-computed initialShowGate to avoid flash
-  const showGate = !isVerified && !isPublicPath;
+  // Don't show gate until mounted (avoids flash on already-verified users)
+  const showGate = mounted && !isVerified && !isPublicPath;
 
   const setVerified = (value: boolean) => {
     setIsVerified(value);
@@ -42,10 +53,7 @@ export function AgeVerificationProvider({
   return (
     <AgeVerificationContext.Provider value={{ isVerified, setVerified }}>
       {children}
-      {/* Age gate rendered as overlay — no redirect, no round-trip.
-          initialShowGate ensures it's rendered in the SSR HTML so it appears
-          before JS hydration (no blank screen flash on first visit). */}
-      {(showGate || initialShowGate) && !isVerified && <AgeVerification callbackUrl={pathname} />}
+      {showGate && <AgeVerification callbackUrl={pathname} />}
     </AgeVerificationContext.Provider>
   );
 }

@@ -1,7 +1,6 @@
 "use client";
 
 import { useState } from "react";
-import { setAgeVerification } from "./verifyAge";
 import { useAgeVerification } from "./age-verification-provider";
 
 const TEASER_COMPANIONS = [
@@ -22,19 +21,26 @@ const FEATURES = [
   { icon: "✏️", label: "Fully Customize" },
 ];
 
+// Set a client-side cookie (not httpOnly — that's fine for age gate)
+function setClientCookie(name: string, days: number) {
+  const expires = new Date(Date.now() + days * 864e5).toUTCString();
+  document.cookie = `${name}=true; expires=${expires}; path=/; SameSite=Lax`;
+}
+
 export function AgeVerification({ callbackUrl }: { callbackUrl: string }) {
   const [loading, setLoading] = useState(false);
   const { setVerified } = useAgeVerification();
 
-  const handleVerification = async (isAdult: boolean) => {
+  const handleVerification = (isAdult: boolean) => {
     if (!isAdult) {
       window.location.href = "https://www.google.com";
       return;
     }
     setLoading(true);
-    await setAgeVerification();
-    setVerified(true); // Dismiss overlay — page content already loaded behind it
-    setLoading(false);
+    // Set cookie client-side immediately — no server round-trip needed
+    setClientCookie("age_verified", 30);
+    // Dismiss the gate right away
+    setVerified(true);
   };
 
   return (
@@ -109,7 +115,7 @@ export function AgeVerification({ callbackUrl }: { callbackUrl: string }) {
               disabled={loading}
               className="w-full py-4 rounded-xl font-bold text-white text-lg bg-gradient-to-r from-purple-600 to-pink-600 hover:from-purple-500 hover:to-pink-500 transition-all duration-200 shadow-lg shadow-purple-500/30 hover:shadow-purple-500/50 hover:scale-[1.02] active:scale-[0.98] disabled:opacity-70 disabled:cursor-not-allowed mb-3"
             >
-              {loading ? "Entering…" : "Enter — I'm 18+"}
+              Enter — I&apos;m 18+
             </button>
 
             <button

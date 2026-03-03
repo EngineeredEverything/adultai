@@ -4,23 +4,16 @@ import boldena from "@/fonts/boldena";
 import { RootLayoutMetadata } from "./metadata";
 import { Toaster } from "@/components/ui/sonner";
 import { AgeVerificationProvider } from "./_components/age-verification-provider";
-import { getAgeVerification } from "./_components/verifyAge";
 
 export const metadata = RootLayoutMetadata;
 
-export default async function RootLayout({
+export default function RootLayout({
   children,
 }: Readonly<{
   children: React.ReactNode;
 }>) {
-  // Graceful fallback during static prerender (no request context = no cookies)
-  let isVerified = false;
-  try {
-    isVerified = await getAgeVerification();
-  } catch {
-    isVerified = false;
-  }
-
+  // No SSR cookie check — AgeVerificationProvider checks client-side on mount.
+  // This eliminates the blocking async call that was causing 16s page loads.
   return (
     <html lang="en">
       <head>
@@ -29,10 +22,7 @@ export default async function RootLayout({
         <link rel="dns-prefetch" href="https://adultai-com.b-cdn.net" />
       </head>
       <body className={`${boldena.className} antialiased dark`}>
-        <AgeVerificationProvider
-          initialVerified={isVerified}
-          initialShowGate={!isVerified}
-        >
+        <AgeVerificationProvider initialVerified={false}>
           {children}
           <Toaster />
         </AgeVerificationProvider>
