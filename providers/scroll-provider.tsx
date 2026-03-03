@@ -1,7 +1,7 @@
 "use client";
 
-import { createContext, useContext, useEffect, useRef, useState } from "react";
-import { useScroll } from "framer-motion";
+import { createContext, useContext, useRef, useState } from "react";
+import { useScroll, useMotionValueEvent } from "framer-motion";
 
 interface ScrollContextProps {
   isScrolled: boolean;
@@ -14,12 +14,10 @@ export function ScrollProvider({ children }: { children: React.ReactNode }) {
   const { scrollY } = useScroll({ container: containerRef });
   const [isScrolled, setIsScrolled] = useState(false);
 
-  useEffect(() => {
-    const unsubscribe = scrollY.onChange((y) => {
-      setIsScrolled(y > 80);
-    });
-    return () => unsubscribe();
-  }, [scrollY]);
+  // useMotionValueEvent replaces the deprecated scrollY.onChange (removed in framer-motion v12)
+  useMotionValueEvent(scrollY, "change", (y) => {
+    setIsScrolled(y > 80);
+  });
 
   return (
     <ScrollContext.Provider value={{ isScrolled }}>
