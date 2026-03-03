@@ -48,7 +48,8 @@ export const getImagesInfoRAW = async (
 
       const [commentsInfo, votesInfo, categoriesMap] = await Promise.all([
         data.comments ? getImagesCommentsInfoCORE(query, data.comments, tracker) : Promise.resolve([]),
-        data.votes ? getImagesVotesInfoCORE(query, data.votes, tracker) : Promise.resolve([]),
+        // Skip vote sub-query — use denormalized voteScore/upvotes/downvotes on image itself
+        Promise.resolve([]),
         data.categories
           ? tracker.trackQuery("findManyCategories", async () => {
             const categoryIdsSet = new Set<string>()
@@ -94,7 +95,6 @@ export const getImagesInfoRAW = async (
       const cdnMap = new Map(cdnLinks.map((l) => [l.id, l.link]))
 
       const commentMap = new Map(commentsInfo.map((c) => [c.imageId, c]))
-      const voteMap = new Map(votesInfo.map((v) => [v.imageId, v]))
 
       const imagesInfo = validImages.map((image) => ({
         image: {
@@ -103,7 +103,14 @@ export const getImagesInfoRAW = async (
           cdnUrl: cdnMap.get(image.id) || image.imageUrl || undefined,
         },
         comments: commentMap.get(image.id),
-        votes: voteMap.get(image.id),
+        // Use denormalized vote fields stored directly on the image — no extra query needed
+        votes: {
+          imageId: image.id,
+          voteScore: Number(image.voteScore) || 0,
+          upvoteCount: Number(image.upvotes) || 0,
+          downvoteCount: Number(image.downvotes) || 0,
+          userVote: null,
+        },
         categories: data.categories ? categoriesMap[image.id] || [] : undefined,
       }))
 

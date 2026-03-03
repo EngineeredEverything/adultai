@@ -7,14 +7,22 @@ interface HeaderProps {
 
 export const Header = ({ label, title }: HeaderProps) => {
   return (
-    <div className="w-full flex flex-col gap-y-4 items-center justify-center">
-      <div className="flex items-center gap-2">
-        <Image src={"/logo.png"} alt="adultai logo" width={50} height={50} />
-        <h1 className="text-2xl font-bold bg-gradient-to-r from-gray-900 to-gray-600 bg-clip-text text-transparent">
-          {title}
-        </h1>
+    <div className="w-full flex flex-col gap-y-3 items-center justify-center">
+      {/* Logo mark */}
+      <div className="relative">
+        <div className="absolute inset-0 bg-gradient-to-br from-purple-600 to-pink-600 rounded-2xl blur-lg opacity-50" />
+        <div className="relative w-12 h-12 rounded-2xl bg-gradient-to-br from-purple-600 to-pink-600 flex items-center justify-center shadow-lg shadow-purple-500/30">
+          <span className="text-white font-black text-xl leading-none">A</span>
+        </div>
       </div>
-      <p className="text-muted-foreground text-sm text-center max-w-sm leading-relaxed">
+
+      {/* Title */}
+      <h1 className="text-2xl font-bold text-white tracking-tight">
+        {title}
+      </h1>
+
+      {/* Subtitle */}
+      <p className="text-gray-400 text-sm text-center max-w-xs leading-relaxed">
         {label}
       </p>
     </div>

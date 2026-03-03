@@ -132,8 +132,8 @@ export const LoginForm = ({ onClose }: { onClose?: Dispatch<SetStateAction<boole
                   name="email"
                   render={({ field }) => (
                     <FormItem>
-                      <FormLabel className="flex items-center gap-2 text-sm font-medium">
-                        <Mail className="w-4 h-4" />
+                      <FormLabel className="flex items-center gap-2 text-sm font-medium text-gray-300">
+                        <Mail className="w-4 h-4 text-gray-400" />
                         Email Address
                       </FormLabel>
                       <FormControl>
@@ -142,7 +142,7 @@ export const LoginForm = ({ onClose }: { onClose?: Dispatch<SetStateAction<boole
                           disabled={isPending}
                           placeholder="Enter your email"
                           type="email"
-                          className="h-11"
+                          className="h-11 bg-white/5 border-white/10 text-white placeholder:text-gray-600 focus:border-purple-500/60 focus:ring-purple-500/20 rounded-xl"
                         />
                       </FormControl>
                       <FormMessage />
@@ -154,8 +154,8 @@ export const LoginForm = ({ onClose }: { onClose?: Dispatch<SetStateAction<boole
                   name="password"
                   render={({ field }) => (
                     <FormItem>
-                      <FormLabel className="flex items-center gap-2 text-sm font-medium">
-                        <Lock className="w-4 h-4" />
+                      <FormLabel className="flex items-center gap-2 text-sm font-medium text-gray-300">
+                        <Lock className="w-4 h-4 text-gray-400" />
                         Password
                       </FormLabel>
                       <FormControl>
@@ -165,7 +165,7 @@ export const LoginForm = ({ onClose }: { onClose?: Dispatch<SetStateAction<boole
                             disabled={isPending}
                             placeholder="Enter your password"
                             type={showPassword ? "text" : "password"}
-                            className="h-11 pr-10"
+                            className="h-11 pr-10 bg-white/5 border-white/10 text-white placeholder:text-gray-600 focus:border-purple-500/60 focus:ring-purple-500/20 rounded-xl"
                           />
                           <Button
                             type="button"
@@ -198,7 +198,7 @@ export const LoginForm = ({ onClose }: { onClose?: Dispatch<SetStateAction<boole
           </div>
           <FormError message={error || urlError} />
           <FormSuccess message={success} />
-          <Button disabled={isPending} type="submit" className="w-full h-11 font-medium" size="lg">
+          <Button disabled={isPending} type="submit" className="w-full h-11 font-semibold bg-gradient-to-r from-purple-600 to-pink-600 hover:from-purple-500 hover:to-pink-500 text-white border-0 rounded-xl shadow-lg shadow-purple-500/25 transition-all duration-200 disabled:opacity-50" size="lg">
             {isPending ? (
               <div className="flex items-center gap-2">
                 <div className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin" />
