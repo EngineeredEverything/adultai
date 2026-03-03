@@ -5,7 +5,6 @@ import { LoadingSpinner } from "@/components/ui/loading-spinner";
 import type { SearchImagesResponseSuccessType } from "@/types/images";
 import {
   Lock,
-  MessageCircle,
   TrendingUp,
   TrendingDown,
   Film,
@@ -15,47 +14,34 @@ import {
   ThumbsUp,
   ThumbsDown,
 } from "lucide-react";
-// next/image removed — using Bunny CDN optimizer directly for edge caching
 
-const BUNNY_CDN = "adultai-com.b-cdn.net"
+const BUNNY_CDN = "adultai-com.b-cdn.net";
 
-/**
- * Build a Bunny CDN optimized image URL.
- * Bunny serves WebP from edge cache — much faster than routing through /_next/image.
- * Falls back to original URL if it's not a Bunny CDN URL.
- */
 function optimizeBunnyUrl(url: string, width: number, quality = 80): string {
-  if (!url || !url.includes(BUNNY_CDN)) return url
-  // Strip existing query params then add optimizer params
-  const base = url.split("?")[0]
-  return `${base}?width=${width}&format=webp&quality=${quality}`
+  if (!url || !url.includes(BUNNY_CDN)) return url;
+  const base = url.split("?")[0];
+  return `${base}?width=${width}&format=webp&quality=${quality}`;
 }
-import { useState, useEffect, useRef } from "react";
+
+import { useState, useRef } from "react";
 import { motion } from "framer-motion";
-import { logger } from "@/lib/logger";
 import { toast } from "sonner";
 import { createVote } from "@/actions/votes/create";
+import { showAuthToast, isAuthError } from "@/lib/auth-toast";
 
-// Alternative compact version for smaller cards
 export function ImageCard({
   image,
   isLoaded,
   onClick,
   onLoad,
   onError,
-  position,
-  width,
-  debug = false,
   index,
 }: {
   image: SearchImagesResponseSuccessType["images"][number];
   isLoaded: boolean;
   onClick: () => void;
   onLoad: () => void;
-  onError: (error: Error) => void;
-  position: { x: number; y: number; height: number };
-  width: number;
-  debug?: boolean;
+  onError: () => void;
   index: number;
 }) {
   const [hovering, setHovering] = useState(false);
@@ -64,7 +50,6 @@ export function ImageCard({
   const [animatedVideoUrl, setAnimatedVideoUrl] = useState<string | null>(null);
   const videoRef = useRef<HTMLVideoElement | null>(null);
 
-  // Inline vote state — seeded from props, updated optimistically
   const [userVote, setUserVote] = useState<"UPVOTE" | "DOWNVOTE" | null>(
     (image.votes as any)?.userVote || null
   );
@@ -73,20 +58,9 @@ export function ImageCard({
   const [downvotes, setDownvotes] = useState(image.votes?.downvoteCount || 0);
   const [isVoting, setIsVoting] = useState(false);
 
-  useEffect(() => {
-    logger.debug(`ImageCard mounted for image ID: ${image.image.id}`);
-    logger.debug(`Initial isLoaded: ${isLoaded}`);
-  }, [image.image.id, isLoaded]);
-
   const handleLoad = () => {
-    logger.debug(`handleLoad triggered for image ID: ${image.image.id}`);
     setImageLoaded(true);
     onLoad();
-  };
-
-  const handleError = (e: any) => {
-    logger.error(`handleError triggered for image ID: ${image.image.id}`, e);
-    onError(new Error("Failed to load image"));
   };
 
   const handleQuickAnimate = async (e: React.MouseEvent) => {
@@ -121,20 +95,16 @@ export function ImageCard({
     if (isVoting) return;
     setIsVoting(true);
 
-    // Optimistic update
     const prev = { userVote, voteScore, upvotes, downvotes };
     if (userVote === voteType) {
-      // Toggle off
       setUserVote(null);
       if (voteType === "UPVOTE") { setUpvotes(u => Math.max(0, u - 1)); setVoteScore(s => s - 1); }
       else { setDownvotes(d => Math.max(0, d - 1)); setVoteScore(s => s + 1); }
     } else if (userVote && userVote !== voteType) {
-      // Switch
       setUserVote(voteType);
       if (voteType === "UPVOTE") { setUpvotes(u => u + 1); setDownvotes(d => Math.max(0, d - 1)); setVoteScore(s => s + 2); }
       else { setDownvotes(d => d + 1); setUpvotes(u => Math.max(0, u - 1)); setVoteScore(s => s - 2); }
     } else {
-      // New vote
       setUserVote(voteType);
       if (voteType === "UPVOTE") { setUpvotes(u => u + 1); setVoteScore(s => s + 1); }
       else { setDownvotes(d => d + 1); setVoteScore(s => s - 1); }
@@ -142,13 +112,23 @@ export function ImageCard({
 
     try {
       const res = await createVote(image.image.id, voteType);
-      if ("error" in res) throw new Error(res.error);
+      if ("error" in res) {
+        if (isAuthError(res.error)) {
+          // Revert optimistic update before showing auth prompt
+          setUserVote(prev.userVote);
+          setVoteScore(prev.voteScore);
+          setUpvotes(prev.upvotes);
+          setDownvotes(prev.downvotes);
+          showAuthToast("vote");
+          return;
+        }
+        throw new Error(res.error);
+      }
       setUserVote(res.userVote);
       setVoteScore(res.voteScore || 0);
       setUpvotes(res.upvotes || 0);
       setDownvotes(res.downvotes || 0);
     } catch {
-      // Revert
       setUserVote(prev.userVote);
       setVoteScore(prev.voteScore);
       setUpvotes(prev.upvotes);
@@ -159,79 +139,58 @@ export function ImageCard({
     }
   };
 
-  const hasVotes = upvotes > 0 || downvotes > 0;
-
   return (
     <motion.div
-      className="absolute group cursor-pointer rounded-lg overflow-hidden shadow-sm hover:shadow-md transition-shadow duration-300"
+      className="relative group cursor-pointer rounded-lg overflow-hidden shadow-sm hover:shadow-md transition-shadow duration-300 w-full"
       onClick={onClick}
       onMouseEnter={() => setHovering(true)}
       onMouseLeave={() => setHovering(false)}
       initial={{ opacity: 0 }}
       animate={{ opacity: 1 }}
       transition={{ duration: 0.3 }}
-      style={{
-        width: `${width}px`,
-        height: `${position.height}px`,
-        top: position.y,
-        left: position.x,
-      }}
     >
-      {debug && (
-        <div
-          className="absolute text-xs text-white bg-black/70 px-1 rounded z-50"
-          style={{ top: 0, left: 0 }}
-        >
-          I{index}: y={Math.round(position.y)} h={Math.round(position.height)}
-        </div>
-      )}
-
-      {!imageLoaded && (
-        <div className="absolute inset-0 flex items-center justify-center bg-gray-100">
-          <LoadingSpinner size="lg" className="text-gray-400" />
-        </div>
-      )}
-
-      <div className="relative w-full h-full">
-        {animatedVideoUrl ? (
-          <video
-            ref={videoRef}
-            src={animatedVideoUrl}
-            className="w-full h-full object-cover"
-            autoPlay
-            loop
-            muted
-            playsInline
-          />
-        ) : (
-          // eslint-disable-next-line @next/next/no-img-element
+      {/* Image / Video — drives container height naturally */}
+      {animatedVideoUrl ? (
+        <video
+          ref={videoRef}
+          src={animatedVideoUrl}
+          className="w-full h-auto block"
+          autoPlay
+          loop
+          muted
+          playsInline
+        />
+      ) : (
+        <>
+          {/* Loading spinner — sits above image while it loads */}
+          {!imageLoaded && (
+            <div className="absolute inset-0 flex items-center justify-center bg-gray-900/80 min-h-[120px]">
+              <LoadingSpinner size="lg" className="text-gray-500" />
+            </div>
+          )}
+          {/* eslint-disable-next-line @next/next/no-img-element */}
           <img
-            src={optimizeBunnyUrl(image.image.cdnUrl || "", width, 80) || "/placeholder.png"}
+            src={optimizeBunnyUrl(image.image.cdnUrl || "", 600, 80) || "/placeholder.png"}
             alt={image.image.prompt || "Generated image"}
-            className={`absolute inset-0 w-full h-full object-cover transition-all duration-300 ${
-              imageLoaded ? "opacity-100" : "opacity-0"
-            }`}
-            loading={index < 4 ? "eager" : "lazy"}
+            className={`w-full h-auto block transition-opacity duration-300 ${imageLoaded ? "opacity-100" : "opacity-0"}`}
+            loading={index < 6 ? "eager" : "lazy"}
+            fetchPriority={index < 2 ? "high" : "auto"}
             decoding="async"
-            onLoad={() => {
-              handleLoad()
-            }}
-            onError={(e) => {
-              handleError(e as any)
-            }}
+            onLoad={handleLoad}
+            onError={onError}
           />
-        )}
-      </div>
+        </>
+      )}
 
-      {/* Animating spinner */}
+      {/* Animating spinner overlay */}
       {isAnimating && (
-        <div className="absolute inset-0 bg-black/60 flex flex-col items-center justify-center gap-2 z-20">
+        <div className="absolute inset-0 bg-black/60 flex flex-col items-center justify-center gap-2 z-20 min-h-[120px]">
           <Loader2 className="w-8 h-8 text-pink-400 animate-spin" />
           <span className="text-white text-xs font-medium">Animating...</span>
         </div>
       )}
 
-      {/* Clear animation button */}
+      {/* Clear animation */}
       {animatedVideoUrl && (
         <button
           onClick={handleClearAnimation}
@@ -242,7 +201,7 @@ export function ImageCard({
         </button>
       )}
 
-      {/* Vote Score Badge - Top Right (shown when not hovering) */}
+      {/* Vote score badge (not hovering) */}
       {Math.abs(voteScore) > 0 && !hovering && (
         <div className="absolute top-2 right-2 z-10">
           <Badge
@@ -257,7 +216,7 @@ export function ImageCard({
         </div>
       )}
 
-      {/* Vote buttons — top right on hover */}
+      {/* Vote buttons (hovering) */}
       {hovering && (
         <div
           className="absolute top-2 right-2 z-20 flex flex-col items-end gap-1"
@@ -299,21 +258,18 @@ export function ImageCard({
         </div>
       )}
 
-      {/* Hover overlay — bottom gradient with prompt + actions */}
+      {/* Hover overlay */}
       <div
         className={`absolute inset-0 flex flex-col justify-between p-2 bg-gradient-to-t from-black/75 via-transparent to-transparent
                    transition-all duration-200 pointer-events-none ${hovering ? "opacity-100" : "opacity-0"}`}
       >
-        <div /> {/* spacer */}
-
-        {/* Bottom: prompt + action buttons */}
+        <div />
         <div className="flex flex-col gap-1.5 pointer-events-auto">
           {image.image.prompt && (
             <p className="text-white/90 text-[10px] line-clamp-2 leading-tight cursor-pointer" onClick={onClick}>
               {image.image.prompt}
             </p>
           )}
-
           <div className="flex items-center gap-1" onClick={(e) => e.stopPropagation()}>
             {!image.image.isPublic && (
               <Badge variant="outline" className="flex gap-1 items-center text-[10px] bg-black/40 border-white/20 text-white py-0">
@@ -355,9 +311,7 @@ export function ImageCard({
       </div>
 
       <div
-        className={`absolute inset-0 bg-black transition-opacity duration-300 ${
-          hovering ? "opacity-10" : "opacity-0"
-        }`}
+        className={`absolute inset-0 bg-black transition-opacity duration-300 ${hovering ? "opacity-10" : "opacity-0"}`}
       />
     </motion.div>
   );
