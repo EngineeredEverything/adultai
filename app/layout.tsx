@@ -29,7 +29,10 @@ export default async function RootLayout({
         <link rel="dns-prefetch" href="https://adultai-com.b-cdn.net" />
       </head>
       <body className={`${boldena.className} antialiased dark`}>
-        <AgeVerificationProvider initialVerified={isVerified}>
+        <AgeVerificationProvider
+          initialVerified={isVerified}
+          initialShowGate={!isVerified}
+        >
           {children}
           <Toaster />
         </AgeVerificationProvider>
