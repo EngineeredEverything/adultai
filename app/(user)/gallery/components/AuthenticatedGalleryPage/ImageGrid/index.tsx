@@ -45,7 +45,9 @@ export function ImageGrid({
   tempImages = 0,
   setLoadedImages,
 }: ImageGridProps) {
-  const [colCount, setColCount] = useState(2);
+  const [colCount, setColCount] = useState(() =>
+    typeof window !== "undefined" ? getColumnCount(window.innerWidth) : 2
+  );
 
   useEffect(() => {
     const update = () => setColCount(getColumnCount(window.innerWidth));
@@ -109,9 +111,9 @@ export function ImageGrid({
   });
 
   return (
-    <div className="flex gap-3 w-full pb-12 items-start">
+    <div className="flex gap-3 w-full pb-12 items-start align-top">
       {columns.map((col, colIdx) => (
-        <div key={colIdx} className="flex flex-col gap-3 flex-1 min-w-0">
+        <div key={colIdx} className="flex flex-col gap-3 flex-1 min-w-0 self-start">
           {col.map((item) => {
             if (item.kind === "placeholder") {
               return <LoadingImageCard key={`placeholder-${item.idx}`} index={item.idx} />;
