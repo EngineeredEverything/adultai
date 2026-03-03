@@ -1,7 +1,6 @@
 "use client";
 
 import { Badge } from "@/components/ui/badge";
-import { LoadingSpinner } from "@/components/ui/loading-spinner";
 import type { SearchImagesResponseSuccessType } from "@/types/images";
 import {
   Lock,
@@ -45,7 +44,6 @@ export function ImageCard({
   index: number;
 }) {
   const [hovering, setHovering] = useState(false);
-  const [imageLoaded, setImageLoaded] = useState(isLoaded);
   const [isAnimating, setIsAnimating] = useState(false);
   const [animatedVideoUrl, setAnimatedVideoUrl] = useState<string | null>(null);
   const videoRef = useRef<HTMLVideoElement | null>(null);
@@ -57,11 +55,6 @@ export function ImageCard({
   const [upvotes, setUpvotes] = useState(image.votes?.upvoteCount || 0);
   const [downvotes, setDownvotes] = useState(image.votes?.downvoteCount || 0);
   const [isVoting, setIsVoting] = useState(false);
-
-  const handleLoad = () => {
-    setImageLoaded(true);
-    onLoad();
-  };
 
   const handleQuickAnimate = async (e: React.MouseEvent) => {
     e.stopPropagation();
@@ -161,25 +154,20 @@ export function ImageCard({
           playsInline
         />
       ) : (
-        <>
-          {/* Loading spinner — sits above image while it loads */}
-          {!imageLoaded && (
-            <div className="absolute inset-0 flex items-center justify-center bg-gray-900/80 min-h-[120px]">
-              <LoadingSpinner size="lg" className="text-gray-500" />
-            </div>
-          )}
-          {/* eslint-disable-next-line @next/next/no-img-element */}
-          <img
-            src={optimizeBunnyUrl(image.image.cdnUrl || "", 600, 80) || "/placeholder.png"}
-            alt={image.image.prompt || "Generated image"}
-            className={`w-full h-auto block transition-opacity duration-300 ${imageLoaded ? "opacity-100" : "opacity-0"}`}
-            loading={index < 6 ? "eager" : "lazy"}
-            fetchPriority={index < 2 ? "high" : "auto"}
-            decoding="async"
-            onLoad={handleLoad}
-            onError={onError}
-          />
-        </>
+        // eslint-disable-next-line @next/next/no-img-element
+        <img
+          src={optimizeBunnyUrl(image.image.cdnUrl || "", 600, 80) || "/placeholder.png"}
+          alt={image.image.prompt || "Generated image"}
+          width={image.image.width || 512}
+          height={image.image.height || 768}
+          className="w-full h-auto block"
+          style={{ display: "block" }}
+          loading={index < 6 ? "eager" : "lazy"}
+          fetchPriority={index < 2 ? "high" : "auto"}
+          decoding="async"
+          onLoad={handleLoad}
+          onError={onError}
+        />
       )}
 
       {/* Animating spinner overlay */}
