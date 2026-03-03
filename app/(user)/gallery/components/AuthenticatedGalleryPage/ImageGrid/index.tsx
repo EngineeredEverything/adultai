@@ -4,6 +4,7 @@ import type { Dispatch, SetStateAction } from "react";
 import type { SearchImagesResponseSuccessType } from "@/types/images";
 import type { GetCurrentUserInfoSuccessType } from "@/types/user";
 import { HardDrive } from "lucide-react";
+import { useEffect, useState } from "react";
 import { LoadingImageCard } from "./LoadingImageCard";
 import { ImageCard } from "./ImageCard";
 
@@ -22,10 +23,18 @@ interface ImageGridProps {
   setLoadedImages: Dispatch<SetStateAction<Record<string, boolean>>>;
 }
 
+function getColumnCount(width: number): number {
+  if (width >= 1600) return 6;
+  if (width >= 1280) return 5;
+  if (width >= 900) return 4;
+  if (width >= 640) return 3;
+  return 2;
+}
+
 /**
- * CSS-columns masonry grid.
- * No JS layout calculation — images appear immediately on first paint.
- * Columns adjust via responsive CSS classes (1 → 2 → 3 → 4 → 5 → 6).
+ * Flex-column masonry grid.
+ * Items are distributed across N vertical flex columns (round-robin).
+ * No CSS columns — no gaps, no break-inside hacks.
  */
 export function ImageGrid({
   images,
@@ -36,6 +45,15 @@ export function ImageGrid({
   tempImages = 0,
   setLoadedImages,
 }: ImageGridProps) {
+  const [colCount, setColCount] = useState(2);
+
+  useEffect(() => {
+    const update = () => setColCount(getColumnCount(window.innerWidth));
+    update();
+    window.addEventListener("resize", update);
+    return () => window.removeEventListener("resize", update);
+  }, []);
+
   const handleImageLoad = (imageId: string) => {
     setLoadedImages((prev) => ({ ...prev, [imageId]: true }));
   };
@@ -44,7 +62,35 @@ export function ImageGrid({
     setLoadedImages((prev) => ({ ...prev, [imageId]: false }));
   };
 
-  if (!images.length && !tempImages) {
+  // Build flat list of all renderable items
+  type Item =
+    | { kind: "placeholder"; idx: number }
+    | { kind: "skeleton"; idx: number }
+    | { kind: "processing"; idx: number; id: string }
+    | { kind: "image"; idx: number; item: SearchImagesResponseSuccessType["images"][number] };
+
+  const items: Item[] = [];
+
+  for (let i = 0; i < tempImages; i++) {
+    items.push({ kind: "placeholder", idx: i });
+  }
+
+  images.forEach((imageItem, index) => {
+    if ("isSkeleton" in imageItem && imageItem.isSkeleton) {
+      items.push({ kind: "skeleton", idx: index });
+      return;
+    }
+    if (!("image" in imageItem)) return;
+    if (imageItem.image.status === "processing") {
+      items.push({ kind: "processing", idx: index, id: imageItem.image.id });
+      return;
+    }
+    if (imageItem.image.status === "completed") {
+      items.push({ kind: "image", idx: index, item: imageItem });
+    }
+  });
+
+  if (!items.length) {
     return (
       <div className="flex flex-col items-center justify-center py-16">
         <HardDrive className="w-16 h-16 text-gray-300 mb-4" />
@@ -56,76 +102,43 @@ export function ImageGrid({
     );
   }
 
+  // Distribute items round-robin across columns
+  const columns: Item[][] = Array.from({ length: colCount }, () => []);
+  items.forEach((item, i) => {
+    columns[i % colCount].push(item);
+  });
+
   return (
-    <div
-      className="w-full"
-      style={{
-        columnCount: 2,
-        columnGap: "12px",
-      }}
-      // Responsive columns via inline style (CSS custom property trick)
-      // We use a style tag approach via className override below
-    >
-      <style>{`
-        @media (min-width: 480px)  { .masonry-grid { column-count: 2; } }
-        @media (min-width: 640px)  { .masonry-grid { column-count: 3; } }
-        @media (min-width: 900px)  { .masonry-grid { column-count: 4; } }
-        @media (min-width: 1280px) { .masonry-grid { column-count: 5; } }
-        @media (min-width: 1600px) { .masonry-grid { column-count: 6; } }
-        .masonry-grid * { box-sizing: border-box; }
-      `}</style>
-
-      <div
-        className="masonry-grid w-full pb-12"
-        style={{ columnCount: 2, columnGap: "12px" }}
-      >
-        {/* Loading placeholders for actively generating images */}
-        {Array(tempImages)
-          .fill(null)
-          .map((_, index) => (
-            <div key={`loading-placeholder-${index}`} style={{ breakInside: "avoid", marginBottom: "12px" }}>
-              <LoadingImageCard index={index} />
-            </div>
-          ))}
-
-        {/* Images */}
-        {images.map((imageItem, index) => {
-          // Skeleton
-          if ("isSkeleton" in imageItem && imageItem.isSkeleton) {
-            return (
-              <div key={`skeleton-${index}`} style={{ breakInside: "avoid", marginBottom: "12px" }}>
-                <LoadingImageCard index={index} skeleton />
-              </div>
-            );
-          }
-
-          if (!("image" in imageItem)) return null;
-
-          if (imageItem.image.status === "processing") {
-            return (
-              <div key={`processing-${imageItem.image.id}`} style={{ breakInside: "avoid", marginBottom: "12px" }}>
-                <LoadingImageCard index={index} />
-              </div>
-            );
-          }
-
-          if (imageItem.image.status === "completed") {
-            return (
-              <ImageCard
-                key={`completed-${imageItem.image.id}`}
-                image={imageItem}
-                isLoaded={loadedImages[imageItem.image.id] !== false}
-                onClick={() => onImageClick(imageItem)}
-                onLoad={() => handleImageLoad(imageItem.image.id)}
-                onError={() => handleImageError(imageItem.image.id)}
-                index={index}
-              />
-            );
-          }
-
-          return null;
-        })}
-      </div>
+    <div className="flex gap-3 w-full pb-12 items-start">
+      {columns.map((col, colIdx) => (
+        <div key={colIdx} className="flex flex-col gap-3 flex-1 min-w-0">
+          {col.map((item) => {
+            if (item.kind === "placeholder") {
+              return <LoadingImageCard key={`placeholder-${item.idx}`} index={item.idx} />;
+            }
+            if (item.kind === "skeleton") {
+              return <LoadingImageCard key={`skeleton-${item.idx}`} index={item.idx} skeleton />;
+            }
+            if (item.kind === "processing") {
+              return <LoadingImageCard key={`processing-${item.id}`} index={item.idx} />;
+            }
+            if (item.kind === "image") {
+              return (
+                <ImageCard
+                  key={`image-${item.item.image.id}`}
+                  image={item.item}
+                  isLoaded={loadedImages[item.item.image.id] !== false}
+                  onClick={() => onImageClick(item.item)}
+                  onLoad={() => handleImageLoad(item.item.image.id)}
+                  onError={() => handleImageError(item.item.image.id)}
+                  index={item.idx}
+                />
+              );
+            }
+            return null;
+          })}
+        </div>
+      ))}
     </div>
   );
 }

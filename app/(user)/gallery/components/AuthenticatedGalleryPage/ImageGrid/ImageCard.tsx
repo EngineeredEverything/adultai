@@ -134,7 +134,6 @@ export function ImageCard({
   return (
     <div
       className="relative group cursor-pointer rounded-lg overflow-hidden shadow-sm hover:shadow-md transition-shadow duration-300 w-full"
-      style={{ breakInside: "avoid", marginBottom: "12px" }}
       onClick={onClick}
       onMouseEnter={() => setHovering(true)}
       onMouseLeave={() => setHovering(false)}
