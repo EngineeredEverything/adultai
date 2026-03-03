@@ -15,6 +15,7 @@ export async function getAllComments(imageId: string) {
     const comments = await db.imageComment.findMany({
       where: {
         imageId: imageId,
+        user: { isNot: null },
       },
       include: {
         user: {
@@ -49,7 +50,7 @@ export const getImagesCommentsInfoCORE = async (
 
   const queryFn = () =>
     db.imageComment.findMany({
-      where: { imageId: { in: imageIds } },
+      where: { imageId: { in: imageIds }, user: { isNot: null } },
       include: { user: { select: { name: true } } },
       orderBy: { createdAt: "desc" },
     })
