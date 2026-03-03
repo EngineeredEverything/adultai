@@ -152,7 +152,7 @@ export function ImageCard({
       ) : (
         // eslint-disable-next-line @next/next/no-img-element
         <img
-          src={optimizeBunnyUrl(image.image.cdnUrl || "", 600, 80) || "/placeholder.png"}
+          src={optimizeBunnyUrl(image.image.cdnUrl || image.image.imageUrl || "", 600, 80) || image.image.imageUrl || "/placeholder.png"}
           alt={image.image.prompt || "Generated image"}
           width={image.image.width || 512}
           height={image.image.height || 768}
