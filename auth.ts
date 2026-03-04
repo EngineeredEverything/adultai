@@ -162,7 +162,7 @@ export const authOptions: AuthOptions = {
     error: "/auth/error",
   },
 
-  secret: process.env.APP_SECRET,
+  secret: process.env.NEXTAUTH_SECRET || process.env.APP_SECRET,
   events: {
     async linkAccount({ user, profile }) {
       await db.user.update({
