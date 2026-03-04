@@ -109,22 +109,43 @@ export function analyzePromptForCategories(
 
 // ─── Gender / content-type detection ───────────────────────────────────────
 
-const MALE_KEYWORDS = [
-  "male","man ","men ","guy ","boy ","dude","masculine",
-  "muscular man","gay ","bisexual man","male companion",
-  "mike hawk","ben dover","dick ","oliver ","seymour","yuri nator","willie",
-  "him ","his body","bulge","cock","penis","erect","daddy","hunk",
+// Word-boundary regex patterns for male-subject prompts.
+// These must NOT match inside female words (e.g. "woman", "shimmer").
+const MALE_PATTERNS = [
+  /\bmale\b/,
+  /\b(?<!wo)man\b/,        // "man" but not "woman"
+  /\b(?<!wo)men\b/,        // "men" but not "women"
+  /\bguy\b/, /\bguys\b/,
+  /\bboy\b/, /\bboys\b/,
+  /\bdude\b/, /\bmasculine\b/,
+  /\bmuscular man\b/, /\bgay\b/, /\bbisexual man\b/,
+  /\bhim\b/,               // "him" but not "shimmer"
+  /\bhis\s+body\b/,
+  /\bbulge\b/, /\bcock\b/, /\bpenis\b/, /\berect\b/,
+  /\bdaddy\b/, /\bhunk\b/,
 ]
 
-const FANTASY_KEYWORDS = [
-  "elf ","elven","demon","angel","vampire","witch","dragon","orc ",
-  "alien","robot","cyborg","mermaid","furry","anthro","hentai","anime",
-  "fantasy","magical","mythical","monster","creature","tentacle",
-  "celestial","succubus","neko ","catgirl","wolf girl",
+const FEMALE_PATTERNS = [
+  /\bwoman\b/, /\bwomen\b/, /\bgirl\b/, /\bgirls\b/,
+  /\bfemale\b/, /\bshe\b/, /\bher\b/, /\blady\b/,
+  /\bgoddess\b/, /\bmilf\b/, /\bwife\b/, /\bgirlfriend\b/,
+  /\bbabe\b/, /\bbeauty\b/, /\bprincess\b/, /\bqueen\b/,
+  /\bbreasts?\b/, /\bboobs?\b/, /\btits?\b/, /\bpussy\b/, /\bvagina\b/,
+  /\bcleavage\b/, /\bthong\b/, /\blingerie\b/, /\bbikini\b/, /\bbra\b/,
+]
+
+const FANTASY_PATTERNS = [
+  /\belf\b/, /\belven\b/, /\bdemon\b/, /\bangel\b/, /\bvampire\b/,
+  /\bwitch\b/, /\bdragon\b/, /\borc\b/, /\balien\b/, /\brobot\b/,
+  /\bcyborg\b/, /\bmermaid\b/, /\bfurry\b/, /\banthro\b/,
+  /\bhentai\b/, /\banime\b/, /\bfantasy\b/, /\bmagical\b/,
+  /\bmythical\b/, /\bmonster\b/, /\bcreature\b/, /\btentacle\b/,
+  /\bsuccubus\b/, /\bneko\b/, /\bcatgirl\b/,
 ]
 
 /**
  * Detect the content gender/type from a prompt.
+ * Uses word-boundary regex to avoid false positives (e.g. "woman" ≠ "man").
  * Returns: "male" | "female" | "fantasy" | "other"
  */
 export function detectGender(prompt: string): "male" | "female" | "fantasy" | "other" {
@@ -132,15 +153,16 @@ export function detectGender(prompt: string): "male" | "female" | "fantasy" | "o
   const text = prompt.toLowerCase()
 
   // Fantasy check first (overrides gender)
-  for (const kw of FANTASY_KEYWORDS) {
-    if (text.includes(kw)) return "fantasy"
-  }
+  if (FANTASY_PATTERNS.some(re => re.test(text))) return "fantasy"
 
-  // Male check
-  for (const kw of MALE_KEYWORDS) {
-    if (text.includes(kw)) return "male"
-  }
+  const hasMale = MALE_PATTERNS.some(re => re.test(text))
+  const hasFemale = FEMALE_PATTERNS.some(re => re.test(text))
 
-  // Default to female for all remaining (platform is female-dominant)
+  // If both detected, the subject is likely female (e.g. "her boyfriend watches him")
+  // If only male, it's male content
+  if (hasMale && !hasFemale) return "male"
+  if (hasFemale) return "female"
+
+  // Default to female (platform is female-dominant content)
   return "female"
 }
