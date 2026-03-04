@@ -1,4 +1,7 @@
 import { NextRequest, NextResponse } from "next/server"
+import { db } from "@/lib/db"
+import { getServerSession } from "next-auth"
+import { authOptions } from "@/auth"
 
 const GPU_API_URL = process.env.GPU_API_URL || "http://213.224.31.105:29612"
 const GPU_API_KEY = process.env.GPU_API_KEY || "Pd10V9L4ULaOxmq93oHTktk6Fa5FxjX2iASILCjWi1o"
@@ -88,7 +91,36 @@ export async function POST(req: NextRequest) {
     const avatarData = await avatarRes.json()
     const videoUrl = avatarData.video_url || null
 
-    return NextResponse.json({ audioUrl, videoUrl, audioOnly: !videoUrl })
+    // ── Step 3: Save to DB ─────────────────────────────────────────────────
+    let videoId: string | null = null
+    if (videoUrl) {
+      try {
+        const session = await getServerSession(authOptions)
+        if (session?.user?.email) {
+          const dbUser = await db.user.findUnique({ where: { email: session.user.email } })
+          if (dbUser) {
+            const record = await db.generatedVideo.create({
+              data: {
+                userId: dbUser.id,
+                prompt: `Lip sync: ${text.trim().substring(0, 200)}`,
+                videoUrl,
+                status: "completed",
+                isPublic: false,
+                costNuts: 0,
+                width: 512,
+                height: 512,
+              },
+            })
+            videoId = record.id
+          }
+        }
+      } catch (dbErr) {
+        console.error("Failed to save lip-sync video to DB:", dbErr)
+        // Non-fatal — still return the video
+      }
+    }
+
+    return NextResponse.json({ audioUrl, videoUrl, audioOnly: !videoUrl, videoId })
 
   } catch (err: any) {
     console.error("animate-image error:", err)

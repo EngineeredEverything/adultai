@@ -1,7 +1,35 @@
 import { NextRequest, NextResponse } from "next/server"
+import { db } from "@/lib/db"
+import { getServerSession } from "next-auth"
+import { authOptions } from "@/auth"
 
 const GPU_API_URL = process.env.GPU_API_URL || "http://213.224.31.105:29612"
 const GPU_API_KEY = process.env.GPU_API_KEY || "Pd10V9L4ULaOxmq93oHTktk6Fa5FxjX2iASILCjWi1o"
+
+async function saveVideoToDB(videoUrl: string): Promise<string | null> {
+  try {
+    const session = await getServerSession(authOptions)
+    if (!session?.user?.email) return null
+    const dbUser = await db.user.findUnique({ where: { email: session.user.email } })
+    if (!dbUser) return null
+    const record = await db.generatedVideo.create({
+      data: {
+        userId: dbUser.id,
+        prompt: "Animation from image",
+        videoUrl,
+        status: "completed",
+        isPublic: false,
+        costNuts: 0,
+        width: 512,
+        height: 512,
+      },
+    })
+    return record.id
+  } catch (dbErr) {
+    console.error("Failed to save animation video to DB:", dbErr)
+    return null
+  }
+}
 
 export async function POST(req: NextRequest) {
   try {
@@ -54,7 +82,8 @@ export async function POST(req: NextRequest) {
         if (!poll.ok) continue
         const pollData = await poll.json()
         if (pollData.status === "completed" && pollData.video_url) {
-          return NextResponse.json({ videoUrl: pollData.video_url })
+          const videoId = await saveVideoToDB(pollData.video_url)
+          return NextResponse.json({ videoUrl: pollData.video_url, videoId })
         }
         if (pollData.status === "failed") {
           return NextResponse.json({ error: "Video generation failed" }, { status: 502 })
@@ -65,7 +94,8 @@ export async function POST(req: NextRequest) {
 
     // Sync response
     if (data.video_url) {
-      return NextResponse.json({ videoUrl: data.video_url })
+      const videoId = await saveVideoToDB(data.video_url)
+      return NextResponse.json({ videoUrl: data.video_url, videoId })
     }
 
     return NextResponse.json({ error: "No video URL in response" }, { status: 502 })

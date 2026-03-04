@@ -31,6 +31,8 @@ import { GallerySortMenu, type SortOption } from "../GallerySortMenu";
 import { SubcategoryFilter } from "../SubcategoryFilter";
 import { PremiumModal } from "../premium-modal";
 import dynamic from "next/dynamic";
+import { MediaTypeFilter, type MediaType } from "../MediaTypeFilter";
+const VideoSection = dynamic(() => import("../VideoSection"), { ssr: false });
 
 // Heavy components — lazy loaded to keep initial bundle small
 const ImageDialog = dynamic(() => import("./ImageDialog").then((m) => ({ default: m.ImageDialog })), { ssr: false });
@@ -102,6 +104,8 @@ export default function GalleryPage(props: GalleryPageProps) {
   const [activeSubcategory, setActiveSubcategory] = useState<string | null>(null);
   // Gender/type filter — applies in normal gallery mode
   const [genderFilter, setGenderFilter] = useState<"female" | "male" | null>(null);
+  // Media type filter — images vs videos vs lip sync
+  const [mediaType, setMediaType] = useState<MediaType>("images");
   // Upgrade modal — shown when user hits generation limit
   const [limitModalOpen, setLimitModalOpen] = useState(false);
 
@@ -670,8 +674,13 @@ export default function GalleryPage(props: GalleryPageProps) {
         </div>
       )}
 
-      {/* GENDER FILTER — normal gallery mode */}
-      {isNormalMode && (
+      {/* MEDIA TYPE FILTER — images / videos / lip sync */}
+      {(isNormalMode || isUserMode) && (
+        <MediaTypeFilter active={mediaType} onChange={setMediaType} />
+      )}
+
+      {/* GENDER FILTER — normal gallery mode (images only) */}
+      {isNormalMode && mediaType === "images" && (
         <div className="flex gap-2 mb-4">
           {(
             [
@@ -694,8 +703,8 @@ export default function GalleryPage(props: GalleryPageProps) {
         </div>
       )}
 
-      {/* SORT MENU — normal / user mode */}
-      {!isCategoryMode && paginatedImages.length > 0 && (
+      {/* SORT MENU — normal / user mode (images only) */}
+      {!isCategoryMode && mediaType === "images" && paginatedImages.length > 0 && (
         <div className="flex justify-between items-center mb-6">
           <h2 className="text-xl font-semibold">
             {isUserMode ? "Your Images" : "Public Gallery"}
@@ -717,32 +726,46 @@ export default function GalleryPage(props: GalleryPageProps) {
         </div>
       )}
 
-      {/* IMAGE GRID OR EMPTY */}
-      {!isLoadingImages &&
-      paginatedImages.length === 0 &&
-      (!isNormalMode || !pendingCount) ? (
-        <div className="flex flex-col items-center justify-center min-h-[40vh] gap-4">
-          <p className="text-muted-foreground text-lg">No images found</p>
-          {searchQuery && (
-            <p className="text-sm text-muted-foreground">
-              Try adjusting your search query
-            </p>
-          )}
-        </div>
-      ) : (
-        <ImageGrid
-          images={displayImages}
-          onImageClick={setSelectedImage}
-          loadedImages={loadedImages}
-          onDelete={handleDelete}
-          user={user}
-          tempImages={0}
-          setLoadedImages={setLoadedImages}
+      {/* VIDEO SECTION — shown when videos or lipsync tab is active */}
+      {(mediaType === "videos" || mediaType === "lipsync") && (
+        <VideoSection
+          mediaType={mediaType}
+          userId={userId}
+          userMode={isUserMode}
+          searchQuery={searchQuery}
         />
       )}
 
+      {/* IMAGE GRID OR EMPTY — only when images tab is active */}
+      {mediaType === "images" && (
+        <>
+          {!isLoadingImages &&
+          paginatedImages.length === 0 &&
+          (!isNormalMode || !pendingCount) ? (
+            <div className="flex flex-col items-center justify-center min-h-[40vh] gap-4">
+              <p className="text-muted-foreground text-lg">No images found</p>
+              {searchQuery && (
+                <p className="text-sm text-muted-foreground">
+                  Try adjusting your search query
+                </p>
+              )}
+            </div>
+          ) : (
+            <ImageGrid
+              images={displayImages}
+              onImageClick={setSelectedImage}
+              loadedImages={loadedImages}
+              onDelete={handleDelete}
+              user={user}
+              tempImages={0}
+              setLoadedImages={setLoadedImages}
+            />
+          )}
+        </>
+      )}
+
       {/* NO MORE IMAGES */}
-      {!hasMore &&
+      {mediaType === "images" && !hasMore &&
         paginatedImages.length > 0 &&
         !isPaginating &&
         !isLoadingImages && (
@@ -754,7 +777,7 @@ export default function GalleryPage(props: GalleryPageProps) {
         )}
 
       {/* Infinite Scroll Trigger */}
-      {hasMore && paginatedImages.length > 0 && !isLoadingImages && (
+      {mediaType === "images" && hasMore && paginatedImages.length > 0 && !isLoadingImages && (
         <div
           ref={infiniteScrollRef}
           className="h-20 w-full flex items-center justify-center"
