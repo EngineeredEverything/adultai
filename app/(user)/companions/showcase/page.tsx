@@ -15,7 +15,6 @@ export default async function ShowcasePage() {
   const companions = await prisma.companion.findMany({
     where: { featured: true },
     orderBy: [
-      { displayOrder: 'asc' },
       { createdAt: 'desc' },
     ],
   });
