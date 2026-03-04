@@ -8,6 +8,7 @@ import { recordImagePreference } from "@/actions/images/preference"
 import { toast } from "sonner"
 import { Loader2, Globe, Lock, Download, Trash2, X, ChevronLeft, ChevronRight, RefreshCw, Pencil } from "lucide-react"
 import type { SearchImagesResponseSuccessType } from "@/types/images"
+import { CategoryPicker } from "./CategoryPicker"
 
 type ImageItem = SearchImagesResponseSuccessType["images"][number]
 
@@ -35,6 +36,8 @@ export function GeneratedImagePreview({
   const [publishingIds, setPublishingIds] = useState<Set<string>>(new Set())
   const [savingPrivateIds, setSavingPrivateIds] = useState<Set<string>>(new Set())
   const [deletingIds, setDeletingIds] = useState<Set<string>>(new Set())
+  // Per-image selected categories
+  const [imageCategoryMap, setImageCategoryMap] = useState<Record<string, string[]>>({})
   // Full-size lightbox
   const [viewingImage, setViewingImage] = useState<ImageItem | null>(null)
 
@@ -61,7 +64,8 @@ export function GeneratedImagePreview({
   const handlePublish = async (imageId: string) => {
     setPublishingIds((prev) => new Set(prev).add(imageId))
     try {
-      const result = await updateImageInfo(imageId, { isPublic: true })
+      const categoryIds = imageCategoryMap[imageId] || []
+      const result = await updateImageInfo(imageId, { isPublic: true, ...(categoryIds.length > 0 && { categoryIds }) })
       if ("error" in result) {
         toast.error("Failed to publish image")
       } else {
@@ -80,6 +84,10 @@ export function GeneratedImagePreview({
   const handleSavePrivate = async (imageId: string) => {
     setSavingPrivateIds((prev) => new Set(prev).add(imageId))
     try {
+      const categoryIds = imageCategoryMap[imageId] || []
+      if (categoryIds.length > 0) {
+        await updateImageInfo(imageId, { categoryIds })
+      }
       toast.success("Saved to your private gallery!")
       recordPreferenceOnSave(imageId)
       onSavePrivate?.(imageId)
@@ -218,6 +226,13 @@ export function GeneratedImagePreview({
                   {!isProcessing && image.imageUrl && (
                     <div className="p-3 space-y-2">
                       <p className="text-sm text-gray-400 line-clamp-2">{image.prompt}</p>
+
+                      {/* Category picker */}
+                      <CategoryPicker
+                        compact
+                        selectedIds={imageCategoryMap[image.id] || []}
+                        onChange={(ids) => setImageCategoryMap((prev) => ({ ...prev, [image.id]: ids }))}
+                      />
 
                       <div className="flex flex-col gap-2">
                         <div className="flex gap-2">
@@ -358,6 +373,18 @@ export function GeneratedImagePreview({
               className="max-w-full max-h-[90vh] object-contain rounded-lg shadow-2xl"
               onClick={(e) => e.stopPropagation()}
             />
+
+            {/* Category picker for lightbox */}
+            <div
+              className="absolute bottom-20 left-1/2 -translate-x-1/2 bg-black/70 backdrop-blur-md rounded-2xl px-4 py-2 max-w-[95vw]"
+              onClick={(e) => e.stopPropagation()}
+            >
+              <CategoryPicker
+                compact
+                selectedIds={imageCategoryMap[viewingImage.image.id] || []}
+                onChange={(ids) => setImageCategoryMap((prev) => ({ ...prev, [viewingImage!.image.id]: ids }))}
+              />
+            </div>
 
             {/* Bottom action bar */}
             <div
