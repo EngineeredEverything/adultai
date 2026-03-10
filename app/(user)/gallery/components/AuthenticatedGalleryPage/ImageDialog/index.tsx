@@ -2,7 +2,7 @@
 
 import type React from "react";
 
-import { Dialog, DialogContent } from "@/components/ui/dialog";
+import { Dialog, DialogContent, DialogTitle } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import { useState, useEffect, useCallback, useRef } from "react";
 import Image from "next/image";
@@ -343,7 +343,8 @@ export function ImageDialog({
 
   return (
     <Dialog open={isOpen} onOpenChange={onClose}>
-      <DialogContent className="w-full max-w-4xl max-h-[95vh] p-0 overflow-hidden">
+      <DialogContent className="w-full max-w-4xl max-h-[95vh] p-0 overflow-hidden" aria-describedby={undefined}>
+        <DialogTitle className="sr-only">Image Details</DialogTitle>
         <div className="flex flex-col max-h-[95vh]">
           {/* Header */}
           <div className="flex items-center justify-between p-4 border-b bg-white sticky top-0 z-10">

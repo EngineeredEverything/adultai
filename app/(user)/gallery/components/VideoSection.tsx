@@ -5,7 +5,7 @@ import { searchVideos } from "@/actions/videos/info"
 import { deleteVideo } from "@/actions/videos/delete"
 import type { SearchVideosResponseSuccessType } from "@/types/videos"
 import { Play, Trash2, Download, X } from "lucide-react"
-import { Dialog, DialogContent } from "@/components/ui/dialog"
+import { Dialog, DialogContent, DialogTitle } from "@/components/ui/dialog"
 import { toast } from "sonner"
 import type { MediaType } from "./MediaTypeFilter"
 
@@ -99,7 +99,8 @@ function VideoDetailDialog({
 
   return (
     <Dialog open={isOpen} onOpenChange={(open) => !open && onClose()}>
-      <DialogContent className="max-w-3xl p-0 bg-black/95 border-gray-800">
+      <DialogContent className="max-w-3xl p-0 bg-black/95 border-gray-800" aria-describedby={undefined}>
+        <DialogTitle className="sr-only">Video Player</DialogTitle>
         <div className="relative">
           <button onClick={onClose} className="absolute top-3 right-3 z-10 bg-black/60 rounded-full p-1.5 hover:bg-black/80">
             <X className="w-5 h-5 text-white" />
