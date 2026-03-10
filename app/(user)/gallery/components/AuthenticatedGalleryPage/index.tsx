@@ -73,7 +73,7 @@ export default function GalleryPage(props: GalleryPageProps) {
   const [generatedImages, setGeneratedImages] = useState<
     SearchImagesResponseSuccessType["images"]
   >([]);
-  const [totalCount, setTotalCount] = useState(0);
+  const [totalCount, setTotalCount] = useState(prefetchedCount ?? 0);
   const [categories, setCategories] = useState<Category[]>([]);
   const [interests, setInterests] = useState<string[]>([]);
   const [showOnboarding, setShowOnboarding] = useState(false);
