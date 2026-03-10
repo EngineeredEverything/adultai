@@ -4,6 +4,7 @@ import { Badge } from "@/components/ui/badge";
 import type { SearchImagesResponseSuccessType } from "@/types/images";
 import { Lock, TrendingUp, TrendingDown, Film, Loader2, Play, X, ThumbsUp, ThumbsDown } from "lucide-react";
 import { useState, useRef } from "react";
+import { useSession } from "next-auth/react";
 import { toast } from "sonner";
 import { createVote } from "@/actions/votes/create";
 import { showAuthToast, isAuthError } from "@/lib/auth-toast";
@@ -37,6 +38,7 @@ export function ImageCard({
   onError: () => void;
   index: number;
 }) {
+  const { data: session } = useSession();
   const [hovering, setHovering] = useState(false);
   const [isAnimating, setIsAnimating] = useState(false);
   const [animatedVideoUrl, setAnimatedVideoUrl] = useState<string | null>(null);
@@ -77,6 +79,7 @@ export function ImageCard({
   const handleVote = async (e: React.MouseEvent, voteType: "UPVOTE" | "DOWNVOTE") => {
     e.stopPropagation();
     if (isVoting) return;
+    if (!session?.user) { showAuthToast("vote"); return; }
     setIsVoting(true);
     const prev = { userVote, voteScore, upvotes, downvotes };
     if (userVote === voteType) {
