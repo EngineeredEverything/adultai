@@ -4,7 +4,6 @@ import { Badge } from "@/components/ui/badge";
 import type { SearchImagesResponseSuccessType } from "@/types/images";
 import { Lock, TrendingUp, TrendingDown, Film, Loader2, Play, X, ThumbsUp, ThumbsDown } from "lucide-react";
 import { useState, useRef } from "react";
-import { useSession } from "next-auth/react";
 import { toast } from "sonner";
 import { createVote } from "@/actions/votes/create";
 import { showAuthToast, isAuthError } from "@/lib/auth-toast";
@@ -38,7 +37,6 @@ export function ImageCard({
   onError: () => void;
   index: number;
 }) {
-  const { data: session } = useSession();
   const [hovering, setHovering] = useState(false);
   const [isAnimating, setIsAnimating] = useState(false);
   const [animatedVideoUrl, setAnimatedVideoUrl] = useState<string | null>(null);
@@ -79,30 +77,11 @@ export function ImageCard({
   const handleVote = async (e: React.MouseEvent, voteType: "UPVOTE" | "DOWNVOTE") => {
     e.stopPropagation();
     if (isVoting) return;
-    if (!session?.user) { showAuthToast("vote"); return; }
     setIsVoting(true);
-    const prev = { userVote, voteScore, upvotes, downvotes };
-    if (userVote === voteType) {
-      setUserVote(null);
-      if (voteType === "UPVOTE") { setUpvotes(u => Math.max(0, u - 1)); setVoteScore(s => s - 1); }
-      else { setDownvotes(d => Math.max(0, d - 1)); setVoteScore(s => s + 1); }
-    } else if (userVote && userVote !== voteType) {
-      setUserVote(voteType);
-      if (voteType === "UPVOTE") { setUpvotes(u => u + 1); setDownvotes(d => Math.max(0, d - 1)); setVoteScore(s => s + 2); }
-      else { setDownvotes(d => d + 1); setUpvotes(u => Math.max(0, u - 1)); setVoteScore(s => s - 2); }
-    } else {
-      setUserVote(voteType);
-      if (voteType === "UPVOTE") { setUpvotes(u => u + 1); setVoteScore(s => s + 1); }
-      else { setDownvotes(d => d + 1); setVoteScore(s => s - 1); }
-    }
     try {
       const res = await createVote(image.image.id, voteType);
       if ("error" in res) {
-        if (isAuthError(res.error)) {
-          setUserVote(prev.userVote); setVoteScore(prev.voteScore);
-          setUpvotes(prev.upvotes); setDownvotes(prev.downvotes);
-          showAuthToast("vote"); return;
-        }
+        if (isAuthError(res.error)) { showAuthToast("vote"); return; }
         throw new Error(res.error);
       }
       setUserVote(res.userVote);
@@ -110,8 +89,6 @@ export function ImageCard({
       setUpvotes(res.upvotes || 0);
       setDownvotes(res.downvotes || 0);
     } catch {
-      setUserVote(prev.userVote); setVoteScore(prev.voteScore);
-      setUpvotes(prev.upvotes); setDownvotes(prev.downvotes);
       toast.error("Failed to vote");
     } finally {
       setIsVoting(false);
