@@ -437,6 +437,10 @@ export default function GalleryPage(props: GalleryPageProps) {
     setShowSignInDialog,
     count,
     setCount,
+    selectedModel,
+    setSelectedModel,
+    selectedStyle,
+    setSelectedStyle,
   } = useImageGeneration(generationParams);
 
   // Handle mobile sheet close
@@ -576,6 +580,10 @@ export default function GalleryPage(props: GalleryPageProps) {
               setIsPublic={setIsPublic}
               count={count}
               setCount={setCount}
+              selectedModel={selectedModel}
+              setSelectedModel={setSelectedModel}
+              selectedStyle={selectedStyle}
+              setSelectedStyle={setSelectedStyle}
             />
           </div>
 
@@ -859,6 +867,10 @@ export default function GalleryPage(props: GalleryPageProps) {
               setIsPublic={setIsPublic}
               count={count}
               setCount={setCount}
+              selectedModel={selectedModel}
+              setSelectedModel={setSelectedModel}
+              selectedStyle={selectedStyle}
+              setSelectedStyle={setSelectedStyle}
             />
           )}
         </AnimatePresence>

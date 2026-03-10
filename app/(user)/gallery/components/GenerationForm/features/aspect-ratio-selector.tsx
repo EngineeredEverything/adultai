@@ -20,11 +20,12 @@ export function AspectRatioSelector({
   disabled = false,
 }: AspectRatioSelectorProps) {
   const ratios = [
-    { label: "1:1", value: "1:1" },
-    { label: "4:5", value: "4:5" },
-    { label: "3:4", value: "3:4" },
-    { label: "16:9", value: "16:9" },
-    { label: "9:16", value: "9:16" },
+    { label: "1:1 Square", value: "1:1" },
+    { label: "4:5 Portrait", value: "4:5" },
+    { label: "2:3 Portrait", value: "2:3" },
+    { label: "3:4 Portrait", value: "3:4" },
+    { label: "9:16 Tall", value: "9:16" },
+    { label: "16:9 Wide", value: "16:9" },
   ]
 
   return (

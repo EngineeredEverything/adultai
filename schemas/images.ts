@@ -35,6 +35,11 @@ export const createGeneratedImageSchema = z.object({
   width: z.optional(z.number().int().default(1024)),
   height: z.optional(z.number().int().default(1024)),
   isPublic: z.boolean().default(false),
+  model_id: z.string().optional(),
+  loras: z.array(z.object({
+    id: z.string(),
+    strength: z.number().min(-1).max(2),
+  })).optional(),
 })
 
 export const createGeneratedImagesBatchSchema = z.object({

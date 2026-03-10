@@ -3,7 +3,7 @@
 import type React from "react";
 import { type Dispatch, type SetStateAction, useState, useEffect } from "react";
 import { AnimatePresence, motion } from "framer-motion";
-import { computeLorasFromStyle } from "../hooks/use-lora-utils";
+
 import { Textarea } from "@/components/ui/textarea";
 import { Button } from "@/components/ui/button";
 import { MoreHorizontal, AlertTriangle, Search, Wand2 } from "lucide-react";
@@ -53,6 +53,10 @@ interface GenerationFormProps {
   setIsPublic: Dispatch<SetStateAction<boolean>>;
   count: number;
   setCount: Dispatch<SetStateAction<number>>;
+  selectedModel?: string;
+  setSelectedModel?: (model: string) => void;
+  selectedStyle?: string;
+  setSelectedStyle?: (style: string) => void;
 }
 
 export default function GenerationForm({
@@ -70,13 +74,22 @@ export default function GenerationForm({
   setIsPublic,
   count,
   setCount,
+  selectedModel: selectedModelProp = "cyberrealistic_pony",
+  setSelectedModel: setSelectedModelProp,
+  selectedStyle: selectedStyleProp = "none",
+  setSelectedStyle: setSelectedStyleProp,
 }: GenerationFormProps) {
   // Form state
-  const [aspectRatio, setAspectRatio] = useState("4:5");
+  const [aspectRatio, setAspectRatio] = useState("832:1216");
   const [mode, setMode] = useState<"generate" | "search">("generate");
-  const [selectedModel, setSelectedModel] = useState("3.0-default");
+  // Use lifted state from hook if provided, otherwise fall back to local state
+  const [localModel, setLocalModel] = useState("cyberrealistic_pony");
+  const [localStyle, setLocalStyle] = useState("none");
+  const selectedModel = setSelectedModelProp ? selectedModelProp : localModel;
+  const selectedStyle = setSelectedStyleProp ? selectedStyleProp : localStyle;
+  const setSelectedModel = setSelectedModelProp ?? setLocalModel;
+  const setSelectedStyle = setSelectedStyleProp ?? setLocalStyle;
   const [selectedMP, setSelectedMP] = useState("standard");
-  const [selectedStyle, setSelectedStyle] = useState("none");
   const [selectedColor, setSelectedColor] = useState("natural");
   const router = useRouter();
   logger.info({ count });
@@ -103,31 +116,30 @@ export default function GenerationForm({
     height: Math.round(h / 8) * 8,
   });
 
-  const handleAspectRatioChange = (ratio: string) => {
-    setAspectRatio(ratio);
-    const [w, h] = ratio.split(":").map(Number);
-    // SD 1.5 optimal: keep short side at 512, long side derived from ratio.
-    // Hires-fix handles upscaling; don't exceed 768 on long side natively.
-    const BASE = 512;
-    let newWidth: number, newHeight: number;
-
-    if (w >= h) {
-      // Landscape or square: fix width at 512
-      newWidth = BASE;
-      newHeight = (h / w) * BASE;
+  const handleAspectRatioChange = (ratioStr: string) => {
+    setAspectRatio(ratioStr);
+    const [w, h] = ratioStr.split(":").map(Number);
+    // SDXL optimal: total pixel count ~1MP (1024×1024), keep multiples of 64
+    // Standard SDXL sizes: 1:1→1024×1024, 4:5→832×1040, 9:16→768×1344, 16:9→1344×768, 3:4→896×1152
+    const SDXL_SIZES: Record<string, { width: number; height: number }> = {
+      "1:1": { width: 1024, height: 1024 },
+      "4:5": { width: 832, height: 1040 },
+      "9:16": { width: 768, height: 1344 },
+      "16:9": { width: 1344, height: 768 },
+      "3:4": { width: 896, height: 1152 },
+      "2:3": { width: 832, height: 1216 },
+    };
+    const key = `${w}:${h}`;
+    if (SDXL_SIZES[key]) {
+      setRatio(SDXL_SIZES[key]);
     } else {
-      // Portrait: fix width at 512, scale height
-      newWidth = BASE;
-      newHeight = (h / w) * BASE;
-      // Cap portrait height at 768 (SD 1.5 sweet spot)
-      if (newHeight > 768) {
-        newHeight = 768;
-        newWidth = (w / h) * newHeight;
-      }
+      // Fallback: fit within 1MP, round to 64
+      const TARGET_PX = 1024 * 1024;
+      const scale = Math.sqrt(TARGET_PX / (w * h));
+      const newWidth = Math.round((w * scale) / 64) * 64;
+      const newHeight = Math.round((h * scale) / 64) * 64;
+      setRatio({ width: newWidth, height: newHeight });
     }
-
-    const adjusted = adjustDimensions(newWidth, newHeight);
-    setRatio({ width: adjusted.width, height: adjusted.height });
   };
 
   const handlePremiumRequired = (feature: Feature) => {
@@ -176,10 +188,6 @@ export default function GenerationForm({
     if (!prompt.trim()) return;
     router.push(`/gallery?search=${encodeURIComponent(prompt.trim())}`);
   };
-
-  // Compute LoRAs from the selected style
-  const loras = computeLorasFromStyle(selectedStyle);
-
 
   return (
     <motion.form

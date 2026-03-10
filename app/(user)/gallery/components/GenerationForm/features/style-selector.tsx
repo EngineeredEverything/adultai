@@ -5,16 +5,13 @@ import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover
 import { motion } from "framer-motion"
 import { Check } from "lucide-react"
 
-const LORA_STYLES = [
-  { id: "none", name: "None (Base Model)", description: "Default realistic style" },
-  { id: "more_details", name: "Enhanced Detail", description: "Extra fine detail and texture" },
+// LoRA styles compatible with SDXL Pony models
+// IDs must match LORA_REGISTRY keys in /root/urpm/core/model_loader.py
+export const LORA_STYLES = [
+  { id: "none", name: "Base Model", description: "No style modifier — pure model output" },
+  { id: "more_details", name: "Enhanced Detail", description: "Extra fine skin texture and detail" },
   { id: "epi_noiseoffset", name: "Dramatic Lighting", description: "Deep shadows, cinematic contrast" },
-  { id: "polaroid_style", name: "Vintage / Polaroid", description: "Retro instant camera look" },
-  { id: "ghibli_style", name: "Ghibli / Anime Art", description: "Studio Ghibli-inspired" },
-  { id: "anime_lineart", name: "Anime Lineart", description: "Manga line-art style" },
-  { id: "hipoly_3d", name: "3D Rendered", description: "CGI / 3D model look" },
-  { id: "cute_girl_mix4", name: "Soft / Cute", description: "Soft, gentle aesthetic" },
-  { id: "clothing_adjuster", name: "Clothing Control", description: "Adjust clothing presence" },
+  { id: "detail_tweaker", name: "Sharp & Clear", description: "Fine-grained detail control" },
 ]
 
 interface StyleSelectorProps {
@@ -25,7 +22,7 @@ interface StyleSelectorProps {
 }
 
 export function StyleSelector({ selectedStyle, onStyleChange }: StyleSelectorProps) {
-  const selectedName = LORA_STYLES.find((s) => s.id === selectedStyle)?.name || "None"
+  const selectedName = LORA_STYLES.find((s) => s.id === selectedStyle)?.name || "Base Model"
 
   return (
     <motion.div whileTap={{ scale: 0.95 }}>
@@ -41,17 +38,18 @@ export function StyleSelector({ selectedStyle, onStyleChange }: StyleSelectorPro
           </Button>
         </PopoverTrigger>
         <PopoverContent className="w-72 p-2">
+          <p className="text-xs text-muted-foreground px-2 pb-2 font-medium uppercase tracking-wide">Style Modifier</p>
           <div className="space-y-1 max-h-64 overflow-y-auto">
             {LORA_STYLES.map((style) => (
               <Button
                 key={style.id}
                 variant={selectedStyle === style.id ? "default" : "ghost"}
                 size="sm"
-                className="w-full justify-between text-left"
+                className="w-full justify-between text-left h-auto py-2"
                 onClick={() => onStyleChange(style.id)}
               >
-                <div className="flex flex-col items-start">
-                  <span className="text-sm">{style.name}</span>
+                <div className="flex flex-col items-start gap-0.5">
+                  <span className="text-sm font-medium">{style.name}</span>
                   <span className="text-xs text-muted-foreground font-normal">{style.description}</span>
                 </div>
                 {selectedStyle === style.id && <Check className="h-4 w-4 ml-2 flex-shrink-0" />}

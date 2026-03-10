@@ -45,15 +45,17 @@ export const createGeneratedImagesRAW = async (user: User, data: z.infer<typeof 
     const seeds = Array.from({ length: data.count }, () => Math.floor(Math.random() * 1000000))
 
     // Start image generation process with webhook
-    const modelConfig = provider.MODEL_CONFIGS.flux
+    const modelConfig = provider.MODEL_CONFIGS.sdxl
     const response = await initiateImageGeneration({
       prompt: data.prompt,
       seeds,
       count: data.count,
       modelConfig,
-      width: data.width || 512,
-      height: data.height || 768,
+      width: data.width || 832,
+      height: data.height || 1216,
       userId: user.id,
+      model_id: data.model_id,
+      loras: data.loras,
     })
 
     // Create placeholder images in database
@@ -64,8 +66,8 @@ export const createGeneratedImagesRAW = async (user: User, data: z.infer<typeof 
       response.taskId,
       modelConfig,
       0, // No cost for bots
-      data.width || 512,
-      data.height || 768,
+      data.width || 832,
+      data.height || 1216,
       response.futureLinks || [],
     )
 
@@ -127,15 +129,20 @@ export const createGeneratedImagesRAW = async (user: User, data: z.infer<typeof 
   const seeds = Array.from({ length: data.count }, () => Math.floor(Math.random() * 1000000))
 
   // Start image generation process with webhook
-  const modelConfig = provider.MODEL_CONFIGS.flux
+  // SDXL models (cyberrealistic_pony, pony_realism, etc.) need 1024x native dimensions
+  const modelConfig = provider.MODEL_CONFIGS.sdxl
+  const defaultWidth = data.width || 832
+  const defaultHeight = data.height || 1216
   const response = await initiateImageGeneration({
     prompt: data.prompt,
     seeds,
     count: data.count,
     modelConfig,
-    width: data.width || 512,
-    height: data.height || 768,
+    width: defaultWidth,
+    height: defaultHeight,
     userId: user.id,
+    model_id: data.model_id,
+    loras: data.loras,
   })
 
   // Create placeholder images in database
@@ -181,6 +188,8 @@ export async function initiateImageGeneration({
   width,
   height,
   userId,
+  model_id,
+  loras,
 }: {
   prompt: string
   seeds: number[]
@@ -189,6 +198,8 @@ export async function initiateImageGeneration({
   width: number
   height: number
   userId: string
+  model_id?: string
+  loras?: { id: string; strength: number }[]
 }): Promise<{
   taskId: string
   eta?: number
@@ -219,6 +230,10 @@ export async function initiateImageGeneration({
         webhook: WEBHOOK_URL,
         track_id: userId, // Send user ID as tracking ID for webhook
         ...modelConfig,
+        // Override model and loras if explicitly provided by user
+        ...(model_id ? { base_model: model_id } : {}),
+        ...(loras && loras.length > 0 ? { loras } : {}),
+        ...(loras && loras.length === 1 ? { lora_id: loras[0].id, lora_strength: loras[0].strength } : {}),
       }),
     })
 

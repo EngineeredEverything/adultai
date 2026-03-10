@@ -1,6 +1,6 @@
 "use client";
 
-import { Dispatch, SetStateAction, useState } from "react";
+import { Dispatch, SetStateAction } from "react";
 import { motion } from "framer-motion";
 import { Textarea } from "@/components/ui/textarea";
 import { Button } from "@/components/ui/button";
@@ -29,6 +29,10 @@ interface MobileGenerateSheetProps {
   setIsPublic: Dispatch<SetStateAction<boolean>>;
   count: number;
   setCount: Dispatch<SetStateAction<number>>;
+  selectedModel?: string;
+  setSelectedModel?: (model: string) => void;
+  selectedStyle?: string;
+  setSelectedStyle?: (style: string) => void;
 }
 
 export default function MobileGenerateSheet({
@@ -47,37 +51,11 @@ export default function MobileGenerateSheet({
   setIsPublic,
   count,
   setCount,
+  selectedModel,
+  setSelectedModel,
+  selectedStyle,
+  setSelectedStyle,
 }: MobileGenerateSheetProps) {
-  const [aspectRatio, setAspectRatio] = useState("4:5");
-
-  // Ensure dimensions are multiples of 8
-  const adjustDimensions = (w: number, h: number) => {
-    return {
-      width: Math.round(w / 8) * 8,
-      height: Math.round(h / 8) * 8,
-    };
-  };
-
-  const handleAspectRatioChange = (r: string) => {
-    setAspectRatio(r);
-    const [w, h] = r.split(":").map(Number);
-    // SD 1.5 optimal: short side at 512, portrait height capped at 768
-    const BASE = 512;
-    let newWidth: number, newHeight: number;
-    if (w >= h) {
-      newWidth = BASE;
-      newHeight = (h / w) * BASE;
-    } else {
-      newWidth = BASE;
-      newHeight = (h / w) * BASE;
-      if (newHeight > 768) {
-        newHeight = 768;
-        newWidth = (w / h) * newHeight;
-      }
-    }
-    const adjusted = adjustDimensions(newWidth, newHeight);
-    setRatio({ width: adjusted.width, height: adjusted.height });
-  };
 
   return (
     <motion.div
@@ -191,6 +169,10 @@ export default function MobileGenerateSheet({
             subscriptionStatus={subscriptionStatus}
             count={count}
             setCount={setCount}
+            selectedModel={selectedModel}
+            setSelectedModel={setSelectedModel}
+            selectedStyle={selectedStyle}
+            setSelectedStyle={setSelectedStyle}
           />
         </div>
       </motion.div>

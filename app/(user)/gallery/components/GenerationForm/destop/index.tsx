@@ -25,6 +25,10 @@ interface InputSectionProps {
   setIsPublic: Dispatch<SetStateAction<boolean>>;
   count: number;
   setCount: Dispatch<SetStateAction<number>>;
+  selectedModel?: string;
+  setSelectedModel?: (model: string) => void;
+  selectedStyle?: string;
+  setSelectedStyle?: (style: string) => void;
 }
 
 // Memoized title component to prevent unnecessary re-renders
@@ -75,6 +79,10 @@ export default memo(function InputSection(props: InputSectionProps) {
     setIsPublic,
     count,
     setCount,
+    selectedModel,
+    setSelectedModel,
+    selectedStyle,
+    setSelectedStyle,
   } = props;
 
   return (
@@ -127,6 +135,10 @@ export default memo(function InputSection(props: InputSectionProps) {
                 setIsPublic={setIsPublic}
                 count={count}
                 setCount={setCount}
+                selectedModel={selectedModel}
+                setSelectedModel={setSelectedModel}
+                selectedStyle={selectedStyle}
+                setSelectedStyle={setSelectedStyle}
               />
             </motion.div>
           </motion.div>

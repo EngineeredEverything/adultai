@@ -11,6 +11,7 @@ import { POLL_INTERVAL } from "../data/constants"
 import type { GetCurrentUserInfoSuccessType } from "@/types/user"
 import { toast } from "sonner"
 import { useLoadingState } from "./use-loading-state"
+import { computeLorasFromStyle } from "./use-lora-utils"
 
 interface UseImageGenerationParams {
   initialImages: SearchImagesResponseSuccessType["images"]
@@ -31,6 +32,8 @@ interface GenerationState {
   isPublic: boolean
   count: number
   showSignInDialog: boolean
+  selectedModel: string
+  selectedStyle: string
 }
 
 export function useImageGeneration(params: UseImageGenerationParams) {
@@ -40,10 +43,12 @@ export function useImageGeneration(params: UseImageGenerationParams) {
   const [state, setState] = useState<GenerationState>({
     prompt: "",
     isGenerating: false,
-    ratio: { width: 512, height: 768 }, // SD 1.5 optimal portrait — hires-fix upscales to final size
+    ratio: { width: 832, height: 1216 }, // SDXL optimal portrait (832×1216)
     isPublic: false, // Default to private - users must explicitly publish
     count: 2, // Default 2 so users can pick their favorite (A/B preference data)
     showSignInDialog: false,
+    selectedModel: "cyberrealistic_pony", // Default SDXL model
+    selectedStyle: "none",
   })
 
   const [pendingTaskIds, setPendingTaskIds] = useState<string[]>(
@@ -110,6 +115,20 @@ export function useImageGeneration(params: UseImageGenerationParams) {
   const setShowSignInDialog = useCallback(
     (show: boolean) => {
       updateState({ showSignInDialog: show })
+    },
+    [updateState],
+  )
+
+  const setSelectedModel = useCallback(
+    (model: string) => {
+      updateState({ selectedModel: model })
+    },
+    [updateState],
+  )
+
+  const setSelectedStyle = useCallback(
+    (style: string) => {
+      updateState({ selectedStyle: style })
     },
     [updateState],
   )
@@ -237,10 +256,12 @@ export function useImageGeneration(params: UseImageGenerationParams) {
       updateState({ isGenerating: true })
 
       try {
+        const loras = computeLorasFromStyle(state.selectedStyle)
         const results = await createGeneratedImage({
           count: state.count,
           prompt: state.prompt,
-          loras,
+          loras: loras.length > 0 ? loras : undefined,
+          model_id: state.selectedModel !== "cyberrealistic_pony" ? state.selectedModel : undefined,
           width: state.ratio.width,
           height: state.ratio.height,
           isPublic: state.isPublic,
@@ -361,6 +382,8 @@ export function useImageGeneration(params: UseImageGenerationParams) {
     setIsPublic,
     setCount,
     setShowSignInDialog,
+    setSelectedModel,
+    setSelectedStyle,
     handleSubmit,
     retryPrompt,
     pendingCount,
