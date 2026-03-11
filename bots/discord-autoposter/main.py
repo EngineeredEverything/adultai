@@ -65,8 +65,10 @@ def load_or_create_accounts():
 # -----------------------
 # Generation Config
 # -----------------------
-MODELS = ["flux", "sdxl"]
-SAMPLERS = ["euler_a", "euler", "dpm_2m_karras", "dpm_sde_karras"]
+# cyberrealistic_pony is the most photorealistic model on the GPU
+MODELS = ["cyberrealistic_pony"]
+# DPM++ samplers are better for photorealism and quality
+SAMPLERS = ["DPM++ 2M Karras", "DPM++ SDE Karras", "Euler a"]
 
 # Portrait-favored aspect ratios — better for character/person images
 ASPECT_RATIOS = [
@@ -100,9 +102,9 @@ def run_task():
             "count": 4,
             "width": dims["width"],
             "height": dims["height"],
-            "modelId": random.choice(MODELS),
-            "steps": random.choice([25, 30, 35, 40]),
-            "cfg": random.choice([6.0, 7.0, 7.5, 8.0]),
+            "modelId": "cyberrealistic_pony",  # Most photorealistic model
+            "steps": random.choice([35, 40, 45]),  # Higher steps = better quality
+            "cfg": random.choice([6.0, 6.5, 7.0]),  # Lower CFG = more natural, less over-processed
             "sampler": random.choice(SAMPLERS),
         }
 

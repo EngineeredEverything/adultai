@@ -917,10 +917,11 @@ class RetryButton(discord.ui.Button):
 
 
 class ImageButtons(discord.ui.View):
-    def __init__(self, images, prompt):
+    def __init__(self, images, prompt, meta=None):
         super().__init__(timeout=None)  # Never timeout — keep retry always active
         self.images = images
         self.prompt = prompt
+        self.meta = meta or []
 
         # Number buttons to select individual images (shows full-size with action buttons)
         for i in range(min(4, len(images))):

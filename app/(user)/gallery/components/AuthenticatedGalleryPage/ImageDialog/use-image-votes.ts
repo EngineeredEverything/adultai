@@ -102,7 +102,7 @@ export function useImageVotes(
                 upvotePercentage: 0,
             })
         }
-    }, [imageId, user, refreshVotes])
+    }, [imageId, user?.id])
 
     const handleVote = async (voteType: "UPVOTE" | "DOWNVOTE") => {
         if (!imageId || isLoading) return
@@ -198,8 +198,15 @@ export function useImageVotes(
         }
     }
 
-    const handleUpvote = useCallback(() => handleVote("UPVOTE"), [imageId, user])
-    const handleDownvote = useCallback(() => handleVote("DOWNVOTE"), [imageId, user])
+    const handleVoteStable = useCallback(
+        async (voteType: "UPVOTE" | "DOWNVOTE") => {
+            return handleVote(voteType)
+        },
+        [imageId, user, voteStats, userVote]
+    )
+
+    const handleUpvote = useCallback(() => handleVoteStable("UPVOTE"), [handleVoteStable])
+    const handleDownvote = useCallback(() => handleVoteStable("DOWNVOTE"), [handleVoteStable])
 
     return {
         userVote,

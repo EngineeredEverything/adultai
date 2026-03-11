@@ -43,12 +43,12 @@ export default async function AdminDashboard() {
         };
       })
     ),
-    // Top categories
-    db.category.findMany({
-      include: { _count: { select: { generatedImages: true } } },
-      orderBy: { generatedImages: { _count: "desc" } },
-      take: 5,
-    }),
+    // Top categories (by image count)
+    db.category.findMany({ take: 100 }).then(cats =>
+      cats.map(cat => ({ ...cat, imageCount: cat.imageIds.length }))
+        .sort((a, b) => b.imageCount - a.imageCount)
+        .slice(0, 5)
+    ),
     // Recent images
     db.generatedImage.findMany({
       orderBy: { createdAt: "desc" },
@@ -77,7 +77,7 @@ export default async function AdminDashboard() {
 
   const categoryData = categories.map((cat, i) => ({
     name: cat.name,
-    value: cat._count.generatedImages,
+    value: (cat as any).imageCount || cat.imageIds.length,
     color: palette[i % palette.length],
   }));
 
