@@ -1,0 +1,416 @@
+{
+  "norma@adultai.bot": {
+    "name": "Norma Stitz",
+    "archetype": "girl-next-door",
+    "style": "photorealistic",
+    "modelId": "cyberrealistic_pony",
+    "cfg": [5.5, 6.0, 6.5],
+    "steps": [35, 40],
+    "characterPrompts": [
+      "a stunning brunette woman with natural makeup and warm smile, freckles, girl next door",
+      "a gorgeous wholesome brunette woman, natural beauty, minimal makeup, soft features",
+      "a beautiful woman with chestnut hair and natural freckles, warm inviting expression"
+    ],
+    "settingWeights": {
+      "bedroom": 0.30,
+      "kitchen": 0.20,
+      "bathroom": 0.20,
+      "outdoor": 0.20,
+      "office": 0.05,
+      "other": 0.05
+    },
+    "outfitWeights": {
+      "lingerie": 0.25,
+      "casual": 0.35,
+      "nude": 0.20,
+      "athletic": 0.20
+    },
+    "learnedWeights": {},
+    "totalVotes": 0,
+    "avgVoteScore": 0,
+    "lastLearned": null
+  },
+
+  "connie@adultai.bot": {
+    "name": "Connie Lingus",
+    "archetype": "seductive-professional",
+    "style": "photorealistic",
+    "modelId": "cyberrealistic_pony",
+    "cfg": [6.0, 6.5, 7.0],
+    "steps": [40, 45],
+    "characterPrompts": [
+      "a stunning professional woman in her 30s, sharp jawline, confident expression, perfectly styled dark hair",
+      "a gorgeous powerful businesswoman, commanding presence, sleek appearance, sophisticated beauty",
+      "a beautiful executive woman with piercing eyes and immaculate grooming, commanding and sensual"
+    ],
+    "settingWeights": {
+      "office": 0.40,
+      "bedroom": 0.25,
+      "other": 0.20,
+      "outdoor": 0.15
+    },
+    "outfitWeights": {
+      "formal": 0.40,
+      "lingerie": 0.35,
+      "nude": 0.25
+    },
+    "learnedWeights": {},
+    "totalVotes": 0,
+    "avgVoteScore": 0,
+    "lastLearned": null
+  },
+
+  "dick@adultai.bot": {
+    "name": "Dick Gozinya",
+    "archetype": "experimental-provocateur",
+    "style": "artistic",
+    "modelId": "cyberrealistic_pony",
+    "cfg": [6.0, 7.0, 7.5],
+    "steps": [40, 45],
+    "characterPrompts": [
+      "a bold artistic woman with avant-garde style, dramatic makeup, unconventional beauty",
+      "a strikingly beautiful woman with an edgy provocative look, artistic expression, striking features",
+      "a confident woman with dramatic artistic styling, bold and unconventional"
+    ],
+    "settingWeights": {
+      "other": 0.40,
+      "outdoor": 0.30,
+      "bedroom": 0.30
+    },
+    "outfitWeights": {
+      "lingerie": 0.30,
+      "nude": 0.35,
+      "casual": 0.20,
+      "formal": 0.15
+    },
+    "learnedWeights": {},
+    "totalVotes": 0,
+    "avgVoteScore": 0,
+    "lastLearned": null
+  },
+
+  "seymour@adultai.bot": {
+    "name": "Seymour Butts",
+    "archetype": "playful-comic",
+    "style": "photorealistic",
+    "modelId": "cyberrealistic_pony",
+    "cfg": [5.5, 6.0],
+    "steps": [35, 40],
+    "characterPrompts": [
+      "a fun playful beautiful blonde woman with bright eyes and mischievous smile",
+      "a gorgeous energetic woman with a playful expression and bubbly personality",
+      "a beautiful woman with a cheeky grin and bright infectious smile"
+    ],
+    "settingWeights": {
+      "outdoor": 0.35,
+      "bedroom": 0.25,
+      "bathroom": 0.25,
+      "other": 0.15
+    },
+    "outfitWeights": {
+      "casual": 0.30,
+      "lingerie": 0.30,
+      "athletic": 0.25,
+      "nude": 0.15
+    },
+    "learnedWeights": {},
+    "totalVotes": 0,
+    "avgVoteScore": 0,
+    "lastLearned": null
+  },
+
+  "amanda@adultai.bot": {
+    "name": "Amanda Hugginkiss",
+    "archetype": "wholesome-sweetheart",
+    "style": "photorealistic",
+    "modelId": "cyberrealistic_pony",
+    "cfg": [5.0, 5.5, 6.0],
+    "steps": [35, 40],
+    "characterPrompts": [
+      "a sweet beautiful woman with soft features, warm eyes, gentle smile, approachable and lovely",
+      "a gorgeous wholesome woman with honey blonde hair, gentle demeanor, natural beauty",
+      "a beautiful woman with kind eyes and a warm genuine smile, soft romantic look"
+    ],
+    "settingWeights": {
+      "bedroom": 0.30,
+      "outdoor": 0.30,
+      "kitchen": 0.20,
+      "bathroom": 0.20
+    },
+    "outfitWeights": {
+      "casual": 0.35,
+      "lingerie": 0.30,
+      "nude": 0.20,
+      "athletic": 0.15
+    },
+    "learnedWeights": {},
+    "totalVotes": 0,
+    "avgVoteScore": 0,
+    "lastLearned": null
+  },
+
+  "mike@adultai.bot": {
+    "name": "Mike Rotch",
+    "archetype": "alt-punk",
+    "style": "artistic",
+    "modelId": "cyberrealistic_pony",
+    "cfg": [6.5, 7.0, 7.5],
+    "steps": [40, 45],
+    "characterPrompts": [
+      "a beautiful punk woman with tattoos, colored hair, alternative aesthetic, gorgeous face",
+      "a stunning alt-girl with piercings, dark makeup, eclectic style and striking features",
+      "a gorgeous rebellious woman with an edgy look, tattoo sleeves, dramatic eye makeup"
+    ],
+    "settingWeights": {
+      "other": 0.35,
+      "outdoor": 0.30,
+      "bedroom": 0.25,
+      "bathroom": 0.10
+    },
+    "outfitWeights": {
+      "casual": 0.25,
+      "lingerie": 0.30,
+      "nude": 0.25,
+      "athletic": 0.20
+    },
+    "learnedWeights": {},
+    "totalVotes": 0,
+    "avgVoteScore": 0,
+    "lastLearned": null
+  },
+
+  "anita@adultai.bot": {
+    "name": "Anita Bath",
+    "archetype": "spa-wellness-goddess",
+    "style": "photorealistic",
+    "modelId": "cyberrealistic_pony",
+    "cfg": [5.5, 6.0],
+    "steps": [35, 40],
+    "characterPrompts": [
+      "a serene beautiful woman with glowing skin, spa setting, luminous and radiant",
+      "a gorgeous wellness goddess with perfect skin, relaxed and blissful expression, natural beauty",
+      "a beautiful woman with dewy glowing skin, zen expression, wellness and self-care aesthetic"
+    ],
+    "settingWeights": {
+      "bathroom": 0.50,
+      "outdoor": 0.25,
+      "bedroom": 0.15,
+      "other": 0.10
+    },
+    "outfitWeights": {
+      "nude": 0.40,
+      "casual": 0.30,
+      "lingerie": 0.20,
+      "athletic": 0.10
+    },
+    "learnedWeights": {},
+    "totalVotes": 0,
+    "avgVoteScore": 0,
+    "lastLearned": null
+  },
+
+  "wilma@adultai.bot": {
+    "name": "Wilma Fingerdoo",
+    "archetype": "wild-adventurer",
+    "style": "photorealistic",
+    "modelId": "cyberrealistic_pony",
+    "cfg": [6.0, 6.5],
+    "steps": [35, 40],
+    "characterPrompts": [
+      "a fit adventurous woman with sun-kissed skin and athletic build, wild hair, outdoorsy beauty",
+      "a gorgeous athletic woman with toned body, natural tan, confident outdoor explorer",
+      "a beautiful sporty woman with freckles from the sun, strong and sensual, nature lover"
+    ],
+    "settingWeights": {
+      "outdoor": 0.60,
+      "bathroom": 0.15,
+      "bedroom": 0.15,
+      "other": 0.10
+    },
+    "outfitWeights": {
+      "athletic": 0.40,
+      "casual": 0.25,
+      "nude": 0.25,
+      "lingerie": 0.10
+    },
+    "learnedWeights": {},
+    "totalVotes": 0,
+    "avgVoteScore": 0,
+    "lastLearned": null
+  },
+
+  "dixie@adultai.bot": {
+    "name": "Dixie Normous",
+    "archetype": "southern-belle",
+    "style": "photorealistic",
+    "modelId": "cyberrealistic_pony",
+    "cfg": [5.5, 6.0, 6.5],
+    "steps": [35, 40],
+    "characterPrompts": [
+      "a gorgeous Southern belle with long wavy auburn hair, warm hazel eyes, charming smile",
+      "a beautiful curvy Southern woman with soft features, sun-kissed skin, classic country charm",
+      "a stunning Southern beauty with flowing hair, warm complexion, wholesome and sensual"
+    ],
+    "settingWeights": {
+      "outdoor": 0.35,
+      "bedroom": 0.30,
+      "bathroom": 0.15,
+      "kitchen": 0.15,
+      "other": 0.05
+    },
+    "outfitWeights": {
+      "casual": 0.30,
+      "lingerie": 0.30,
+      "nude": 0.25,
+      "formal": 0.15
+    },
+    "learnedWeights": {},
+    "totalVotes": 0,
+    "avgVoteScore": 0,
+    "lastLearned": null
+  },
+
+  "ben@adultai.bot": {
+    "name": "Ben Dover",
+    "archetype": "dominatrix-power",
+    "style": "photorealistic",
+    "modelId": "cyberrealistic_pony",
+    "cfg": [6.5, 7.0],
+    "steps": [40, 45],
+    "characterPrompts": [
+      "a powerful commanding woman with strong presence, confident dominant energy, striking beauty",
+      "a gorgeous dominant woman with intense gaze, powerful physique, commanding and magnetic",
+      "a stunningly beautiful woman with an aura of authority, confident and captivating"
+    ],
+    "settingWeights": {
+      "other": 0.40,
+      "bedroom": 0.35,
+      "office": 0.25
+    },
+    "outfitWeights": {
+      "lingerie": 0.35,
+      "formal": 0.30,
+      "nude": 0.25,
+      "casual": 0.10
+    },
+    "learnedWeights": {},
+    "totalVotes": 0,
+    "avgVoteScore": 0,
+    "lastLearned": null
+  },
+
+  "oliver@adultai.bot": {
+    "name": "Oliver Klozoff",
+    "archetype": "minimalist-art",
+    "style": "artistic",
+    "modelId": "cyberrealistic_pony",
+    "cfg": [6.0, 6.5],
+    "steps": [40, 45],
+    "characterPrompts": [
+      "a striking woman with sculptural features and elegant minimalist aesthetic, artistic beauty",
+      "a beautiful woman with clean sharp features, understated elegance, geometric composition",
+      "a gorgeous woman with refined minimal styling, art gallery aesthetic, clean and striking"
+    ],
+    "settingWeights": {
+      "other": 0.50,
+      "bedroom": 0.25,
+      "outdoor": 0.25
+    },
+    "outfitWeights": {
+      "nude": 0.45,
+      "lingerie": 0.30,
+      "formal": 0.25
+    },
+    "learnedWeights": {},
+    "totalVotes": 0,
+    "avgVoteScore": 0,
+    "lastLearned": null
+  },
+
+  "vye@adultai.bot": {
+    "name": "Vye Brator",
+    "archetype": "cyberpunk-experimental",
+    "style": "artistic",
+    "modelId": "cyberrealistic_pony",
+    "cfg": [6.5, 7.0, 7.5],
+    "steps": [40, 45],
+    "characterPrompts": [
+      "a stunning cyberpunk woman with neon-lit features, chrome aesthetic, futuristic beauty",
+      "a beautiful woman with bioluminescent skin accents and cybernetic implants, sci-fi gorgeous",
+      "a gorgeous woman with neon hair and holographic makeup, cyberpunk-meets-luxury aesthetic"
+    ],
+    "settingWeights": {
+      "other": 0.60,
+      "outdoor": 0.25,
+      "bedroom": 0.15
+    },
+    "outfitWeights": {
+      "cyberpunk": 0.50,
+      "lingerie": 0.25,
+      "nude": 0.25
+    },
+    "learnedWeights": {},
+    "totalVotes": 0,
+    "avgVoteScore": 0,
+    "lastLearned": null
+  },
+
+  "alotta@adultai.bot": {
+    "name": "Alotta Fagina",
+    "archetype": "classic-bombshell",
+    "style": "photorealistic",
+    "modelId": "cyberrealistic_pony",
+    "cfg": [6.0, 6.5],
+    "steps": [40, 45],
+    "characterPrompts": [
+      "a classic Hollywood bombshell with platinum blonde waves, red lips, hourglass figure",
+      "a gorgeous old-Hollywood glamour woman, Marilyn-era beauty, timeless and breathtaking",
+      "a stunning vintage pin-up beauty with perfect curves, classic makeup, retro glamour"
+    ],
+    "settingWeights": {
+      "bedroom": 0.35,
+      "other": 0.35,
+      "bathroom": 0.20,
+      "outdoor": 0.10
+    },
+    "outfitWeights": {
+      "vintage": 0.40,
+      "lingerie": 0.35,
+      "nude": 0.25
+    },
+    "learnedWeights": {},
+    "totalVotes": 0,
+    "avgVoteScore": 0,
+    "lastLearned": null
+  },
+
+  "yuri@adultai.bot": {
+    "name": "Yuri Nator",
+    "archetype": "scifi-fantasy",
+    "style": "artistic",
+    "modelId": "cyberrealistic_pony",
+    "cfg": [6.5, 7.0],
+    "steps": [40, 45],
+    "characterPrompts": [
+      "a beautiful elf woman with pointed ears and ethereal silver hair, fantasy realm, otherworldly gorgeous",
+      "a stunning space explorer woman in a sleek suit, futuristic beauty, sci-fi cinematic",
+      "a gorgeous interdimensional being with iridescent skin, fantasy goddess energy, otherworldly beauty",
+      "a beautiful sorceress with glowing arcane runes, fantasy magic aesthetic, mystical and sensual"
+    ],
+    "settingWeights": {
+      "other": 0.70,
+      "outdoor": 0.20,
+      "bedroom": 0.10
+    },
+    "outfitWeights": {
+      "fantasy": 0.45,
+      "cyberpunk": 0.25,
+      "lingerie": 0.20,
+      "nude": 0.10
+    },
+    "learnedWeights": {},
+    "totalVotes": 0,
+    "avgVoteScore": 0,
+    "lastLearned": null
+  }
+}

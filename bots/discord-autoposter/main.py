@@ -2,11 +2,15 @@ import os
 import json
 import time
 import random
-from prompt import generate_prompt
+import subprocess
+from bot_prompt_engine import generate_prompt_for_bot
 from api import callApi
 
-ACCOUNTS_FILE = "accounts.json"
-LOCK_FILE = "task.lock"
+GENERATION_COUNTER_FILE = os.path.join(os.path.dirname(__file__), "generation_count.txt")
+LEARN_EVERY_N = 20  # Run learning loop every N successful generations
+
+ACCOUNTS_FILE = os.path.join(os.path.dirname(__file__), "accounts.json")
+LOCK_FILE = os.path.join(os.path.dirname(__file__), "task.lock")
 MIN_INTERVAL = 12 * 60   # minimum 12 min between posts
 MAX_INTERVAL = 25 * 60   # maximum 25 min between posts
 TASK_TIMEOUT = 15 * 60   # 15 min max for a single task
@@ -83,6 +87,38 @@ def weighted_choice(options):
     weights = [o["weight"] for o in options]
     return random.choices(options, weights=weights, k=1)[0]
 
+def increment_and_check_learning():
+    """Track generation count, trigger learning every LEARN_EVERY_N generations."""
+    try:
+        count = 0
+        if os.path.exists(GENERATION_COUNTER_FILE):
+            with open(GENERATION_COUNTER_FILE, "r") as f:
+                count = int(f.read().strip() or "0")
+        
+        count += 1
+        with open(GENERATION_COUNTER_FILE, "w") as f:
+            f.write(str(count))
+        
+        if count % LEARN_EVERY_N == 0:
+            print(f"\n[LEARN] Generation #{count}: triggering bot learning loop...")
+            try:
+                # Run learner in background (non-blocking)
+                subprocess.Popen(
+                    ["python3", "bot-learner.py"],
+                    cwd=os.path.dirname(__file__),
+                    env={**os.environ},
+                    stdout=subprocess.DEVNULL,
+                    stderr=subprocess.DEVNULL,
+                )
+            except Exception as e:
+                print(f"[LEARN] Warning: could not spawn learner: {e}")
+        
+        return count
+    except Exception as e:
+        print(f"[LEARN] Counter error: {e}")
+        return 0
+
+
 def run_task():
     if is_task_locked():
         print("[SKIP] Task locked.")
@@ -92,28 +128,40 @@ def run_task():
         lock_task()
         accounts = load_or_create_accounts()
         user = random.choice(accounts)
-        prompt = generate_prompt()
+        
+        # Get personality-driven prompt for this bot
+        bot_gen = generate_prompt_for_bot(user["email"])
+        
         dims = weighted_choice(ASPECT_RATIOS)
 
         task = {
             "email": user["email"],
             "password": user["password"],
-            "prompt": prompt,
+            "prompt": bot_gen["prompt"],
             "count": 4,
             "width": dims["width"],
             "height": dims["height"],
-            "modelId": "cyberrealistic_pony",  # Most photorealistic model
-            "steps": random.choice([35, 40, 45]),  # Higher steps = better quality
-            "cfg": random.choice([6.0, 6.5, 7.0]),  # Lower CFG = more natural, less over-processed
+            "modelId": bot_gen["modelId"],
+            "steps": bot_gen["steps"],
+            "cfg": bot_gen["cfg"],
             "sampler": random.choice(SAMPLERS),
+            "negativePrompt": bot_gen.get("negativePrompt", ""),
         }
 
-        # 50% chance of adding a seed for reproducibility
-        if random.random() < 0.5:
+        # 30% chance of adding a seed for reproducibility
+        if random.random() < 0.3:
             task["seed"] = str(random.randint(1, 2147483647))
 
-        print(f"\n[TASK] model={task['modelId']} size={dims['ratio']} prompt={prompt[:80]}...")
+        bot_name = user.get("displayName", user["email"])
+        print(f"\n[TASK] bot={bot_name} model={task['modelId']} size={dims['ratio']} cfg={task['cfg']} steps={task['steps']}")
+        print(f"       prompt: {task['prompt'][:90]}...")
+        
         callApi(task)
+        
+        # Track generations and trigger learning periodically
+        gen_count = increment_and_check_learning()
+        print(f"[TASK] ✓ Completed (total generations: {gen_count})")
+        
         return True
 
     finally:
