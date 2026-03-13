@@ -79,6 +79,7 @@ export function useImageLoading(params: UseImageLoadingParams) {
         if (!isMountedRef.current) return
 
         const paramsChanged = hasSearchParamsChanged()
+        const isFirstLoad = fetchedCountRef.current === 0
 
         // Update search params ref
         searchParamsRef.current = {
@@ -90,42 +91,48 @@ export function useImageLoading(params: UseImageLoadingParams) {
             sort: sort,
         }
 
-        // Only reset if params changed or initial load
-        if (paramsChanged || images.length === 0) {
-            logger.info('[useImageLoading] Initializing/Resetting state', {
-                paramsChanged,
-                initialImagesCount: initialImages.length,
-                totalCount,
-            })
+        // IMPORTANT: Only reset when search params actually changed or on first load.
+        // Do NOT reset when initialImages shrinks due to a delete — that would corrupt
+        // fetchedCountRef and hasMore, breaking infinite scroll after deletions.
+        if (!paramsChanged && !isFirstLoad) {
+            logger.debug('[useImageLoading] Skipping reset — params unchanged, treating as delete update')
+            return
+        }
 
-            // Reset all state and refs
-            setImages(initialImages)
-            setHasMore(initialImages.length < totalCount && totalCount > 0)
-            setError(null)
-            setIsLoading(false)
-            isLoadingRef.current = false
-            currentRequestRef.current = null
-            lastSuccessfulPageRef.current = initialImages.length > 0 ? 1 : 0
-            fetchedCountRef.current = initialImages.length
-            loadedPagesRef.current = new Set()
+        logger.info('[useImageLoading] Initializing/Resetting state', {
+            paramsChanged,
+            isFirstLoad,
+            initialImagesCount: initialImages.length,
+            totalCount,
+        })
 
-            // Mark initial page as loaded if we have images
-            if (initialImages.length > 0) {
-                loadedPagesRef.current.add('0-20')
-            }
+        // Reset all state and refs
+        setImages(initialImages)
+        setHasMore(initialImages.length < totalCount && totalCount > 0)
+        setError(null)
+        setIsLoading(false)
+        isLoadingRef.current = false
+        currentRequestRef.current = null
+        lastSuccessfulPageRef.current = initialImages.length > 0 ? 1 : 0
+        fetchedCountRef.current = initialImages.length
+        loadedPagesRef.current = new Set()
 
-            // Initialize loaded images tracking
-            const newLoadedImages: Record<string, boolean> = {}
-            initialImages.forEach((img) => {
-                newLoadedImages[img.image.id] = false
-            })
-            setLoadedImages(newLoadedImages)
+        // Mark initial page as loaded if we have images
+        if (initialImages.length > 0) {
+            loadedPagesRef.current.add('0-20')
+        }
 
-            // Clear any pending timeouts
-            if (timeoutRef.current) {
-                clearTimeout(timeoutRef.current)
-                timeoutRef.current = null
-            }
+        // Initialize loaded images tracking
+        const newLoadedImages: Record<string, boolean> = {}
+        initialImages.forEach((img) => {
+            newLoadedImages[img.image.id] = false
+        })
+        setLoadedImages(newLoadedImages)
+
+        // Clear any pending timeouts
+        if (timeoutRef.current) {
+            clearTimeout(timeoutRef.current)
+            timeoutRef.current = null
         }
     }, [initialImages, totalCount, searchQuery, userMode, user?.user.id, category_id, subcategory_id, sort])
 

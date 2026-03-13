@@ -445,12 +445,13 @@ export default function GalleryPage(props: GalleryPageProps) {
   const handleDelete = useCallback(
     async (imageId: string) => {
       try {
-        // Optimistic update
+        // Optimistic update — only update hook's internal state (setPaginatedImages).
+        // Do NOT call setImages here: that triggers useImageLoading's init effect which
+        // resets fetchedCountRef and hasMore, breaking infinite scroll after deletes.
         const previousImages = paginatedImages;
         setPaginatedImages((prev) =>
           prev.filter((img) => img.image.id !== imageId)
         );
-        setImages((prev) => prev.filter((img) => img.image.id !== imageId));
         setSelectedImage(null);
 
         const result = await deleteImageAction(imageId);
@@ -458,7 +459,6 @@ export default function GalleryPage(props: GalleryPageProps) {
         if ("error" in result) {
           // Rollback on error
           setPaginatedImages(previousImages);
-          setImages((prev) => [...prev]);
           throw new Error(result.error);
         }
 
