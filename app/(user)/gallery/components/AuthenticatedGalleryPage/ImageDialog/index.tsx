@@ -339,6 +339,8 @@ export function ImageDialog({
   if (!image) return null;
 
   const isOwner = user?.user.id === image.image.userId;
+  const isAdmin = user?.user.role === "ADMIN" || user?.user.role === "MODERATOR";
+  const canDelete = isOwner || isAdmin;
   const categories = image.categories || [];
 
   return (
@@ -366,24 +368,25 @@ export function ImageDialog({
             </div>
             <div className="flex items-center gap-2">
               {isOwner && (
-                <>
-                  <Button
-                    variant="ghost"
-                    size="sm"
-                    onClick={() => setIsEditing(true)}
-                    className="h-8 px-2"
-                  >
-                    <Edit className="w-4 h-4" />
-                  </Button>
-                  <Button
-                    variant="ghost"
-                    size="sm"
-                    onClick={handleDelete}
-                    className="h-8 px-2 text-destructive hover:text-destructive"
-                  >
-                    <Trash2 className="w-4 h-4" />
-                  </Button>
-                </>
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  onClick={() => setIsEditing(true)}
+                  className="h-8 px-2"
+                >
+                  <Edit className="w-4 h-4" />
+                </Button>
+              )}
+              {canDelete && (
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  onClick={handleDelete}
+                  className="h-8 px-2 text-destructive hover:text-destructive"
+                  title={isAdmin && !isOwner ? "Delete (admin)" : "Delete"}
+                >
+                  <Trash2 className="w-4 h-4" />
+                </Button>
               )}
               <Button
                 variant="ghost"

@@ -148,11 +148,6 @@ export default function GalleryPage(props: GalleryPageProps) {
     isMountedRef.current = true;
 
     async function fetchUser() {
-      if (!userId) {
-        setIsLoadingUser(false);
-        return;
-      }
-
       try {
         const result = await getCurrentUserInfo({});
         if (isMountedRef.current && isGetCurrentUserInfoSuccess(result)) {
@@ -341,10 +336,7 @@ export default function GalleryPage(props: GalleryPageProps) {
 
   // Fetch subscription info (only in normal mode) — deferred 300ms, not blocking render
   useEffect(() => {
-    if (!isNormalMode || !userId) {
-      setIsLoadingSubscription(false);
-      return;
-    }
+    if (!isNormalMode || !userId) return;  // userId set by fetchUser effect; will re-run once set
 
     async function fetchSubscription() {
       setIsLoadingSubscription(true);
@@ -682,9 +674,13 @@ export default function GalleryPage(props: GalleryPageProps) {
         </div>
       )}
 
-      {/* MEDIA TYPE FILTER — images / videos / lip sync */}
+      {/* MEDIA TYPE FILTER — images / lip sync (+ videos coming soon in user mode) */}
       {(isNormalMode || isUserMode) && (
-        <MediaTypeFilter active={mediaType} onChange={setMediaType} />
+        <MediaTypeFilter
+          active={mediaType}
+          onChange={setMediaType}
+          hideVideos={isNormalMode}
+        />
       )}
 
       {/* GENDER FILTER — normal gallery mode (images only) */}

@@ -47,15 +47,15 @@ function VideoCard({ video, onClick }: { video: VideoItem; onClick: () => void }
         <video
           ref={videoRef}
           src={videoUrl}
-          preload="metadata"
+          preload="auto"
           className="w-full h-full object-cover"
           muted
           playsInline
           loop
-          onLoadedMetadata={(e) => {
-            // Seek to 0.5s to show a real first frame as thumbnail
+          onCanPlay={(e) => {
+            // Seek slightly past frame 0 so browser renders a real thumbnail
             const v = e.currentTarget
-            v.currentTime = 0.5
+            if (v.currentTime === 0) v.currentTime = 0.1
           }}
         />
       ) : (
@@ -162,6 +162,13 @@ export default function VideoSection({ mediaType, userId, userMode, searchQuery 
   const [selectedVideo, setSelectedVideo] = useState<VideoItem | null>(null)
 
   const fetchVideos = useCallback(async () => {
+    // For lipsync tab, we need to know who the user is before fetching
+    // If no userId yet (still resolving), show loading and wait
+    if (mediaType === "lipsync" && userId === undefined) {
+      setIsLoading(true)
+      return
+    }
+
     setIsLoading(true)
     try {
       if (mediaType === "lipsync") {
