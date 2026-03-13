@@ -737,6 +737,7 @@ export default function GalleryPage(props: GalleryPageProps) {
           userId={userId}
           userMode={isUserMode}
           searchQuery={searchQuery}
+          isAdmin={user?.user.role === "ADMIN" || user?.user.role === "MODERATOR"}
         />
       )}
 

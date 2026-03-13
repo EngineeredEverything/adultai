@@ -13,6 +13,7 @@ interface VideoSectionProps {
   mediaType: MediaType
   userId?: string
   userMode?: boolean
+  isAdmin?: boolean
   searchQuery?: string
 }
 
@@ -104,6 +105,7 @@ function VideoDetailDialog({
   onClose: () => void
   onDelete: (id: string) => void
   isOwner: boolean
+  isAdmin?: boolean
 }) {
   if (!video) return null
   const url = video.video.cdnUrl || video.video.videoUrl || ""
@@ -137,7 +139,7 @@ function VideoDetailDialog({
                   <Download className="w-4 h-4" /> Download
                 </a>
               )}
-              {isOwner && (
+              {(isOwner || isAdmin) && (
                 <button
                   onClick={() => {
                     onDelete(video.video.id)
@@ -156,7 +158,7 @@ function VideoDetailDialog({
   )
 }
 
-export default function VideoSection({ mediaType, userId, userMode, searchQuery = "" }: VideoSectionProps) {
+export default function VideoSection({ mediaType, userId, userMode, isAdmin, searchQuery = "" }: VideoSectionProps) {
   const [videos, setVideos] = useState<VideoItem[]>([])
   const [isLoading, setIsLoading] = useState(true)
   const [selectedVideo, setSelectedVideo] = useState<VideoItem | null>(null)
@@ -255,6 +257,7 @@ export default function VideoSection({ mediaType, userId, userMode, searchQuery 
         onClose={() => setSelectedVideo(null)}
         onDelete={handleDelete}
         isOwner={!!userId && selectedVideo?.video.userId === userId}
+        isAdmin={isAdmin}
       />
     </>
   )

@@ -23,7 +23,7 @@ export const deleteVideo = async (videoId: string) => {
       return { error: "Video not found" }
     }
 
-    if (video.userId !== user.id) {
+    if (video.userId !== user.id && user.role !== "ADMIN" && user.role !== "MODERATOR") {
       logger.warn("Unauthorized video deletion attempt", {
         videoId,
         userId: user.id,
