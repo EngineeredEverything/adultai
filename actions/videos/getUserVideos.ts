@@ -20,13 +20,21 @@ function formatVideos(videos: any[]) {
 }
 
 export async function getUserLipsyncs(userIdParam?: string) {
+  console.log(`[LIPSYNC] called with userIdParam=${userIdParam ?? "undefined"}`)
+
   // Try passed userId first, fall back to session
   let uid = userIdParam
   if (!uid) {
     const user = await currentUser()
-    if (!user) return { error: "Not authenticated" }
+    console.log(`[LIPSYNC] session user=${user?.id ?? "null"}`)
+    if (!user) {
+      console.log("[LIPSYNC] no user, returning error")
+      return { error: "Not authenticated" }
+    }
     uid = user.id
   }
+
+  console.log(`[LIPSYNC] querying for userId=${uid}`)
 
   const videos = await db.generatedVideo.findMany({
     where: {
@@ -37,6 +45,8 @@ export async function getUserLipsyncs(userIdParam?: string) {
     orderBy: { createdAt: "desc" },
     take: 60,
   })
+
+  console.log(`[LIPSYNC] found ${videos.length} videos`)
 
   return { videos: formatVideos(videos) }
 }
