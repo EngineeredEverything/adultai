@@ -14,10 +14,7 @@ export const metadata: Metadata = {
 export default async function ShowcasePage() {
   const companions = await prisma.companion.findMany({
     where: { featured: true },
-    orderBy: [
-      { pinned: 'desc' },
-      { createdAt: 'desc' },
-    ],
+    orderBy: { createdAt: 'desc' },
   });
 
   // Spotlight: Sofanda Cox + Mike Hawk always first
