@@ -13,6 +13,8 @@ export async function deleteImageAction(
 
   const isAdmin = (user as any).role === "ADMIN";
 
+  logger.info(`[DELETE] user=${user.id} role=${(user as any).role} isAdmin=${isAdmin} imageId=${imageId}`);
+
   try {
     // First get the image to check ownership and get the CDN path
     // Admins can delete any image; regular users can only delete their own
@@ -21,6 +23,8 @@ export async function deleteImageAction(
         ? { id: imageId }
         : { id: imageId, userId: user.id },
     });
+
+    logger.info(`[DELETE] found image: ${image ? image.id : "null"}`);
 
     if (!image) {
       return { error: "Image not found or unauthorized" };
@@ -31,19 +35,23 @@ export async function deleteImageAction(
       where: { id: imageId },
     });
 
-    // Delete from BunnyCDN (best-effort, non-fatal)
+    logger.info(`[DELETE] DB delete success for ${imageId}`);
+
+    // Delete from BunnyCDN — best-effort, NEVER throw (404 = already gone, that's fine)
     if (image.path) {
       try {
         await deleteFile(image.path);
-      } catch (error) {
-        logger.error("Error deleting from CDN:", error);
+        logger.info(`[DELETE] CDN delete success for ${image.path}`);
+      } catch (cdnErr) {
+        logger.warn(`[DELETE] CDN delete failed (non-fatal): ${cdnErr}`);
+        // CDN errors are non-fatal — file may already be deleted or path missing
       }
     }
 
     return { success: true };
   } catch (error: any) {
-    logger.error("Error deleting image:", error);
-    return { error: error.message };
+    logger.error(`[DELETE] FATAL error: ${String(error?.message ?? error)}`);
+    return { error: String(error?.message ?? error) };
   }
 }
 
@@ -75,7 +83,7 @@ export async function deleteMultipleImages(
         : { id: { in: imageIds }, userId: user.id },
     });
 
-    // Delete from CDN (best-effort, non-fatal)
+    // Delete from CDN — best-effort, never throw
     await Promise.all(
       images
         .filter((img) => img.path)
@@ -83,8 +91,8 @@ export async function deleteMultipleImages(
           try {
             if (!img.path) return;
             await deleteFile(img.path);
-          } catch (error) {
-            logger.error(`Error deleting from CDN: ${img.path}`, error);
+          } catch {
+            // CDN errors are non-fatal
           }
         })
     );
