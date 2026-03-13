@@ -15,6 +15,10 @@ GPU_API_URL = os.environ.get("GPU_API_URL", "http://localhost:8080")
 GPU_API_KEY = os.environ.get("GPU_API_KEY", "")
 ELEVENLABS_API_KEY = os.environ.get("ELEVENLABS_API_KEY", "")
 DEFAULT_VOICE_ID = "21m00Tcm4TlvDq8ikWAM"
+OPENAI_API_KEY = os.environ.get("OPENAI_API_KEY", "")
+JESSICA_VOICE = "nova"  # OpenAI TTS voice (nova = warm female)
+ADULTAI_BASE_URL = os.environ.get("ADULTAI_BASE_URL", "https://adultai.com")
+DISCORD_BOT_SECRET = os.environ.get("DISCORD_BOT_SECRET", "adultai_discord_bot_2026")
 BUNNY_API_KEY = os.environ.get("BUNNY_API_KEY", "")
 BUNNY_STORAGE_ZONE = "storage-adultai"
 BUNNY_STORAGE_HOST = "la.storage.bunnycdn.com"
@@ -41,15 +45,16 @@ async def upload_video_to_bunny(session: aiohttp.ClientSession, video_bytes: byt
     return await upload_to_bunny(session, video_bytes, f"video/bot_{uid}.mp4", "video/mp4")
 
 
-async def tts_to_audio(session: aiohttp.ClientSession, text: str, voice_id: str = DEFAULT_VOICE_ID) -> bytes | None:
-    """Generate audio from text using ElevenLabs."""
+async def tts_to_audio(session: aiohttp.ClientSession, text: str, voice_id: str = JESSICA_VOICE) -> bytes | None:
+    """Generate audio from text using OpenAI TTS."""
     async with session.post(
-        f"https://api.elevenlabs.io/v1/text-to-speech/{voice_id}",
-        json={"text": text, "model_id": "eleven_turbo_v2", "voice_settings": {"stability": 0.5, "similarity_boost": 0.8, "style": 0.2}},
-        headers={"xi-api-key": ELEVENLABS_API_KEY, "Content-Type": "application/json"},
+        "https://api.openai.com/v1/audio/speech",
+        json={"model": "tts-1", "input": text, "voice": voice_id},
+        headers={"Authorization": f"Bearer {OPENAI_API_KEY}", "Content-Type": "application/json"},
     ) as r:
         if not r.ok:
-            print(f"[TTS] ElevenLabs error: {r.status}")
+            err = await r.text()
+            print(f"[TTS] OpenAI error: {r.status} — {err[:200]}")
             return None
         return await r.read()
 
@@ -321,6 +326,48 @@ class SpeakModal(discord.ui.Modal, title="Make it Speak"):
             await interaction.followup.send(f"🎙️ *\"{phrase}\"*\n\nCreate your own companion → **AdultAI.com** ✨", file=vid_file)
         else:
             await interaction.followup.send(f"🎙️ *\"{phrase}\"*\n\nVideo: {video_cdn_url}\n\nCreate your own → **AdultAI.com** ✨")
+
+        # Save lipsync video to adultai.com gallery
+        try:
+            discord_id = str(interaction.user.id)
+            discord_username = str(interaction.user.name)
+            async with aiohttp.ClientSession() as save_session:
+                async with save_session.post(
+                    f"{ADULTAI_BASE_URL}/api/discord/save-video",
+                    json={
+                        "discordId": discord_id,
+                        "discordUsername": discord_username,
+                        "videoUrl": video_cdn_url,
+                        "prompt": phrase,
+                        "isPublic": False,
+                        "videoType": "lipsync",
+                        "width": 768,
+                        "height": 1152,
+                        "fps": 25,
+                    },
+                    headers={"x-bot-secret": DISCORD_BOT_SECRET, "Content-Type": "application/json"},
+                    timeout=aiohttp.ClientTimeout(total=15),
+                ) as sr:
+                    if sr.ok:
+                        save_data = await sr.json()
+                        claim_url = save_data.get("claimUrl", "")
+                        gallery_url = save_data.get("galleryUrl", "https://adultai.com/gallery/user")
+                        is_new = save_data.get("isNewUser", False)
+                        if is_new and claim_url:
+                            await interaction.followup.send(
+                                f"✅ Saved to your gallery! [View →]({gallery_url})\n"
+                                f"🔗 Link your account to keep it: [Claim →]({claim_url})",
+                                ephemeral=True,
+                            )
+                        else:
+                            await interaction.followup.send(
+                                f"✅ Saved to your [AdultAI gallery]({gallery_url})!",
+                                ephemeral=True,
+                            )
+                    else:
+                        print(f"[SAVE VIDEO] Failed: {sr.status}")
+        except Exception as save_err:
+            print(f"[SAVE VIDEO] Error: {save_err}")
 
 
 # --- Button Views ---
@@ -1221,6 +1268,48 @@ class AaiCog(commands.Cog, name="aai"):
             )
         else:
             await interaction.followup.send(f"🎙️ *\"{text[:100]}\"*\n\nVideo: {video_cdn_url}")
+
+        # Save lipsync video to adultai.com gallery
+        try:
+            discord_id = str(interaction.user.id)
+            discord_username = str(interaction.user.name)
+            async with aiohttp.ClientSession() as save_session:
+                async with save_session.post(
+                    f"{ADULTAI_BASE_URL}/api/discord/save-video",
+                    json={
+                        "discordId": discord_id,
+                        "discordUsername": discord_username,
+                        "videoUrl": video_cdn_url,
+                        "prompt": text.strip(),
+                        "isPublic": False,
+                        "videoType": "lipsync",
+                        "width": 768,
+                        "height": 1152,
+                        "fps": 25,
+                    },
+                    headers={"x-bot-secret": DISCORD_BOT_SECRET, "Content-Type": "application/json"},
+                    timeout=aiohttp.ClientTimeout(total=15),
+                ) as sr:
+                    if sr.ok:
+                        save_data = await sr.json()
+                        claim_url = save_data.get("claimUrl", "")
+                        gallery_url = save_data.get("galleryUrl", "https://adultai.com/gallery/user")
+                        is_new = save_data.get("isNewUser", False)
+                        if is_new and claim_url:
+                            await interaction.followup.send(
+                                f"✅ Saved to your gallery! [View →]({gallery_url})\n"
+                                f"🔗 Link your account to keep it: [Claim →]({claim_url})",
+                                ephemeral=True,
+                            )
+                        else:
+                            await interaction.followup.send(
+                                f"✅ Saved to your [AdultAI gallery]({gallery_url})!",
+                                ephemeral=True,
+                            )
+                    else:
+                        print(f"[SAVE VIDEO] Failed: {sr.status}")
+        except Exception as save_err:
+            print(f"[SAVE VIDEO] Error: {save_err}")
 
     @app_commands.command(name="status", description="Check the status of the AI generation API.")
     async def status(self, interaction: discord.Interaction):
