@@ -3,6 +3,7 @@ import { Metadata } from 'next';
 import { Suspense } from "react";
 import AuthenticatedGalleryPage from "./components/AuthenticatedGalleryPage";
 import { searchImages } from "@/actions/images/info";
+import { currentUser } from "@/utils/auth";
 
 export const metadata: Metadata = {
   title: {
@@ -19,9 +20,10 @@ export const metadata: Metadata = {
 };
 
 // SSR prefetch — runs on the server while HTML is being streamed.
-// The client skips the initial fetch when it receives prefetched data,
-// eliminating one full client-server round-trip before images appear.
 async function GalleryLoader() {
+  // Get logged-in user id (if any) so VideoSection can fetch their lip syncs
+  const user = await currentUser();
+
   try {
     const result = await searchImages({
       query: "",
@@ -43,15 +45,16 @@ async function GalleryLoader() {
 
     return (
       <AuthenticatedGalleryPage
+        userId={user?.id}
         searchQuery=""
         prefetchedImages={prefetchedImages}
         prefetchedCount={prefetchedCount}
       />
     );
   } catch {
-    // Fallback to client-side fetch if SSR fails
     return (
       <AuthenticatedGalleryPage
+        userId={user?.id}
         searchQuery=""
         prefetchedImages={[]}
         prefetchedCount={0}
