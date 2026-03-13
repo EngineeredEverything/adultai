@@ -165,8 +165,8 @@ export default function VideoSection({ mediaType, userId, userMode, searchQuery 
     setIsLoading(true)
     try {
       if (mediaType === "lipsync") {
-        // Direct query: current user's own lip syncs (public + private), no filter chain
-        const result = await getUserLipsyncs()
+        // Pass userId directly so server action doesn't depend on session cookies
+        const result = await getUserLipsyncs(userId)
         if ("error" in result) {
           console.error("Failed to fetch lip syncs:", result.error)
           setVideos([])
@@ -189,7 +189,7 @@ export default function VideoSection({ mediaType, userId, userMode, searchQuery 
     } finally {
       setIsLoading(false)
     }
-  }, [mediaType])
+  }, [mediaType, userId])
 
   useEffect(() => {
     fetchVideos()

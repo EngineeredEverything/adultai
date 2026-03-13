@@ -4,13 +4,33 @@ import { db } from "@/lib/db"
 import { currentUser } from "@/utils/auth"
 import { generateLinksBatch } from "@/lib/cdn"
 
-export async function getUserLipsyncs() {
-  const user = await currentUser()
-  if (!user) return { error: "Not authenticated" }
+function formatVideos(videos: any[]) {
+  const cdnLinks = generateLinksBatch(
+    videos.map((v) => ({ id: v.id, path: v.path || "" }))
+  )
+  const cdnMap = new Map(cdnLinks.map((l) => [l.id, l.link]))
+
+  return videos.map((v) => ({
+    video: {
+      ...v,
+      // If path is null, cdnUrl ends in "/" — fall back to videoUrl
+      cdnUrl: v.path ? cdnMap.get(v.id) : v.videoUrl,
+    },
+  }))
+}
+
+export async function getUserLipsyncs(userIdParam?: string) {
+  // Try passed userId first, fall back to session
+  let uid = userIdParam
+  if (!uid) {
+    const user = await currentUser()
+    if (!user) return { error: "Not authenticated" }
+    uid = user.id
+  }
 
   const videos = await db.generatedVideo.findMany({
     where: {
-      userId: user.id,
+      userId: uid,
       prompt: { startsWith: "Lip sync" },
       status: "completed",
     },
@@ -18,20 +38,7 @@ export async function getUserLipsyncs() {
     take: 60,
   })
 
-  const cdnLinks = generateLinksBatch(
-    videos.map((v) => ({ id: v.id, path: v.path || "" }))
-  )
-  const cdnMap = new Map(cdnLinks.map((l) => [l.id, l.link]))
-
-  return {
-    videos: videos.map((v) => ({
-      video: {
-        ...v,
-        // If path is null, cdnUrl will be the base domain — fall back to videoUrl
-        cdnUrl: v.path ? cdnMap.get(v.id) : v.videoUrl,
-      },
-    })),
-  }
+  return { videos: formatVideos(videos) }
 }
 
 export async function getUserMotionVideos() {
@@ -46,17 +53,5 @@ export async function getUserMotionVideos() {
     take: 60,
   })
 
-  const cdnLinks = generateLinksBatch(
-    videos.map((v) => ({ id: v.id, path: v.path || "" }))
-  )
-  const cdnMap = new Map(cdnLinks.map((l) => [l.id, l.link]))
-
-  return {
-    videos: videos.map((v) => ({
-      video: {
-        ...v,
-        cdnUrl: v.path ? cdnMap.get(v.id) : v.videoUrl,
-      },
-    })),
-  }
+  return { videos: formatVideos(videos) }
 }
