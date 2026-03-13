@@ -26,30 +26,19 @@ export async function deleteImageAction(
       return { error: "Image not found or unauthorized" };
     }
 
-    // Start a transaction to ensure both operations succeed or fail together
-    await db.$transaction(async (tx) => {
-      // Delete from database — admins can delete any image
-      await tx.generatedImage.delete({
-        where: { id: imageId },
-      });
-
-      // If there's a CDN URL, delete from BunnyCDN
-      if (image.path) {
-        try {
-          // Extract path from CDN URL and delete from storage
-          await deleteFile(image.path);
-        } catch (error) {
-          logger.error("Error deleting from CDN:", error);
-          // Continue with deletion even if CDN deletion fails
-        }
-      }
-
-      // Optionally refund some nuts to the user
-      // await tx.user.update({
-      //   where: { id: user.id },
-      //   data: { nuts: { increment: image.costNuts } },
-      // });
+    // Delete from database (no $transaction — requires replica set which single-node MongoDB lacks)
+    await db.generatedImage.delete({
+      where: { id: imageId },
     });
+
+    // Delete from BunnyCDN (best-effort, non-fatal)
+    if (image.path) {
+      try {
+        await deleteFile(image.path);
+      } catch (error) {
+        logger.error("Error deleting from CDN:", error);
+      }
+    }
 
     return { success: true };
   } catch (error: any) {
@@ -79,28 +68,26 @@ export async function deleteMultipleImages(
       return { error: "No valid images found" };
     }
 
-    await db.$transaction(async (tx) => {
-      // Delete all images from database — admins can delete any
-      await tx.generatedImage.deleteMany({
-        where: isAdmin
-          ? { id: { in: imageIds } }
-          : { id: { in: imageIds }, userId: user.id },
-      });
-
-      // Delete from CDN
-      await Promise.all(
-        images
-          .filter((img) => img.path)
-          .map(async (img) => {
-            try {
-              if (!img.path) return { success: false };
-              await deleteFile(img.path);
-            } catch (error) {
-              logger.error(`Error deleting from CDN: ${img.path}`, error);
-            }
-          })
-      );
+    // Delete from database (no $transaction — requires replica set which single-node MongoDB lacks)
+    await db.generatedImage.deleteMany({
+      where: isAdmin
+        ? { id: { in: imageIds } }
+        : { id: { in: imageIds }, userId: user.id },
     });
+
+    // Delete from CDN (best-effort, non-fatal)
+    await Promise.all(
+      images
+        .filter((img) => img.path)
+        .map(async (img) => {
+          try {
+            if (!img.path) return;
+            await deleteFile(img.path);
+          } catch (error) {
+            logger.error(`Error deleting from CDN: ${img.path}`, error);
+          }
+        })
+    );
 
     return { success: true, deletedCount: images.length };
   } catch (error: any) {

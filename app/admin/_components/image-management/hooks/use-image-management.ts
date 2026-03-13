@@ -150,9 +150,9 @@ export function useImageManagement(currentUserId?: string, initialData?: {
                 updateState({ error: null })
                 const result = await action()
 
-                if (result.success && result.data) {
-                    onSuccess?.(result.data)
-                    return result.data
+                if (result.success) {
+                    onSuccess?.(result.data ?? null)
+                    return result.data ?? true
                 } else {
                     const errorMessage = result.error || "An error occurred"
                     updateState({ error: errorMessage })
