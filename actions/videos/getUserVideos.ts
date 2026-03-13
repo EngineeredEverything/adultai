@@ -39,8 +39,12 @@ export async function getUserLipsyncs(userIdParam?: string) {
   const videos = await db.generatedVideo.findMany({
     where: {
       userId: uid,
-      prompt: { startsWith: "Lip sync" },
       status: "completed",
+      OR: [
+        { modelId: "wav2lip" },
+        { prompt: { startsWith: "Lip sync" } },
+        { prompt: { startsWith: "[Lip Sync]" } },
+      ],
     },
     orderBy: { createdAt: "desc" },
     take: 60,
@@ -52,12 +56,16 @@ export async function getUserLipsyncs(userIdParam?: string) {
 }
 
 export async function getUserMotionVideos() {
-  // Reserved for future animated video feature — shows non-lipsync public videos
+  // Video/animation tab — excludes lipsync videos (wav2lip modelId or Lip sync prompt prefix)
   const videos = await db.generatedVideo.findMany({
     where: {
       isPublic: true,
       status: "completed",
-      NOT: { prompt: { startsWith: "Lip sync" } },
+      NOT: [
+        { modelId: "wav2lip" },
+        { prompt: { startsWith: "Lip sync" } },
+        { prompt: { startsWith: "[Lip Sync]" } },
+      ],
     },
     orderBy: { createdAt: "desc" },
     take: 60,
