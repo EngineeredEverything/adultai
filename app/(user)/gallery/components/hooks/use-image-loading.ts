@@ -37,6 +37,9 @@ export function useImageLoading(params: UseImageLoadingParams) {
     const currentRequestRef = useRef<Promise<any> | null>(null)
     const lastSuccessfulPageRef = useRef(0) // Track last successfully loaded page
     const loadedPagesRef = useRef<Set<string>>(new Set()) // Track which page ranges were loaded
+    // Track how many images have been fetched from DB (unaffected by deletes)
+    // This is the correct offset to use for pagination, not images.length (which shrinks on delete)
+    const fetchedCountRef = useRef(0)
 
     // Track search params to detect changes
     const searchParamsRef = useRef({
@@ -103,6 +106,7 @@ export function useImageLoading(params: UseImageLoadingParams) {
             isLoadingRef.current = false
             currentRequestRef.current = null
             lastSuccessfulPageRef.current = initialImages.length > 0 ? 1 : 0
+            fetchedCountRef.current = initialImages.length
             loadedPagesRef.current = new Set()
 
             // Mark initial page as loaded if we have images
@@ -151,12 +155,14 @@ export function useImageLoading(params: UseImageLoadingParams) {
             return
         }
 
-        if (images.length === 0) {
+        if (fetchedCountRef.current === 0) {
             logger.debug('[useImageLoading] No initial images yet')
             return
         }
 
-        const pageStart = images.length
+        // Use fetchedCountRef (not images.length) as DB offset — deletes shrink images.length
+        // but the DB cursor position is based on how many were fetched, not how many remain
+        const pageStart = fetchedCountRef.current
         const pageEnd = pageStart + ITEMS_PER_PAGE
         const pageKey = getPageKey(pageStart, pageEnd)
 
@@ -188,7 +194,8 @@ export function useImageLoading(params: UseImageLoadingParams) {
             pageEnd,
             pageKey,
             currentPage,
-            currentImagesCount: images.length,
+            fetchedCount: fetchedCountRef.current,
+            visibleImagesCount: images.length,
             totalCount,
         })
 
@@ -281,11 +288,14 @@ export function useImageLoading(params: UseImageLoadingParams) {
             // Mark this page as loaded BEFORE updating state
             loadedPagesRef.current.add(pageKey)
             lastSuccessfulPageRef.current = currentPage
+            // Advance the DB cursor by how many images were fetched (not images.length)
+            fetchedCountRef.current += newImages.length
 
             // Update state in single batch
             setImages((prev) => {
                 const combined = [...prev, ...newImages]
-                const shouldHaveMore = combined.length < (newCount || totalCount)
+                // hasMore is based on DB cursor vs total, not visible count (which is reduced by deletes)
+                const shouldHaveMore = fetchedCountRef.current < (newCount || totalCount)
 
                 setHasMore(shouldHaveMore)
 
@@ -332,7 +342,7 @@ export function useImageLoading(params: UseImageLoadingParams) {
                 timeoutRef.current = null
             }
         }
-    }, [images.length, hasMore, searchQuery, userMode, user?.user.id, category_id, subcategory_id, sort, totalCount])
+    }, [hasMore, searchQuery, userMode, user?.user.id, category_id, subcategory_id, sort, totalCount])
 
     // Handle infinite scroll trigger - STRICT CONTROL
     useEffect(() => {
@@ -342,7 +352,7 @@ export function useImageLoading(params: UseImageLoadingParams) {
         if (isLoadingRef.current) return
         if (currentRequestRef.current !== null) return
         if (!hasMore) return
-        if (images.length === 0) return
+        if (fetchedCountRef.current === 0) return
 
         logger.debug('[useImageLoading] Scroll trigger activated')
 
@@ -355,7 +365,7 @@ export function useImageLoading(params: UseImageLoadingParams) {
                 hasMore &&
                 !isLoadingRef.current &&
                 currentRequestRef.current === null &&
-                images.length > 0
+                fetchedCountRef.current > 0
             ) {
                 logger.debug('[useImageLoading] Debounce completed, loading more')
                 loadMoreImages()
@@ -363,7 +373,7 @@ export function useImageLoading(params: UseImageLoadingParams) {
         }, 150) // Balanced debounce — fast enough to feel smooth
 
         return () => clearTimeout(debounceTimer)
-    }, [inView, hasMore, images.length]) // Removed loadMoreImages from deps to prevent recreation
+    }, [inView, hasMore, images.length]) // images.length in deps so trigger re-evaluates after deletes
 
     // Manual trigger function (if needed by parent)
     const manualLoadMore = useCallback(() => {
