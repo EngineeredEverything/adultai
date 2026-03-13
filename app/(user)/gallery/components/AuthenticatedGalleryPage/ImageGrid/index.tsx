@@ -150,6 +150,8 @@ export function ImageGrid({
                   onClick={() => onImageClick(item.item)}
                   onLoad={() => handleImageLoad(item.item.image.id)}
                   onError={() => handleImageError(item.item.image.id)}
+                  onDelete={onDelete}
+                  user={user}
                   index={item.idx}
                 />
               );

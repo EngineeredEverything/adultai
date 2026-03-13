@@ -2,7 +2,8 @@
 
 import { Badge } from "@/components/ui/badge";
 import type { SearchImagesResponseSuccessType } from "@/types/images";
-import { Lock, TrendingUp, TrendingDown, Film, Loader2, Play, X, ThumbsUp, ThumbsDown } from "lucide-react";
+import type { GetCurrentUserInfoSuccessType } from "@/types/user";
+import { Lock, TrendingUp, TrendingDown, Film, Loader2, Play, X, ThumbsUp, ThumbsDown, Trash2 } from "lucide-react";
 import { useState, useRef } from "react";
 import { toast } from "sonner";
 import { createVote } from "@/actions/votes/create";
@@ -28,6 +29,8 @@ export function ImageCard({
   onClick,
   onLoad,
   onError,
+  onDelete,
+  user,
   index,
 }: {
   image: SearchImagesResponseSuccessType["images"][number];
@@ -35,6 +38,8 @@ export function ImageCard({
   onClick: () => void;
   onLoad: () => void;
   onError: () => void;
+  onDelete?: (imageId: string) => void;
+  user?: GetCurrentUserInfoSuccessType;
   index: number;
 }) {
   const [hovering, setHovering] = useState(false);
@@ -46,6 +51,17 @@ export function ImageCard({
   const [upvotes, setUpvotes] = useState(image.votes?.upvoteCount || 0);
   const [downvotes, setDownvotes] = useState(image.votes?.downvoteCount || 0);
   const [isVoting, setIsVoting] = useState(false);
+
+  const isOwner = user?.user.id === image.image.userId;
+  const isAdmin = user?.user.role === "ADMIN" || user?.user.role === "MODERATOR";
+  const canDelete = (isOwner || isAdmin) && !!onDelete;
+
+  const handleDelete = (e: React.MouseEvent) => {
+    e.stopPropagation();
+    if (!onDelete) return;
+    if (!window.confirm("Delete this image?")) return;
+    onDelete(image.image.id);
+  };
 
   // Compute aspect ratio — default 2:3 portrait if missing/bad
   const w = Number(image.image.width) || 512;
@@ -190,6 +206,12 @@ export function ImageCard({
                 ) : (
                   <a href={animatedVideoUrl} download="animation.mp4"
                     className="p-1.5 bg-green-600/80 hover:bg-green-600 text-white rounded-lg transition-colors" title="Download">⬇</a>
+                )}
+                {canDelete && (
+                  <button onClick={handleDelete}
+                    className="p-1.5 bg-red-600/80 hover:bg-red-600 text-white rounded-lg transition-colors" title="Delete">
+                    <Trash2 className="w-3 h-3" />
+                  </button>
                 )}
                 <button onClick={onClick}
                   className="p-1.5 bg-white/15 hover:bg-white/25 text-white rounded-lg transition-colors backdrop-blur-sm" title="Open">
