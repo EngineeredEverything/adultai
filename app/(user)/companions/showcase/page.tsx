@@ -15,11 +15,17 @@ export default async function ShowcasePage() {
   const companions = await prisma.companion.findMany({
     where: { featured: true },
     orderBy: [
+      { pinned: 'desc' },
       { createdAt: 'desc' },
     ],
   });
 
-  const pinnedCompanions = companions.filter((c: any) => c.pinned);
+  // Spotlight: Sofanda Cox + Mike Hawk always first
+  const SPOTLIGHT_SLUGS = ['sofonda-cox', 'kai-surfer-adventurer'];
+  const spotlightCompanions = SPOTLIGHT_SLUGS
+    .map(slug => companions.find((c: any) => c.slug === slug))
+    .filter(Boolean);
+  const pinnedCompanions = companions.filter((c: any) => c.pinned && !SPOTLIGHT_SLUGS.includes(c.slug));
   const fantasyCompanions = companions.filter((c: any) => !c.pinned && c.category === 'fantasy');
   const realisticCompanions = companions.filter((c: any) => !c.pinned && c.category === 'realistic');
 
@@ -39,7 +45,23 @@ export default async function ShowcasePage() {
         </Link>
       </div>
 
-      {/* ⭐ Featured companions */}
+      {/* ⭐ Spotlight companions — Sofanda Cox & Mike Hawk */}
+      {spotlightCompanions.length > 0 && (
+        <section className="mb-16">
+          <div className="flex items-center gap-3 mb-6">
+            <Star className="w-6 h-6 text-yellow-400 fill-yellow-400" />
+            <h2 className="text-3xl font-bold">Spotlight</h2>
+            <Star className="w-6 h-6 text-yellow-400 fill-yellow-400" />
+          </div>
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-6 max-w-2xl mx-auto">
+            {spotlightCompanions.map((companion: any) => (
+              <CompanionCard key={companion.id} companion={companion} featured />
+            ))}
+          </div>
+        </section>
+      )}
+
+      {/* ⭐ Other pinned companions */}
       {pinnedCompanions.length > 0 && (
         <section className="mb-16">
           <div className="flex items-center gap-3 mb-6">
