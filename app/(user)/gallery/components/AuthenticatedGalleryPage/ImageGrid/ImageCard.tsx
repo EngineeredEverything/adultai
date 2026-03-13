@@ -31,6 +31,7 @@ export function ImageCard({
   onError,
   onDelete,
   user,
+  isAdmin = false,
   index,
 }: {
   image: SearchImagesResponseSuccessType["images"][number];
@@ -40,6 +41,7 @@ export function ImageCard({
   onError: () => void;
   onDelete?: (imageId: string) => void;
   user?: GetCurrentUserInfoSuccessType;
+  isAdmin?: boolean;
   index: number;
 }) {
   const [hovering, setHovering] = useState(false);
@@ -52,8 +54,7 @@ export function ImageCard({
   const [downvotes, setDownvotes] = useState(image.votes?.downvoteCount || 0);
   const [isVoting, setIsVoting] = useState(false);
 
-  const isOwner = user?.user.id === image.image.userId;
-  const isAdmin = user?.user.role === "ADMIN" || user?.user.role === "MODERATOR";
+  const isOwner = !!user && user.user.id === image.image.userId;
   const canDelete = (isOwner || isAdmin) && !!onDelete;
 
   const handleDelete = (e: React.MouseEvent) => {

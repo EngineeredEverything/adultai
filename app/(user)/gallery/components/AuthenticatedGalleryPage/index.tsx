@@ -761,6 +761,7 @@ export default function GalleryPage(props: GalleryPageProps) {
               loadedImages={loadedImages}
               onDelete={handleDelete}
               user={user}
+              isAdmin={user?.user.role === "ADMIN" || user?.user.role === "MODERATOR"}
               tempImages={0}
               setLoadedImages={setLoadedImages}
             />

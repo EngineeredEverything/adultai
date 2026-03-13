@@ -19,6 +19,7 @@ interface ImageGridProps {
   loadedImages: Record<string, boolean>;
   onDelete: (imageId: string) => void;
   user: GetCurrentUserInfoSuccessType | undefined;
+  isAdmin?: boolean;
   tempImages?: number;
   setLoadedImages: Dispatch<SetStateAction<Record<string, boolean>>>;
 }
@@ -42,6 +43,7 @@ export function ImageGrid({
   loadedImages,
   onDelete,
   user,
+  isAdmin = false,
   tempImages = 0,
   setLoadedImages,
 }: ImageGridProps) {
@@ -152,6 +154,7 @@ export function ImageGrid({
                   onError={() => handleImageError(item.item.image.id)}
                   onDelete={onDelete}
                   user={user}
+                  isAdmin={isAdmin}
                   index={item.idx}
                 />
               );
