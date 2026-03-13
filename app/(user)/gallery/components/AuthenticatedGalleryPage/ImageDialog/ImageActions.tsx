@@ -11,6 +11,7 @@ import { Textarea } from "@/components/ui/textarea"
 import { Slider } from "@/components/ui/slider"
 import { toast } from "sonner"
 import { showAuthToast } from "@/lib/auth-toast"
+import { Globe, Lock, Check, Save } from "lucide-react"
 import type { SearchImagesResponseSuccessType } from "@/types/images"
 
 type Panel = "talk" | "img2img" | "video" | "upscale" | null
@@ -29,7 +30,8 @@ export function ImageActions({ image, onGenerateVariations, onSetPrompt }: Image
   const [talkText, setTalkText] = useState("")
   const [talkLoading, setTalkLoading] = useState(false)
   const [talkVoiceId, setTalkVoiceId] = useState("cgSgspJ2msm6clMCkdW9")
-  const [talkResult, setTalkResult] = useState<{ videoUrl?: string | null; audioUrl?: string | null; audioOnly?: boolean } | null>(null)
+  const [talkIsPublic, setTalkIsPublic] = useState(false)
+  const [talkResult, setTalkResult] = useState<{ videoUrl?: string | null; audioUrl?: string | null; audioOnly?: boolean; videoId?: string | null } | null>(null)
 
   // img2img state
   const [editPrompt, setEditPrompt] = useState("")
@@ -74,14 +76,14 @@ export function ImageActions({ image, onGenerateVariations, onSetPrompt }: Image
     router.push(`/companions/customize?imageUrl=${encodeURIComponent(imageUrl)}&prompt=${encodeURIComponent(prompt)}`)
   }
 
-  // ── Make it Talk ────────────────────────────────────────────────────────
+  // ── Make Me Talk ────────────────────────────────────────────────────────
   const handleTalk = async () => {
     if (!talkText.trim()) { toast.error("Enter something for her to say"); return }
     setTalkLoading(true); setTalkResult(null)
     try {
       const res = await fetch("/api/animate-image", {
         method: "POST", headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ imageUrl, text: talkText.trim(), voiceId: talkVoiceId }),
+        body: JSON.stringify({ imageUrl, text: talkText.trim(), voiceId: talkVoiceId, isPublic: talkIsPublic }),
       })
       const data = await res.json()
       if (!res.ok) throw new Error(data.error || "Failed")
@@ -179,7 +181,7 @@ export function ImageActions({ image, onGenerateVariations, onSetPrompt }: Image
         <ActionBtn icon={<ArrowUpCircle className="w-3.5 h-3.5" />} label="Upscale 4×" color="green"
           onClick={() => { togglePanel("upscale"); handleUpscale(4) }} loading={upscaleLoading === 4} />
 
-        <ActionBtn icon={<Mic className="w-3.5 h-3.5" />} label="Make it Talk" color="red"
+        <ActionBtn icon={<Mic className="w-3.5 h-3.5" />} label="Make Me Talk" color="red"
           onClick={() => togglePanel("talk")} active={activePanel === "talk"} />
 
         <ActionBtn icon={<UserPlus className="w-3.5 h-3.5" />} label="Create Companion" color="teal"
@@ -213,11 +215,14 @@ export function ImageActions({ image, onGenerateVariations, onSetPrompt }: Image
             {videoLoading ? <><Loader2 className="w-3.5 h-3.5 mr-2 animate-spin" />Generating (~60s)</> : <><Film className="w-3.5 h-3.5 mr-2" />Generate Video</>}
           </Button>
           {videoResult && (
-            <div className="mt-3 rounded-lg overflow-hidden bg-black aspect-[9/16] relative">
-              <video src={videoResult} controls autoPlay loop playsInline className="w-full h-full object-contain" />
-              <a href={videoResult} download className="absolute top-2 right-2 p-1.5 bg-black/50 rounded-lg hover:bg-black/70 transition">
-                <Download className="w-3.5 h-3.5 text-white" />
-              </a>
+            <div className="mt-3 space-y-2">
+              <div className="rounded-lg overflow-hidden bg-black aspect-[9/16] relative">
+                <video src={videoResult} controls autoPlay loop playsInline className="w-full h-full object-contain" />
+                <a href={videoResult} download className="absolute top-2 right-2 p-1.5 bg-black/50 rounded-lg hover:bg-black/70 transition">
+                  <Download className="w-3.5 h-3.5 text-white" />
+                </a>
+              </div>
+              <SaveToGalleryButtons id={videoResult} type="video" />
             </div>
           )}
         </Panel>
@@ -278,6 +283,7 @@ export function ImageActions({ image, onGenerateVariations, onSetPrompt }: Image
                       Refine further
                     </button>
                   </div>
+                  <SaveToGalleryButtons id={img2imgResult} type="image" />
                 </div>
               )}
             </>
@@ -293,12 +299,15 @@ export function ImageActions({ image, onGenerateVariations, onSetPrompt }: Image
             className="mt-2 flex items-center justify-center gap-1.5 py-2 bg-green-700/30 hover:bg-green-700/50 border border-green-700/40 rounded-lg transition text-xs text-green-300">
             <Download className="w-3.5 h-3.5" /> Download {upscaleResult.scale}× Image
           </a>
+          <div className="mt-2">
+            <SaveToGalleryButtons id={upscaleResult.url} type="image" />
+          </div>
         </Panel>
       )}
 
-      {/* ── Make it Talk panel ── */}
+      {/* ── Make Me Talk panel ── */}
       {activePanel === "talk" && (
-        <Panel title="Make it Talk" onClose={() => setActivePanel(null)}>
+        <Panel title="Make Me Talk" onClose={() => setActivePanel(null)}>
           <p className="text-xs text-gray-500 mb-3">Type what she should say — get voice + lip sync.</p>
 
           {/* Voice selector */}
@@ -335,6 +344,31 @@ export function ImageActions({ image, onGenerateVariations, onSetPrompt }: Image
             placeholder={'"Hey... I was just thinking about you."'}
             rows={2} maxLength={500}
             className="bg-gray-800 border-gray-700 text-sm resize-none focus:border-pink-500/60 mb-3" />
+
+          {/* Public / Private toggle */}
+          <div className="flex gap-2 mb-3">
+            <button
+              onClick={() => setTalkIsPublic(true)}
+              className={`flex-1 flex items-center justify-center gap-1.5 py-1.5 rounded-lg border text-xs transition-all ${
+                talkIsPublic
+                  ? "border-pink-500 bg-pink-500/10 text-pink-300"
+                  : "border-gray-700 text-gray-500 hover:border-gray-500 hover:text-gray-400"
+              }`}
+            >
+              <Globe className="w-3 h-3" /> Public
+            </button>
+            <button
+              onClick={() => setTalkIsPublic(false)}
+              className={`flex-1 flex items-center justify-center gap-1.5 py-1.5 rounded-lg border text-xs transition-all ${
+                !talkIsPublic
+                  ? "border-purple-500 bg-purple-500/10 text-purple-300"
+                  : "border-gray-700 text-gray-500 hover:border-gray-500 hover:text-gray-400"
+              }`}
+            >
+              <Lock className="w-3 h-3" /> Private
+            </button>
+          </div>
+
           <div className="flex gap-2">
             <Button size="sm" onClick={handleTalk} disabled={talkLoading || !talkText.trim()}
               className="flex-1 bg-gradient-to-r from-pink-600 to-purple-600 hover:from-pink-500 hover:to-purple-500">
@@ -358,6 +392,11 @@ export function ImageActions({ image, onGenerateVariations, onSetPrompt }: Image
                 className="flex items-center justify-center gap-2 w-full py-1.5 bg-gray-800 hover:bg-gray-700 rounded-lg transition text-xs text-gray-300">
                 <Download className="w-3.5 h-3.5" /> Download Video
               </a>
+              {/* Visibility confirmation — saved at generation time */}
+              <div className="flex items-center gap-2 py-1.5 px-3 bg-green-900/20 border border-green-700/30 rounded-lg text-xs text-green-400">
+                <Check className="w-3.5 h-3.5" />
+                Saved to {talkIsPublic ? "public" : "private"} lip sync gallery
+              </div>
             </div>
           )}
           {talkResult?.audioOnly && (
@@ -411,6 +450,60 @@ function Panel({ title, onClose, children }: { title: string; onClose: () => voi
         </button>
       </div>
       {children}
+    </div>
+  )
+}
+
+function SaveToGalleryButtons({ id, type }: { id: string; type: "video" | "image" }) {
+  const [saving, setSaving] = useState(false)
+  const [saved, setSaved] = useState<"public" | "private" | null>(null)
+
+  const handleSave = async (isPublic: boolean) => {
+    setSaving(true)
+    try {
+      const endpoint = type === "video" ? "/api/save-to-gallery" : "/api/save-to-gallery"
+      const res = await fetch(endpoint, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ id, type, isPublic }),
+      })
+      if (!res.ok) throw new Error("Failed to save")
+      setSaved(isPublic ? "public" : "private")
+      toast.success(isPublic ? "Saved to public gallery!" : "Saved to your private gallery!")
+    } catch {
+      toast.error("Failed to save to gallery")
+    } finally {
+      setSaving(false)
+    }
+  }
+
+  if (saved) {
+    return (
+      <div className="flex items-center gap-2 py-1.5 px-3 bg-green-900/20 border border-green-700/30 rounded-lg text-xs text-green-400">
+        <Check className="w-3.5 h-3.5" />
+        Saved to {saved === "public" ? "public" : "private"} gallery
+      </div>
+    )
+  }
+
+  return (
+    <div className="flex gap-2">
+      <button
+        onClick={() => handleSave(true)}
+        disabled={saving}
+        className="flex-1 flex items-center justify-center gap-1.5 py-1.5 bg-pink-600/20 hover:bg-pink-600/30 border border-pink-600/30 rounded-lg transition text-xs text-pink-300 disabled:opacity-50"
+      >
+        {saving ? <Loader2 className="w-3 h-3 animate-spin" /> : <Globe className="w-3 h-3" />}
+        Save Public
+      </button>
+      <button
+        onClick={() => handleSave(false)}
+        disabled={saving}
+        className="flex-1 flex items-center justify-center gap-1.5 py-1.5 bg-gray-800 hover:bg-gray-700 border border-gray-700 rounded-lg transition text-xs text-gray-300 disabled:opacity-50"
+      >
+        {saving ? <Loader2 className="w-3 h-3 animate-spin" /> : <Lock className="w-3 h-3" />}
+        Save Private
+      </button>
     </div>
   )
 }

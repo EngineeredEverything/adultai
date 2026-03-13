@@ -11,13 +11,15 @@ export async function deleteImageAction(
   const user = await currentUser();
   if (!user) return { error: "Not authenticated" };
 
+  const isAdmin = (user as any).role === "ADMIN";
+
   try {
     // First get the image to check ownership and get the CDN path
+    // Admins can delete any image; regular users can only delete their own
     const image = await db.generatedImage.findFirst({
-      where: {
-        id: imageId,
-        userId: user.id,
-      },
+      where: isAdmin
+        ? { id: imageId }
+        : { id: imageId, userId: user.id },
     });
 
     if (!image) {
@@ -26,7 +28,7 @@ export async function deleteImageAction(
 
     // Start a transaction to ensure both operations succeed or fail together
     await db.$transaction(async (tx) => {
-      // Delete from database
+      // Delete from database — admins can delete any image
       await tx.generatedImage.delete({
         where: { id: imageId },
       });
@@ -63,12 +65,13 @@ export async function deleteMultipleImages(
   const user = await currentUser();
   if (!user) return { error: "Not authenticated" };
 
+  const isAdmin = (user as any).role === "ADMIN";
+
   try {
     const images = await db.generatedImage.findMany({
-      where: {
-        id: { in: imageIds },
-        userId: user.id,
-      },
+      where: isAdmin
+        ? { id: { in: imageIds } }
+        : { id: { in: imageIds }, userId: user.id },
       select: { id: true, path: true },
     });
 
@@ -77,12 +80,11 @@ export async function deleteMultipleImages(
     }
 
     await db.$transaction(async (tx) => {
-      // Delete all images from database
+      // Delete all images from database — admins can delete any
       await tx.generatedImage.deleteMany({
-        where: {
-          id: { in: imageIds },
-          userId: user.id,
-        },
+        where: isAdmin
+          ? { id: { in: imageIds } }
+          : { id: { in: imageIds }, userId: user.id },
       });
 
       // Delete from CDN

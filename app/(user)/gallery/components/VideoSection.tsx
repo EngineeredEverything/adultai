@@ -42,6 +42,8 @@ function VideoCard({ video, onClick }: { video: VideoItem; onClick: () => void }
         <video
           ref={videoRef}
           src={video.video.cdnUrl || video.video.videoUrl || ""}
+          poster={(video.video.cdnUrl || video.video.videoUrl || "") + "#t=0.5"}
+          preload="none"
           className="w-full h-full object-cover"
           muted
           playsInline
@@ -153,16 +155,17 @@ export default function VideoSection({ mediaType, userId, userMode, searchQuery 
   const fetchVideos = useCallback(async () => {
     setIsLoading(true)
     try {
-      const promptFilter = mediaType === "lipsync" ? "Lip sync:" : undefined
+      // Build filters: user mode shows all user's own videos (inc. private), public mode shows public only
+      const filters: Record<string, any> = userMode && userId
+        ? { userId, private: true }
+        : { isPublic: true }
 
       const result = await searchVideos({
-        query: promptFilter || searchQuery || "",
+        query: searchQuery || "",
         data: {
-          limit: { start: 0, end: 40 },
+          limit: { start: 0, end: 60 },
         },
-        filters: {
-          ...(userMode && userId ? { userId, private: true } : { isPublic: true }),
-        },
+        filters,
       })
 
       if ("error" in result) {
@@ -170,7 +173,7 @@ export default function VideoSection({ mediaType, userId, userMode, searchQuery 
         setVideos([])
       } else {
         let items = result.videos || []
-        // Client-side filter for lip sync vs animation if needed
+        // Split by type: lip syncs have prompt starting with "Lip sync:"
         if (mediaType === "lipsync") {
           items = items.filter((v) => v.video.prompt?.startsWith("Lip sync"))
         } else if (mediaType === "videos") {

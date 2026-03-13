@@ -27,7 +27,7 @@ async function uploadToBunny(buf: Buffer, ext = "mp3"): Promise<string> {
 
 export async function POST(req: NextRequest) {
   try {
-    const { imageUrl, text, voiceId } = await req.json()
+    const { imageUrl, text, voiceId, isPublic } = await req.json()
 
     if (!imageUrl || !text?.trim()) {
       return NextResponse.json({ error: "imageUrl and text are required" }, { status: 400 })
@@ -99,16 +99,18 @@ export async function POST(req: NextRequest) {
         if (session?.user?.email) {
           const dbUser = await db.user.findUnique({ where: { email: session.user.email } })
           if (dbUser) {
+            const makePublic = isPublic === true
             const record = await db.generatedVideo.create({
               data: {
                 userId: dbUser.id,
                 prompt: `Lip sync: ${text.trim().substring(0, 200)}`,
                 videoUrl,
                 status: "completed",
-                isPublic: false,
+                isPublic: makePublic,
                 costNuts: 0,
                 width: 512,
                 height: 512,
+                verified: makePublic ? new Date() : null,
               },
             })
             videoId = record.id

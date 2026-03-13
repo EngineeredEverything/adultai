@@ -55,6 +55,8 @@ export function VideoCard({ video, isLoaded, onClick, onLoad, onError, position,
             <video
               ref={videoRef}
               src={video.video.cdnUrl}
+              poster={`${video.video.cdnUrl}#t=0.5`}
+              preload="none"
               className="w-full h-full object-cover"
               onLoadedData={onLoad}
               onError={() => {
