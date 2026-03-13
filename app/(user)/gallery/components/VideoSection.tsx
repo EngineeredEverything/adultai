@@ -22,6 +22,11 @@ function VideoCard({ video, onClick }: { video: VideoItem; onClick: () => void }
   const [isHovering, setIsHovering] = useState(false)
   const videoRef = useRef<HTMLVideoElement | null>(null)
 
+  // Use videoUrl if cdnUrl is just the base domain (path was null)
+  const videoUrl = video.video.cdnUrl && !video.video.cdnUrl.endsWith("b-cdn.net/")
+    ? video.video.cdnUrl
+    : video.video.videoUrl || ""
+
   return (
     <div
       className="cursor-pointer group transition-all duration-200 hover:scale-[1.02] relative aspect-square bg-muted rounded-lg overflow-hidden shadow-md hover:shadow-xl"
@@ -38,16 +43,20 @@ function VideoCard({ video, onClick }: { video: VideoItem; onClick: () => void }
         }
       }}
     >
-      {video.video.cdnUrl || video.video.videoUrl ? (
+      {videoUrl ? (
         <video
           ref={videoRef}
-          src={video.video.cdnUrl || video.video.videoUrl || ""}
-          poster={(video.video.cdnUrl || video.video.videoUrl || "") + "#t=0.5"}
-          preload="none"
+          src={videoUrl}
+          preload="metadata"
           className="w-full h-full object-cover"
           muted
           playsInline
           loop
+          onLoadedMetadata={(e) => {
+            // Seek to 0.5s to show a real first frame as thumbnail
+            const v = e.currentTarget
+            v.currentTime = 0.5
+          }}
         />
       ) : (
         <div className="w-full h-full flex items-center justify-center">
@@ -155,39 +164,51 @@ export default function VideoSection({ mediaType, userId, userMode, searchQuery 
   const fetchVideos = useCallback(async () => {
     setIsLoading(true)
     try {
-      // Build filters: user mode shows all user's own videos (inc. private), public mode shows public only
-      const filters: Record<string, any> = userMode && userId
-        ? { userId, private: true }
-        : { isPublic: true }
+      let items: VideoItem[] = []
 
-      const result = await searchVideos({
-        query: searchQuery || "",
-        data: {
-          limit: { start: 0, end: 60 },
-        },
-        filters,
-      })
-
-      if ("error" in result) {
-        console.error("Failed to fetch videos:", result.error)
-        setVideos([])
-      } else {
-        let items = result.videos || []
-        // Split by type: lip syncs have prompt starting with "Lip sync:"
-        if (mediaType === "lipsync") {
-          items = items.filter((v) => v.video.prompt?.startsWith("Lip sync"))
-        } else if (mediaType === "videos") {
-          items = items.filter((v) => !v.video.prompt?.startsWith("Lip sync"))
+      if (mediaType === "lipsync") {
+        // Lip sync tab: always show the current user's own lip syncs (public + private)
+        // Falls back to public-only if no userId available
+        if (userId) {
+          const result = await searchVideos({
+            query: "",
+            data: { limit: { start: 0, end: 60 } },
+            filters: { userId, private: true },
+          })
+          if (!("error" in result)) {
+            items = (result.videos || []).filter((v) => v.video.prompt?.startsWith("Lip sync"))
+          }
+        } else {
+          // Not logged in — show public lip syncs
+          const result = await searchVideos({
+            query: "",
+            data: { limit: { start: 0, end: 60 } },
+            filters: { isPublic: true },
+          })
+          if (!("error" in result)) {
+            items = (result.videos || []).filter((v) => v.video.prompt?.startsWith("Lip sync"))
+          }
         }
-        setVideos(items)
+      } else {
+        // Videos tab: public non-lipsync videos (reserved for future animated videos feature)
+        const result = await searchVideos({
+          query: searchQuery || "",
+          data: { limit: { start: 0, end: 60 } },
+          filters: { isPublic: true },
+        })
+        if (!("error" in result)) {
+          items = (result.videos || []).filter((v) => !v.video.prompt?.startsWith("Lip sync"))
+        }
       }
+
+      setVideos(items)
     } catch (err) {
       console.error("Video fetch error:", err)
       setVideos([])
     } finally {
       setIsLoading(false)
     }
-  }, [mediaType, userId, userMode, searchQuery])
+  }, [mediaType, userId, searchQuery])
 
   useEffect(() => {
     fetchVideos()
