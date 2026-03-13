@@ -683,29 +683,7 @@ export default function GalleryPage(props: GalleryPageProps) {
         />
       )}
 
-      {/* GENDER FILTER — normal gallery mode (images only) */}
-      {isNormalMode && mediaType === "images" && (
-        <div className="flex gap-2 mb-4">
-          {(
-            [
-              { label: "All",   value: null     },
-              { label: "Women", value: "female" },
-              { label: "Men",   value: "male"   },
-            ] as { label: string; value: "female" | "male" | null }[]
-          ).map(({ label, value }) => (
-            <button
-              key={label}
-              onClick={() => setGenderFilter(value)}
-              className={`rounded-full px-4 py-1.5 text-sm font-medium border transition-colors
-                ${genderFilter === value
-                  ? "bg-pink-500 text-white border-pink-500"
-                  : "border-gray-700 text-gray-400 hover:border-gray-500 hover:text-white"}`}
-            >
-              {label}
-            </button>
-          ))}
-        </div>
-      )}
+      {/* GENDER FILTER — hidden until images are fully tagged */}
 
       {/* SORT MENU — normal / user mode (images only) */}
       {!isCategoryMode && mediaType === "images" && paginatedImages.length > 0 && (
