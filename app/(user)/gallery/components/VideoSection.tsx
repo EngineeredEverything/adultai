@@ -1,7 +1,7 @@
 "use client"
 
 import { useState, useEffect, useCallback, useRef } from "react"
-import { searchVideos } from "@/actions/videos/info"
+import { getUserLipsyncs, getUserMotionVideos } from "@/actions/videos/getUserVideos"
 import { deleteVideo } from "@/actions/videos/delete"
 import type { SearchVideosResponseSuccessType } from "@/types/videos"
 import { Play, Trash2, Download, X } from "lucide-react"
@@ -164,51 +164,32 @@ export default function VideoSection({ mediaType, userId, userMode, searchQuery 
   const fetchVideos = useCallback(async () => {
     setIsLoading(true)
     try {
-      let items: VideoItem[] = []
-
       if (mediaType === "lipsync") {
-        // Lip sync tab: always show the current user's own lip syncs (public + private)
-        // Falls back to public-only if no userId available
-        if (userId) {
-          const result = await searchVideos({
-            query: "",
-            data: { limit: { start: 0, end: 60 } },
-            filters: { userId, private: true },
-          })
-          if (!("error" in result)) {
-            items = (result.videos || []).filter((v) => v.video.prompt?.startsWith("Lip sync"))
-          }
+        // Direct query: current user's own lip syncs (public + private), no filter chain
+        const result = await getUserLipsyncs()
+        if ("error" in result) {
+          console.error("Failed to fetch lip syncs:", result.error)
+          setVideos([])
         } else {
-          // Not logged in — show public lip syncs
-          const result = await searchVideos({
-            query: "",
-            data: { limit: { start: 0, end: 60 } },
-            filters: { isPublic: true },
-          })
-          if (!("error" in result)) {
-            items = (result.videos || []).filter((v) => v.video.prompt?.startsWith("Lip sync"))
-          }
+          setVideos(result.videos as VideoItem[])
         }
       } else {
-        // Videos tab: public non-lipsync videos (reserved for future animated videos feature)
-        const result = await searchVideos({
-          query: searchQuery || "",
-          data: { limit: { start: 0, end: 60 } },
-          filters: { isPublic: true },
-        })
-        if (!("error" in result)) {
-          items = (result.videos || []).filter((v) => !v.video.prompt?.startsWith("Lip sync"))
+        // Videos tab: reserved for future animated video feature
+        const result = await getUserMotionVideos()
+        if ("error" in result) {
+          console.error("Failed to fetch videos:", result.error)
+          setVideos([])
+        } else {
+          setVideos(result.videos as VideoItem[])
         }
       }
-
-      setVideos(items)
     } catch (err) {
       console.error("Video fetch error:", err)
       setVideos([])
     } finally {
       setIsLoading(false)
     }
-  }, [mediaType, userId, searchQuery])
+  }, [mediaType])
 
   useEffect(() => {
     fetchVideos()
