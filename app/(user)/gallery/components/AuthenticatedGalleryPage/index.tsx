@@ -780,6 +780,12 @@ export default function GalleryPage(props: GalleryPageProps) {
           user={user}
           onSetPrompt={(p) => { setPrompt(p); setSelectedImage(null) }}
           onGenerateVariations={(p) => { setPrompt(p); setSelectedImage(null) }}
+          onReuseSettings={({ prompt: p, modelId, ratio: r }) => {
+            setPrompt(p)
+            if (modelId) setSelectedModel(modelId)
+            if (r) setRatio(r)
+            setSelectedImage(null)
+          }}
         />
       )}
 

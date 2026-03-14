@@ -77,6 +77,7 @@ interface ImageDialogProps {
   ) => void;
   onGenerateVariations?: (prompt: string) => void;
   onSetPrompt?: (prompt: string) => void;
+  onReuseSettings?: (settings: { prompt: string; modelId?: string; ratio?: { width: number; height: number } }) => void;
 }
 
 export function ImageDialog({
@@ -89,6 +90,7 @@ export function ImageDialog({
   setSelectedImage,
   onGenerateVariations,
   onSetPrompt,
+  onReuseSettings,
 }: ImageDialogProps) {
   const [comments, setComments] = useState<
     {
@@ -633,9 +635,32 @@ export function ImageDialog({
                 ) : (
                   <div className="space-y-3">
                     {image.image.prompt && (
-                      <p className="text-sm leading-relaxed">
-                        {image.image.prompt}
-                      </p>
+                      <div className="space-y-2">
+                        <p className="text-sm leading-relaxed">
+                          {image.image.prompt}
+                        </p>
+                        {onReuseSettings && (
+                          <button
+                            onClick={() => {
+                              const w = image.image.width
+                              const h = image.image.height
+                              onReuseSettings({
+                                prompt: image.image.prompt || "",
+                                modelId: image.image.modelId || undefined,
+                                ratio: w && h ? { width: w, height: h } : undefined,
+                              })
+                              onClose()
+                            }}
+                            className="flex items-center gap-1.5 text-xs text-amber-400 hover:text-amber-300 transition-colors py-1 px-2 rounded-md hover:bg-amber-500/10"
+                          >
+                            <svg className="w-3.5 h-3.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2}>
+                              <path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7" />
+                              <path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z" />
+                            </svg>
+                            Reuse prompt &amp; settings
+                          </button>
+                        )}
+                      </div>
                     )}
 
                     {/* Categories */}
