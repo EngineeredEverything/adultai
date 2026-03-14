@@ -19,6 +19,7 @@ import type { Category } from "../types/image";
 import { AnimatePresence } from "framer-motion";
 import MobileBottomNav from "../mobile-bottom-nav";
 import { useRouter, useSearchParams } from "next/navigation";
+import Link from "next/link";
 import Categories from "../Categories";
 import { useImageGeneration } from "../hooks/use-image-generation";
 import { useImageLoading } from "../hooks/use-image-loading";
@@ -600,9 +601,9 @@ export default function GalleryPage(props: GalleryPageProps) {
             <h1 className="text-lg font-semibold text-white">{creatorName}</h1>
             <p className="text-sm text-gray-400">Public AI-generated images</p>
           </div>
-          <a href="/gallery" className="ml-auto text-xs text-gray-500 hover:text-gray-300 transition-colors">
+          <Link href="/gallery" className="ml-auto text-xs text-gray-500 hover:text-gray-300 transition-colors">
             ← Back to gallery
-          </a>
+          </Link>
         </div>
       )}
 
