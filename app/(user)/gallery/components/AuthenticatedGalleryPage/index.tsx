@@ -107,6 +107,14 @@ export default function GalleryPage(props: GalleryPageProps) {
   const [activeSubcategory, setActiveSubcategory] = useState<string | null>(null);
   // Gender/type filter — applies in normal gallery mode
   const [genderFilter, setGenderFilter] = useState<"female" | "male" | null>(null);
+  // Manual refresh key — bump to re-trigger the fetch effect
+  const [refreshKey, setRefreshKey] = useState(0);
+  const [isRefreshing, setIsRefreshing] = useState(false);
+  // Pull-to-refresh state
+  const [pullDistance, setPullDistance] = useState(0);
+  const [isPulling, setIsPulling] = useState(false);
+  const touchStartYRef = useRef(0);
+  const PULL_THRESHOLD = 70; // px before triggering refresh
   // Media type filter — images vs videos vs lip sync
   const [mediaType, setMediaType] = useState<MediaType>("images");
   // Upgrade modal — shown when user hits generation limit
@@ -288,6 +296,7 @@ export default function GalleryPage(props: GalleryPageProps) {
       } finally {
         if (!abortController.signal.aborted && isMountedRef.current) {
           setIsLoadingImages(false);
+          setIsRefreshing(false);
         }
       }
     }
@@ -297,7 +306,7 @@ export default function GalleryPage(props: GalleryPageProps) {
     return () => {
       abortController.abort();
     };
-  }, [searchQuery, isUserMode, isCategoryMode, userId, category_id, prefetchedImages, prefetchedTotalCount, categorySortBy, activeSubcategory, categoryFiltersChanged, genderFilter, sortBy]);
+  }, [searchQuery, isUserMode, isCategoryMode, userId, category_id, prefetchedImages, prefetchedTotalCount, categorySortBy, activeSubcategory, categoryFiltersChanged, genderFilter, sortBy, refreshKey]);
 
   // Fetch categories (only in normal mode) — deferred 200ms so image grid renders first
   useEffect(() => {
@@ -448,6 +457,38 @@ export default function GalleryPage(props: GalleryPageProps) {
     router.replace("/gallery");
   }, [router]);
 
+  // Manual gallery refresh
+  const handleRefresh = useCallback(() => {
+    setIsRefreshing(true);
+    setRefreshKey((k) => k + 1);
+  }, []);
+
+  // Pull-to-refresh touch handlers
+  const handleTouchStart = useCallback((e: React.TouchEvent) => {
+    // Only activate when scrolled to top
+    if (window.scrollY === 0) {
+      touchStartYRef.current = e.touches[0].clientY;
+      setIsPulling(true);
+    }
+  }, []);
+
+  const handleTouchMove = useCallback((e: React.TouchEvent) => {
+    if (!isPulling) return;
+    const delta = e.touches[0].clientY - touchStartYRef.current;
+    if (delta > 0) {
+      setPullDistance(Math.min(delta * 0.4, PULL_THRESHOLD * 1.4)); // rubber band
+    }
+  }, [isPulling]);
+
+  const handleTouchEnd = useCallback(() => {
+    if (!isPulling) return;
+    setIsPulling(false);
+    if (pullDistance >= PULL_THRESHOLD) {
+      handleRefresh();
+    }
+    setPullDistance(0);
+  }, [isPulling, pullDistance, handleRefresh]);
+
   // Handle image deletion with optimistic update
   const handleDelete = useCallback(
     async (imageId: string) => {
@@ -527,7 +568,28 @@ export default function GalleryPage(props: GalleryPageProps) {
   }, [categories, interests]);
 
   return (
-    <div className={`container mx-auto px-4 py-8 transition-all duration-300`}>
+    <div
+      className={`container mx-auto px-4 py-8 transition-all duration-300`}
+      onTouchStart={handleTouchStart}
+      onTouchMove={handleTouchMove}
+      onTouchEnd={handleTouchEnd}
+    >
+      {/* Pull-to-refresh indicator */}
+      {(isPulling || isRefreshing) && (
+        <div
+          className="flex items-center justify-center gap-2 text-purple-400 text-sm font-medium overflow-hidden transition-all duration-200"
+          style={{ height: isRefreshing ? 44 : Math.min(pullDistance, PULL_THRESHOLD * 1.4), marginBottom: 8 }}
+        >
+          <svg
+            className={`w-5 h-5 ${isRefreshing ? "animate-spin" : ""} transition-transform duration-200`}
+            style={{ transform: isRefreshing ? undefined : `rotate(${Math.min(pullDistance / PULL_THRESHOLD, 1) * 180}deg)` }}
+            viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2}
+          >
+            <path d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
+          </svg>
+          {isRefreshing ? "Refreshing…" : pullDistance >= PULL_THRESHOLD ? "Release to refresh" : "Pull to refresh"}
+        </div>
+      )}
       {/* Creator profile header — shown when browsing another user's public gallery */}
       {creatorName && (
         <div className="mb-6 flex items-center gap-4 p-4 bg-gray-900/60 border border-gray-700/50 rounded-2xl">
@@ -718,9 +780,25 @@ export default function GalleryPage(props: GalleryPageProps) {
       {!isCategoryMode && mediaType === "images" && paginatedImages.length > 0 && (
         <div className="flex justify-between items-center mb-6">
           <h2 className="text-xl font-semibold">
-            {isUserMode ? "Your Images" : "Public Gallery"}
+            {isUserMode ? "Your Images" : isCreatorMode ? `${creatorName}&apos;s Gallery` : "Public Gallery"}
           </h2>
-          <GallerySortMenu currentSort={sortBy} onSortChange={setSortBy} />
+          <div className="flex items-center gap-2">
+            {/* Refresh button */}
+            <button
+              onClick={handleRefresh}
+              disabled={isRefreshing || isLoadingImages}
+              title="Refresh gallery"
+              className="p-2 rounded-xl text-gray-400 hover:text-purple-400 hover:bg-purple-500/10 transition-colors disabled:opacity-40"
+            >
+              <svg
+                className={`w-4 h-4 ${isRefreshing ? "animate-spin" : ""}`}
+                viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2}
+              >
+                <path d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
+              </svg>
+            </button>
+            <GallerySortMenu currentSort={sortBy} onSortChange={setSortBy} />
+          </div>
         </div>
       )}
 
