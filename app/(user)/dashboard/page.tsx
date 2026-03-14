@@ -9,7 +9,7 @@ import { Badge } from "@/components/ui/badge";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Lock, Plus } from "lucide-react";
-import { AuthenticatedGalleryPage } from "../gallery/components/AuthenticatedGalleryPage";
+import GalleryPage from "../gallery/components/AuthenticatedGalleryPage";
 
 export default function DashboardPage() {
   const { data: session, status } = useSession();
@@ -263,17 +263,19 @@ export default function DashboardPage() {
 
           {/* Public Gallery */}
           <TabsContent value="public" className="mt-6">
-            <AuthenticatedGalleryPage
+            <GalleryPage
               userId={session.user.id}
               userMode={false}
+              searchQuery=""
             />
           </TabsContent>
 
           {/* Private Gallery */}
           <TabsContent value="private" className="mt-6">
-            <AuthenticatedGalleryPage
+            <GalleryPage
               userId={session.user.id}
               userMode={true}
+              searchQuery=""
             />
           </TabsContent>
 

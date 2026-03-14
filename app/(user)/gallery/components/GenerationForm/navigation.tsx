@@ -124,45 +124,45 @@ export function Navigation({
                 </TooltipContent>
               </Tooltip>
             </TooltipProvider>
-            {/* Generation Form */}
-
-            {/* {user ? (
+            {/* User Menu */}
+            {user ? (
               <DropdownMenu>
                 <DropdownMenuTrigger asChild>
                   <Button
                     variant="ghost"
-                    className="relative h-8 w-8 rounded-full"
+                    className="relative h-8 w-8 rounded-full p-0"
                   >
                     <Avatar className="h-8 w-8">
                       <AvatarImage
-                        src={user.image || ""}
-                        alt={user.name || ""}
+                        src={user.user.image || ""}
+                        alt={user.user.name || ""}
                       />
-                      <AvatarFallback>{user.name?.[0]}</AvatarFallback>
+                      <AvatarFallback className="bg-gray-700 text-white text-xs">
+                        {user.user.name?.[0]?.toUpperCase() || "U"}
+                      </AvatarFallback>
                     </Avatar>
                   </Button>
                 </DropdownMenuTrigger>
-                <DropdownMenuContent className="w-56" align="end" forceMount>
-                  <Link href={"/profile"}>
-                    <DropdownMenuItem>Profile</DropdownMenuItem>
+                <DropdownMenuContent className="w-48 bg-gray-900 border-gray-800 text-white" align="end" forceMount>
+                  <Link href="/dashboard">
+                    <DropdownMenuItem className="hover:bg-gray-800 cursor-pointer">Dashboard</DropdownMenuItem>
                   </Link>
-                  <Link href={"/gallery/user"}>
-                    <DropdownMenuItem>User Images</DropdownMenuItem>
+                  <Link href="/profile">
+                    <DropdownMenuItem className="hover:bg-gray-800 cursor-pointer">Edit Profile</DropdownMenuItem>
                   </Link>
-                  <Link href={"/gallery"}>
-                    <DropdownMenuItem>Gallery</DropdownMenuItem>
+                  <Link href="/gallery/user">
+                    <DropdownMenuItem className="hover:bg-gray-800 cursor-pointer">My Images</DropdownMenuItem>
                   </Link>
-                  <Separator />
-                  <DropdownMenuItem onClick={handleSignOut}>
+                  <Link href="/subscription">
+                    <DropdownMenuItem className="hover:bg-gray-800 cursor-pointer">Subscription</DropdownMenuItem>
+                  </Link>
+                  <Separator className="bg-gray-800" />
+                  <DropdownMenuItem onClick={handleSignOut} className="hover:bg-gray-800 text-red-400 cursor-pointer">
                     Sign out
                   </DropdownMenuItem>
                 </DropdownMenuContent>
               </DropdownMenu>
-            ) : (
-              <LoginButton onClose={() => setIsLoginOpen(false)} mode="modal">
-                <Button>Sign In</Button>
-              </LoginButton>
-            )} */}
+            ) : null}
           </div>
         </div>
       </div>
