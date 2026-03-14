@@ -42,9 +42,9 @@ export function ImageVotes({
           variant="ghost"
           size="sm"
           className={cn(
-            "h-8 px-2 text-muted-foreground hover:text-green-600",
+            "h-8 px-2 text-gray-400 hover:text-green-400 hover:bg-gray-800",
             userVote === "UPVOTE" &&
-              "text-green-600 bg-green-50 hover:bg-green-100"
+              "text-green-400 bg-green-900/30 hover:bg-green-900/50"
           )}
           onClick={handleUpvote}
           disabled={disabled || isLoading}
@@ -57,8 +57,8 @@ export function ImageVotes({
           variant="ghost"
           size="sm"
           className={cn(
-            "h-8 px-2 text-muted-foreground hover:text-red-600",
-            userVote === "DOWNVOTE" && "text-red-600 bg-red-50 hover:bg-red-100"
+            "h-8 px-2 text-gray-400 hover:text-red-400 hover:bg-gray-800",
+            userVote === "DOWNVOTE" && "text-red-400 bg-red-900/30 hover:bg-red-900/50"
           )}
           onClick={handleDownvote}
           disabled={disabled || isLoading}
@@ -72,8 +72,8 @@ export function ImageVotes({
             className={cn(
               "text-xs font-medium px-2 py-1 rounded-full",
               voteStats.voteScore > 0
-                ? "text-green-700 bg-green-100"
-                : "text-red-700 bg-red-100"
+                ? "text-green-400 bg-green-900/30"
+                : "text-red-400 bg-red-900/30"
             )}
           >
             {voteStats.voteScore > 0 ? "+" : ""}
@@ -92,9 +92,9 @@ export function ImageVotes({
             variant="ghost"
             className={cn(
               sizeClasses[size],
-              "flex items-center gap-2 text-muted-foreground hover:text-green-600",
+              "flex items-center gap-2 text-gray-400 hover:text-green-400 hover:bg-gray-800",
               userVote === "UPVOTE" &&
-                "text-green-600 bg-green-50 hover:bg-green-100"
+                "text-green-400 bg-green-900/30 hover:bg-green-900/50"
             )}
             onClick={handleUpvote}
             disabled={disabled || isLoading}
@@ -108,9 +108,9 @@ export function ImageVotes({
             variant="ghost"
             className={cn(
               sizeClasses[size],
-              "flex items-center gap-2 text-muted-foreground hover:text-red-600",
+              "flex items-center gap-2 text-gray-400 hover:text-red-400 hover:bg-gray-800",
               userVote === "DOWNVOTE" &&
-                "text-red-600 bg-red-50 hover:bg-red-100"
+                "text-red-400 bg-red-900/30 hover:bg-red-900/50"
             )}
             onClick={handleDownvote}
             disabled={disabled || isLoading}
@@ -124,15 +124,15 @@ export function ImageVotes({
         {voteStats.totalVotes > 0 && (
           <div className="space-y-2">
             <div className="flex items-center justify-between text-sm">
-              <span className="text-muted-foreground">Vote Score</span>
+              <span className="text-gray-400">Vote Score</span>
               <span
                 className={cn(
                   "font-medium",
                   voteStats.voteScore > 0
-                    ? "text-green-600"
+                    ? "text-green-400"
                     : voteStats.voteScore < 0
-                    ? "text-red-600"
-                    : "text-muted-foreground"
+                    ? "text-red-400"
+                    : "text-gray-400"
                 )}
               >
                 {voteStats.voteScore > 0 ? "+" : ""}
@@ -141,11 +141,11 @@ export function ImageVotes({
             </div>
 
             <div className="space-y-1">
-              <div className="flex items-center justify-between text-xs text-muted-foreground">
+              <div className="flex items-center justify-between text-xs text-gray-400">
                 <span>{voteStats.upvotePercentage}% upvoted</span>
                 <span>{voteStats.totalVotes} total votes</span>
               </div>
-              <div className="w-full bg-gray-200 rounded-full h-2">
+              <div className="w-full bg-gray-800 rounded-full h-2">
                 <div
                   className="bg-green-500 h-2 rounded-full transition-all duration-300"
                   style={{ width: `${voteStats.upvotePercentage}%` }}
@@ -165,9 +165,9 @@ export function ImageVotes({
         variant="ghost"
         className={cn(
           sizeClasses[size],
-          "flex items-center gap-2 text-muted-foreground hover:text-green-600",
+          "flex items-center gap-2 text-gray-400 hover:text-green-400 hover:bg-gray-800",
           userVote === "UPVOTE" &&
-            "text-green-600 bg-green-50 hover:bg-green-100"
+            "text-green-400 bg-green-900/30 hover:bg-green-900/50"
         )}
         onClick={handleUpvote}
         disabled={disabled || isLoading}
@@ -180,8 +180,8 @@ export function ImageVotes({
         variant="ghost"
         className={cn(
           sizeClasses[size],
-          "flex items-center gap-2 text-muted-foreground hover:text-red-600",
-          userVote === "DOWNVOTE" && "text-red-600 bg-red-50 hover:bg-red-100"
+          "flex items-center gap-2 text-gray-400 hover:text-red-400 hover:bg-gray-800",
+          userVote === "DOWNVOTE" && "text-red-400 bg-red-900/30 hover:bg-red-900/50"
         )}
         onClick={handleDownvote}
         disabled={disabled || isLoading}
@@ -193,14 +193,14 @@ export function ImageVotes({
       {Math.abs(voteStats.voteScore) > 0 && (
         <div className="flex items-center gap-1 text-sm">
           {voteStats.voteScore > 0 ? (
-            <TrendingUp className="w-4 h-4 text-green-600" />
+            <TrendingUp className="w-4 h-4 text-green-400" />
           ) : (
-            <TrendingDown className="w-4 h-4 text-red-600" />
+            <TrendingDown className="w-4 h-4 text-red-400" />
           )}
           <span
             className={cn(
               "font-medium",
-              voteStats.voteScore > 0 ? "text-green-600" : "text-red-600"
+              voteStats.voteScore > 0 ? "text-green-400" : "text-red-400"
             )}
           >
             {Math.abs(voteStats.voteScore)}
