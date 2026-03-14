@@ -52,10 +52,12 @@ interface GalleryPageProps {
   category_id?: string;
   prefetchedImages?: SearchImagesResponseSuccessType["images"];
   prefetchedCount?: number;
+  creatorName?: string;   // Set when browsing another user's public gallery
+  currentUserId?: string; // The logged-in user's id (for creator pages)
 }
 
 export default function GalleryPage(props: GalleryPageProps) {
-  const { userId: userIdProp, searchQuery, userMode, category_id, prefetchedImages, prefetchedCount } = props;
+  const { userId: userIdProp, searchQuery, userMode, category_id, prefetchedImages, prefetchedCount, creatorName, currentUserId } = props;
   // userId may start undefined (SSR no longer reads session) and gets set after client user fetch
   const [resolvedUserId, setResolvedUserId] = useState<string | undefined>(userIdProp);
   const userId = resolvedUserId;
@@ -63,7 +65,8 @@ export default function GalleryPage(props: GalleryPageProps) {
   // Determine the mode
   const isCategoryMode = !!category_id;
   const isUserMode = !!userMode;
-  const isNormalMode = !isCategoryMode && !isUserMode;
+  const isCreatorMode = !!creatorName; // browsing another user's public gallery
+  const isNormalMode = !isCategoryMode && !isUserMode && !isCreatorMode;
 
   // Data states — seed with server-prefetched data if available
   const [user, setUser] = useState<GetCurrentUserInfoSuccessType | undefined>();
@@ -215,8 +218,12 @@ export default function GalleryPage(props: GalleryPageProps) {
           filters.userId = userId;
           filters.private = true;
         } else {
-          // Public gallery should only show public images
+          // Public gallery (or creator profile) — only public images
           filters.isPublic = true;
+          // Creator profile: filter to this creator's public images
+          if (creatorName && userId) {
+            filters.userId = userId;
+          }
         }
 
         if (isCategoryMode && category_id) {
@@ -521,6 +528,22 @@ export default function GalleryPage(props: GalleryPageProps) {
 
   return (
     <div className={`container mx-auto px-4 py-8 transition-all duration-300`}>
+      {/* Creator profile header — shown when browsing another user's public gallery */}
+      {creatorName && (
+        <div className="mb-6 flex items-center gap-4 p-4 bg-gray-900/60 border border-gray-700/50 rounded-2xl">
+          <div className="w-12 h-12 rounded-full bg-gradient-to-br from-purple-600 to-pink-600 flex items-center justify-center text-white font-bold text-lg flex-shrink-0">
+            {creatorName.charAt(0).toUpperCase()}
+          </div>
+          <div>
+            <h1 className="text-lg font-semibold text-white">{creatorName}</h1>
+            <p className="text-sm text-gray-400">Public AI-generated images</p>
+          </div>
+          <a href="/gallery" className="ml-auto text-xs text-gray-500 hover:text-gray-300 transition-colors">
+            ← Back to gallery
+          </a>
+        </div>
+      )}
+
       {/* Interest onboarding modal */}
       {showOnboarding && (
         <InterestOnboardingModal
@@ -586,13 +609,17 @@ export default function GalleryPage(props: GalleryPageProps) {
             pendingPrompt={isGenerating ? prompt : undefined}
             pendingModel={isGenerating ? selectedModel : undefined}
             onPublish={(imageId) => {
-              // Move image from generated to public gallery
+              // Move image from generated to public gallery, with isPublic: true reflected in state
               const publishedImage = generatedImages.find(
                 (img) => img.image.id === imageId
               );
               if (publishedImage) {
-                setImages((prev) => [publishedImage, ...prev]);
-                setPaginatedImages((prev) => [publishedImage, ...prev]);
+                const publicImage = {
+                  ...publishedImage,
+                  image: { ...publishedImage.image, isPublic: true },
+                };
+                setImages((prev) => [publicImage, ...prev]);
+                setPaginatedImages((prev) => [publicImage, ...prev]);
                 setGeneratedImages((prev) =>
                   prev.filter((img) => img.image.id !== imageId)
                 );

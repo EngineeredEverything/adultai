@@ -360,9 +360,13 @@ export function ImageDialog({
                 </AvatarFallback>
               </Avatar>
               <div>
-                <p className="font-semibold text-sm">
+                <a
+                  href={`/gallery/creator/${image.image.userId}`}
+                  className="font-semibold text-sm hover:text-purple-400 transition-colors"
+                  onClick={(e) => e.stopPropagation()}
+                >
                   {image.image.user?.name || "Unknown User"}
-                </p>
+                </a>
                 <p className="text-xs text-muted-foreground">
                   {new Date(image.image.createdAt).toLocaleDateString()}
                 </p>
