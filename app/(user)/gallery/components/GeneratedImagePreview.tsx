@@ -19,7 +19,7 @@ interface GeneratedImagePreviewProps {
   onSavePrivate?: (imageId: string) => void
   onDelete?: (imageId: string) => void
   onClear?: () => void
-  onRetry?: (prompt: string) => void
+  onRetry?: (prompt: string, modelId?: string) => void
   onEdit?: (prompt: string) => void
 }
 
@@ -265,7 +265,7 @@ export function GeneratedImagePreview({
                             <Button
                               size="sm"
                               variant="outline"
-                              onClick={() => onRetry(image.prompt)}
+                              onClick={() => onRetry(image.prompt, image.modelId ?? undefined)}
                               disabled={isBusy}
                               className="flex-1 border-blue-600/50 text-blue-400 hover:bg-blue-600/10"
                             >
@@ -412,7 +412,7 @@ export function GeneratedImagePreview({
                 <Button
                   size="sm"
                   variant="outline"
-                  onClick={() => { onRetry(viewingImage.image.prompt); setViewingImage(null) }}
+                  onClick={() => { onRetry(viewingImage.image.prompt, viewingImage.image.modelId ?? undefined); setViewingImage(null) }}
                   className="border-blue-600/50 text-blue-400 hover:bg-blue-600/10 hover:border-blue-500"
                 >
                   <RefreshCw className="w-4 h-4 mr-1.5" />

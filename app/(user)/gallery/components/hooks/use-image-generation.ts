@@ -306,15 +306,18 @@ export function useImageGeneration(params: UseImageGenerationParams) {
     [user, state, updateState, addPending, onLimitReached],
   )
 
-  // Retry: re-generate with the same prompt but new seed (server generates random seeds)
+  // Retry: re-generate with the same prompt + model but new seed
   const retryPrompt = useCallback(
-    async (prompt: string) => {
+    async (prompt: string, modelId?: string) => {
       if (!user) {
         updateState({ showSignInDialog: true })
         return
       }
 
       updateState({ isGenerating: true })
+
+      // Use the image's original modelId, fall back to currently selected model
+      const effectiveModel = modelId || state.selectedModel
 
       try {
         const results = await createGeneratedImage({
@@ -323,6 +326,8 @@ export function useImageGeneration(params: UseImageGenerationParams) {
           width: state.ratio.width,
           height: state.ratio.height,
           isPublic: state.isPublic,
+          // Pass model if it differs from the default, same logic as handleSubmit
+          ...(effectiveModel !== "cyberrealistic_pony" ? { model_id: effectiveModel } : {}),
         })
 
         if ("error" in results) {

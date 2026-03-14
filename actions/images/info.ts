@@ -96,6 +96,18 @@ export const getImagesInfoRAW = async (
 
       const commentMap = new Map(commentsInfo.map((c) => [c.imageId, c]))
 
+      // Batch-fetch current user's votes for these images
+      const currentUserObj0 = await currentUser()
+      let userVoteMap: Map<string, "UPVOTE" | "DOWNVOTE" | null> | undefined
+      if (currentUserObj0?.id && validImages.length > 0) {
+        const vIds = validImages.map((img) => img.id)
+        const uv0 = await db.vote.findMany({
+          where: { userId: currentUserObj0.id, imageId: { in: vIds } },
+          select: { imageId: true, voteType: true },
+        })
+        userVoteMap = new Map(uv0.map((v) => [v.imageId, v.voteType as "UPVOTE" | "DOWNVOTE"]))
+      }
+
       const imagesInfo = validImages.map((image) => ({
         image: {
           ...image,

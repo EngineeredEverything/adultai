@@ -102,7 +102,7 @@ export function VideoDialog({
     <Dialog open={isOpen} onOpenChange={onClose}>
       <DialogContent className="w-full max-w-4xl max-h-[95vh] p-0 overflow-hidden">
         <div className="flex flex-col max-h-[95vh]">
-          <div className="flex items-center justify-between p-4 border-b bg-white sticky top-0 z-10">
+          <div className="flex items-center justify-between p-4 border-b bg-background sticky top-0 z-10">
             <div className="flex items-center gap-3">
               <Avatar className="h-8 w-8">
                 <AvatarImage src={`/placeholder.svg?height=32&width=32`} />

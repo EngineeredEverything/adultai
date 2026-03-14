@@ -106,7 +106,7 @@ export default function MobileBottomNav({
         </Link>
 
         <motion.button
-          className="bg-white rounded-full p-4 -mt-6 shadow-lg"
+          className="bg-primary rounded-full p-4 -mt-6 shadow-lg"
           whileHover={{ scale: 1.05 }}
           whileTap={{ scale: 0.95 }}
           onClick={onPlusClick}

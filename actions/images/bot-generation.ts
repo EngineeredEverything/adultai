@@ -21,6 +21,7 @@ const handleGeneration = async ({
         loraStrength?: number | undefined;
         loraModel?: string | undefined;
         seed?: string | undefined;
+        negativePrompt?: string | undefined;
         prompt: string;
         modelId: string;
         steps: number;
@@ -49,8 +50,33 @@ const handleGeneration = async ({
         logger.debug("Generated random seeds", { count: data.count })
     }
 
-    // Create model config according to the interface
-    const modelConfig: ModelConfig = MODEL_CONFIGS[data.modelId] || MODEL_CONFIGS['flux']
+    // Build model config from bot's own params (steps/cfg/sampler/negativePrompt),
+    // falling back to static MODEL_CONFIGS only if modelId matches a known config.
+    // This prevents bot's cyberrealistic_pony from falling back to the flux lora.
+    const staticConfig = MODEL_CONFIGS[data.modelId]
+    const modelConfig: ModelConfig = staticConfig
+        ? staticConfig
+        : {
+            model_id: data.modelId,
+            num_inference_steps: data.steps,
+            guidance_scale: data.cfg,
+            sampler: data.sampler,
+            negative_prompt: data.negativePrompt || MODEL_CONFIGS['flux'].negative_prompt,
+            hires_fix: true,
+            hires_scale: 1.5,
+            hires_denoise: 0.4,
+            hires_steps: Math.floor(data.steps * 0.6),
+            face_restore: true,
+            face_restore_strength: 0.2,
+        }
+
+    logger.info("Bot model config resolved", {
+        modelId: data.modelId,
+        usedStaticConfig: !!staticConfig,
+        steps: modelConfig.num_inference_steps,
+        cfg: modelConfig.guidance_scale,
+        lora: (modelConfig as any).lora_model,
+    })
 
     // Start image generation process with webhook
     const response = await initiateImageGeneration({
@@ -130,6 +156,7 @@ export const handleBotImageGeneration = async (props: z.infer<typeof botGenerati
         cfg,
         sampler,
         seed,
+        negativePrompt,
         loraModel,
         loraStrength,
         enhanceStyle
@@ -183,6 +210,7 @@ export const handleBotImageGeneration = async (props: z.infer<typeof botGenerati
                 height,
                 count,
                 ...(seed && { seed }),
+                ...(negativePrompt && { negativePrompt }),
                 ...(loraModel && { loraModel }),
                 ...(loraStrength !== undefined && { loraStrength }),
                 ...(enhanceStyle && { enhanceStyle }),

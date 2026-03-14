@@ -43,20 +43,74 @@ export const DEFAULT_OPTIONS: GenerationOptions = {
   prompt: "",
   negativePrompt: "",
   seed: "",
-  modelId: "urpm-sd15",
-  steps: 42,
-  cfg: 6.8,
-  sampler: "dpmpp_2m_karras",
-  width: 512,
-  height: 768,
+  modelId: "cyberrealistic_pony",
+  steps: 35,
+  cfg: 5,
+  sampler: "dpmpp_sde_karras",
+  width: 832,
+  height: 1216,
   count: 1,
   hiresFix: true,
-  hiresScale: 1.75,
+  hiresScale: 1.5,
   hiresDenoise: 0.4,
-  hiresSteps: 28,
+  hiresSteps: 20,
   faceRestore: true,
-  faceRestoreStrength: 0.2,
+  faceRestoreStrength: 0.25,
   loras: [],
+};
+
+// ═══════════════════════════════════════════════════════════════════════════════════
+// Per-model optimal defaults — applied automatically when model is switched
+// ═══════════════════════════════════════════════════════════════════════════════════
+// Research-backed settings sourced from Civitai official pages + community benchmarks.
+// Users can still override any setting.
+// ═══════════════════════════════════════════════════════════════════════════════════
+
+export const MODEL_OPTION_DEFAULTS: Record<string, Partial<GenerationOptions>> = {
+  cyberrealistic_pony: {
+    steps: 35,
+    cfg: 5,
+    sampler: "dpmpp_sde_karras",
+    hiresScale: 1.5,
+    hiresSteps: Math.floor(35 * 0.55), // ~19 steps
+    hiresDenoise: 0.35,
+  },
+
+  pony_realism: {
+    steps: 35,
+    cfg: 6.5,
+    sampler: "euler_a",
+    hiresScale: 1.5,
+    hiresSteps: Math.floor(35 * 0.55), // ~19 steps
+    hiresDenoise: 0.35,
+  },
+
+  lustify: {
+    steps: 32,
+    cfg: 6,
+    sampler: "dpmpp_2m_sde",
+    hiresScale: 1.4,
+    hiresSteps: Math.floor(32 * 0.55), // ~18 steps
+    hiresDenoise: 0.35,
+  },
+
+  damn_pony: {
+    steps: 36,
+    cfg: 5,
+    sampler: "dpmpp_2m_sde",
+    hiresScale: 1.5,
+    hiresSteps: Math.floor(36 * 0.55), // ~20 steps
+    hiresDenoise: 0.35,
+  },
+
+  pony_diffusion: {
+    steps: 28,
+    cfg: 7.5,
+    sampler: "euler_a",
+    hiresScale: 1.5,
+    hiresSteps: Math.floor(28 * 0.55), // ~15 steps
+    hiresDenoise: 0.3,
+  },
 };
 
 // Model Configuration — single SD 1.5 model on our GPU

@@ -1,10 +1,15 @@
 """
 Bot Learning System
 ===================
-Reads vote + comment data from MongoDB for each bot user.
-Identifies which content categories/styles perform best.
-Updates learnedWeights in bot-profiles.json so future generations
-are biased toward what the audience actually responds to.
+Reads vote, comment, and admin_deleted data from MongoDB for each bot user.
+Identifies which content categories/styles perform best AND worst.
+
+Positive signals:  upvotes, comments
+Negative signals:  downvotes, admin_deleted status
+
+The learner blends positive and negative evidence via a signed score per
+category, then converts to weights via softmax. Categories that consistently
+get deleted or downvoted get lower weights over time.
 
 Run manually:       python3 bot-learner.py
 Run for one bot:    python3 bot-learner.py norma@adultai.bot
@@ -15,6 +20,7 @@ import json
 import os
 import sys
 import re
+import math
 from datetime import datetime, timedelta
 
 try:
@@ -29,6 +35,16 @@ from bot_prompt_engine import load_profiles, save_profiles
 
 MONGO_URL = os.environ.get("DATABASE_URL", "")
 DB_NAME = "adultai-production-v2"
+
+# ── Weights for each signal type ─────────────────────────────────────────────
+# Positive signals add to category score; negative signals subtract.
+
+SIGNAL_WEIGHTS = {
+    "upvote":        +1.0,   # each upvote
+    "downvote":      -1.5,   # each downvote (weighted heavier — explicit rejection)
+    "comment":       +0.5,   # each comment (engagement)
+    "admin_deleted": -5.0,   # admin deleted the image (strong "don't do this" signal)
+}
 
 # ── Keyword maps for classifying prompts ──────────────────────────────────────
 
@@ -77,13 +93,16 @@ def classify_prompt(prompt: str) -> dict:
 def softmax_weights(scores: dict, temperature: float = 1.0) -> dict:
     """
     Convert raw scores to probability weights via softmax.
-    Higher temperature = more uniform (less learned bias).
-    Lower temperature = more peaked (stronger learned preference).
+    All scores are shifted to be positive first so softmax still works
+    even when some categories have negative net scores.
+    Higher temperature = more uniform. Lower = more peaked.
     """
     if not scores:
         return {}
-    import math
-    exp_scores = {k: math.exp(v / temperature) for k, v in scores.items()}
+    # Shift so minimum is 0.1 (preserves relative ordering, avoids zero weights)
+    min_v = min(scores.values())
+    shifted = {k: v - min_v + 0.1 for k, v in scores.items()}
+    exp_scores = {k: math.exp(v / temperature) for k, v in shifted.items()}
     total = sum(exp_scores.values())
     return {k: round(v / total, 4) for k, v in exp_scores.items()}
 
@@ -92,6 +111,11 @@ def learn_for_bot(email: str, db, profiles: dict) -> bool:
     """
     Run learning for a single bot. Modifies profiles in-place.
     Returns True if learned successfully, False otherwise.
+
+    Signals used:
+    - upvotes / downvotes / voteScore from GeneratedImage
+    - comment count from ImageComment
+    - admin_deleted status (strong negative — means "this content is unwanted")
     """
     profile = profiles.get(email)
     if not profile:
@@ -104,35 +128,37 @@ def learn_for_bot(email: str, db, profiles: dict) -> bool:
         return False
 
     user_id = user["_id"]
-    cutoff = datetime.utcnow() - timedelta(days=60)  # 60-day window
+    cutoff = datetime.utcnow() - timedelta(days=60)
 
-    # Fetch images with vote data
+    # Fetch ALL images including admin_deleted ones (that's the whole point)
     images = list(db["GeneratedImage"].find(
         {
             "userId": user_id,
             "createdAt": {"$gte": cutoff},
             "prompt": {"$exists": True},
+            "status": {"$in": ["completed", "admin_deleted", "flagged"]},
         },
-        {"prompt": 1, "voteScore": 1, "upvotes": 1, "downvotes": 1, "createdAt": 1},
+        {"prompt": 1, "voteScore": 1, "upvotes": 1, "downvotes": 1,
+         "status": 1, "createdAt": 1},
     ))
 
     if len(images) < 5:
         print(f"[Learner] {email}: only {len(images)} images (need 5+), skipping")
         return False
 
-    # Fetch comments for this user's images (bonus signal)
-    image_ids = [img["_id"] for img in images]
+    # Fetch comment counts
+    image_ids = [str(img["_id"]) for img in images]
     comment_counts = {}
     try:
         comments = list(db["ImageComment"].find(
-            {"imageId": {"$in": [str(i) for i in image_ids]}},
+            {"imageId": {"$in": image_ids}},
             {"imageId": 1},
         ))
         for c in comments:
             iid = c.get("imageId", "")
             comment_counts[iid] = comment_counts.get(iid, 0) + 1
     except Exception:
-        pass  # Comments are a bonus signal, not required
+        pass
 
     # Score each image
     setting_scores = {}
@@ -140,40 +166,46 @@ def learn_for_bot(email: str, db, profiles: dict) -> bool:
     total_images = len(images)
     total_up = 0
     total_down = 0
+    total_deleted = 0
 
     for img in images:
         prompt = img.get("prompt", "")
-        vote_score = float(img.get("voteScore", 0))
         upvotes = int(img.get("upvotes", 0))
         downvotes = int(img.get("downvotes", 0))
-        comment_bonus = comment_counts.get(str(img["_id"]), 0) * 0.5
+        status = img.get("status", "completed")
+        comment_count = comment_counts.get(str(img["_id"]), 0)
 
         total_up += upvotes
         total_down += downvotes
+        if status == "admin_deleted":
+            total_deleted += 1
 
-        # Engagement score: vote score + comment bonus
-        engagement = vote_score + comment_bonus
+        # Build signed engagement score from all signals
+        score = (
+            upvotes   * SIGNAL_WEIGHTS["upvote"] +
+            downvotes * SIGNAL_WEIGHTS["downvote"] +
+            comment_count * SIGNAL_WEIGHTS["comment"] +
+            (SIGNAL_WEIGHTS["admin_deleted"] if status == "admin_deleted" else 0)
+        )
 
         classification = classify_prompt(prompt)
         s = classification["setting"]
         o = classification["outfit"]
 
-        setting_scores[s] = setting_scores.get(s, 0) + engagement
-        outfit_scores[o] = outfit_scores.get(o, 0) + engagement
+        setting_scores[s] = setting_scores.get(s, 0) + score
+        outfit_scores[o] = outfit_scores.get(o, 0) + score
 
-    # Convert to weights (shift to avoid negatives, then softmax)
-    def score_to_weights(scores, temperature=0.8):
-        if not scores:
-            return {}
-        # Shift to positive
-        min_v = min(scores.values())
-        shifted = {k: v - min_v + 0.1 for k, v in scores.items()}
-        return softmax_weights(shifted, temperature=temperature)
-
-    learned_settings = score_to_weights(setting_scores)
-    learned_outfits = score_to_weights(outfit_scores)
+    # Convert signed scores → probability weights via shifted softmax
+    learned_settings = softmax_weights(setting_scores, temperature=0.8)
+    learned_outfits = softmax_weights(outfit_scores, temperature=0.8)
 
     avg_score = (total_up - total_down) / total_images if total_images > 0 else 0
+
+    # Identify what's being penalized (for logging)
+    worst_setting = min(setting_scores, key=setting_scores.get) if setting_scores else "n/a"
+    worst_outfit = min(outfit_scores, key=outfit_scores.get) if outfit_scores else "n/a"
+    top_setting = max(setting_scores, key=setting_scores.get) if setting_scores else "n/a"
+    top_outfit = max(outfit_scores, key=outfit_scores.get) if outfit_scores else "n/a"
 
     # Update profile
     profile["learnedWeights"] = {
@@ -181,16 +213,14 @@ def learn_for_bot(email: str, db, profiles: dict) -> bool:
         "outfits": learned_outfits,
     }
     profile["totalVotes"] = total_up + total_down
+    profile["totalDeleted"] = total_deleted
     profile["avgVoteScore"] = round(avg_score, 3)
     profile["lastLearned"] = datetime.utcnow().isoformat()
 
-    # Find top performers
-    top_setting = max(setting_scores, key=setting_scores.get) if setting_scores else "n/a"
-    top_outfit = max(outfit_scores, key=outfit_scores.get) if outfit_scores else "n/a"
-
     print(f"[Learner] ✓ {profile['name']} ({email})")
-    print(f"          Images analyzed: {total_images} | Avg score: {avg_score:.2f}")
-    print(f"          Top setting: {top_setting} | Top outfit: {top_outfit}")
+    print(f"          Images: {total_images} | Votes: +{total_up}/-{total_down} | Deleted: {total_deleted}")
+    print(f"          Best:  setting={top_setting}, outfit={top_outfit}")
+    print(f"          Worst: setting={worst_setting}, outfit={worst_outfit}")
 
     return True
 
@@ -206,12 +236,12 @@ def learn_for_all_bots():
         return
 
     print(f"[Learner] Starting learning loop at {datetime.utcnow().isoformat()}")
-    print(f"[Learner] Connecting to MongoDB...")
+    print(f"[Learner] Signals: upvote={SIGNAL_WEIGHTS['upvote']:+}, downvote={SIGNAL_WEIGHTS['downvote']:+}, "
+          f"comment={SIGNAL_WEIGHTS['comment']:+}, admin_deleted={SIGNAL_WEIGHTS['admin_deleted']:+}")
 
     try:
         client = MongoClient(MONGO_URL, serverSelectionTimeoutMS=5000)
         db = client[DB_NAME]
-        # Test connection
         db.command("ping")
     except Exception as e:
         print(f"[Learner] MongoDB connection failed: {e}")
@@ -235,7 +265,7 @@ def learn_for_all_bots():
     save_profiles(profiles)
     client.close()
 
-    print(f"\n[Learner] Done. Learned: {learned_count} | Skipped (not enough data): {skipped_count}")
+    print(f"\n[Learner] Done. Learned: {learned_count} | Skipped: {skipped_count}")
     print(f"[Learner] Profiles saved to {os.path.abspath('bot-profiles.json')}")
 
 
@@ -247,10 +277,12 @@ def show_stats():
         name = profile.get("name", email)
         last = profile.get("lastLearned") or "never"
         votes = profile.get("totalVotes", 0)
+        deleted = profile.get("totalDeleted", 0)
         avg = profile.get("avgVoteScore", 0)
         learned = profile.get("learnedWeights", {})
         has_data = bool(learned.get("settings") or learned.get("outfits"))
-        print(f"{name:25s} | votes: {votes:4d} | avg: {avg:+.2f} | learned: {'yes' if has_data else 'no'} | last: {last[:10] if last != 'never' else 'never'}")
+        print(f"{name:25s} | votes: {votes:4d} | deleted: {deleted:3d} | avg: {avg:+.2f} | "
+              f"learned: {'yes' if has_data else 'no'} | last: {last[:10] if last != 'never' else 'never'}")
     print()
 
 
@@ -260,7 +292,6 @@ if __name__ == "__main__":
     if "--stats" in args:
         show_stats()
     elif args and "@" in args[0]:
-        # Learn for a specific bot
         email = args[0]
         if not MONGO_AVAILABLE or not MONGO_URL:
             print("[Learner] pymongo or DATABASE_URL not available")

@@ -28,6 +28,7 @@ import {
 
 import {
   DEFAULT_OPTIONS,
+  MODEL_OPTION_DEFAULTS,
   AVAILABLE_SAMPLERS,
   AVAILABLE_DIMENSIONS,
   AVAILABLE_LORAS,
@@ -36,6 +37,7 @@ import {
   type GenerationOptions,
   type LoraConfig,
 } from "../advanced-generation-utils";
+import { GPU_MODELS } from "@/app/(user)/gallery/components/GenerationForm/features/model-selector";
 import { toast } from "sonner";
 
 interface AdvancedGenerationFormProps {
@@ -228,6 +230,38 @@ export function AdvancedGenerationForm({
 
           {/* Basic Tab */}
           <TabsContent value="basic" className="space-y-6">
+            {/* Model */}
+            <div>
+              <label className="block text-sm font-medium mb-2">Model</label>
+              <Select
+                value={options.modelId}
+                onValueChange={(modelId) => {
+                  const defaults = MODEL_OPTION_DEFAULTS[modelId]
+                  setOptions((prev) => ({
+                    ...prev,
+                    modelId,
+                    ...(defaults ?? {}),
+                  }))
+                  setIsFormDirty(true)
+                }}
+              >
+                <SelectTrigger>
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  {GPU_MODELS.map((m) => (
+                    <SelectItem key={m.id} value={m.id}>
+                      <span className="font-medium">{m.name}</span>
+                      <span className="ml-2 text-xs text-muted-foreground">{m.description}</span>
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+              <p className="text-xs text-muted-foreground mt-1">
+                Steps, CFG, and sampler auto-load optimal defaults for the selected model
+              </p>
+            </div>
+
             {/* Prompt */}
             <div>
               <label className="block text-sm font-medium mb-2">Prompt *</label>

@@ -12,6 +12,7 @@ export const botGenerationSchema = z.object({
     cfg: z.number().min(1).max(20).default(7.5),
     sampler: z.string().default("DPM++ 2M Karras"),
     seed: z.string().optional(),
+    negativePrompt: z.string().optional(),
     loraModel: z.string().optional(),
     loraStrength: z.number().min(0).max(2).optional(),
     enhanceStyle: z.string().optional(),

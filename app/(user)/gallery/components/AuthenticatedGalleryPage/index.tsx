@@ -619,9 +619,9 @@ export default function GalleryPage(props: GalleryPageProps) {
             onClear={() => {
               setGeneratedImages([]);
             }}
-            onRetry={(promptText) => {
-              // Auto-retry with same prompt, new seed
-              retryPrompt(promptText);
+            onRetry={(promptText, modelId) => {
+              // Auto-retry with same prompt + model, new seed
+              retryPrompt(promptText, modelId);
             }}
             onEdit={(promptText) => {
               // Fill prompt for editing

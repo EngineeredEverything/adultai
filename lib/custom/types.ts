@@ -9,6 +9,7 @@ export interface ModelConfig {
   // Quality optimization params
   negative_prompt?: string
   sampler?: string
+  clip_skip?: number
   hires_fix?: boolean
   hires_scale?: number
   hires_denoise?: number

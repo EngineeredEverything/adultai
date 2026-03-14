@@ -5,6 +5,93 @@ import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover
 import { motion } from "framer-motion"
 import { Check } from "lucide-react"
 
+// ═══════════════════════════════════════════════════════════════════════════════════
+// MODEL OPTIMIZATION STRATEGY
+// ═══════════════════════════════════════════════════════════════════════════════════
+// Each model has been researched on official Civitai pages + community benchmarks.
+// Optimal settings balance: quality, speed, consistency, and NSFW detail adherence.
+// Users can override ANY setting—these are just smart defaults that auto-load.
+//
+// RESEARCH SOURCES:
+// • CyberRealistic Pony v16: 30+ steps, CFG 5, DPM++ SDE Karras (Civitai official)
+// • Pony Realism v2.2:       20-30 steps, CFG 7, Euler (Hugging Face + Reddit)
+// • DAMN! v5 (Illustrious):  30-40 steps, CFG 3-6, DPM++ 2M/3M SDE (Civitai official)
+// • Lustify v7 (SDXL NSFW):  30 steps, CFG 4-7, DPM++ 2M/3M SDE (HF + Civitai)
+// • Pony Diffusion V6 XL:    25 steps, CFG 7, Euler a (Civitai official)
+//
+// CLIP_SKIP: Pony models = 2, Illustrious (DAMN!) = varies, SDXL = 1-2
+// GPU auto-injects: quality prefixes, negative weights, clip_skip per model.
+// ═══════════════════════════════════════════════════════════════════════════════════
+
+export const MODEL_DEFAULTS: Record<string, {
+  steps: number
+  cfg: number
+  sampler: string
+  clipSkip?: number
+  hiresFix?: boolean
+  hiresScale?: number
+  hiresDenoise?: number
+}> = {
+  cyberrealistic_pony: {
+    // Cinematic photorealism — best with moderate steps + low CFG
+    steps: 35,
+    cfg: 5,
+    sampler: "dpmpp_sde_karras",
+    clipSkip: 2,
+    hiresFix: true,
+    hiresScale: 1.5,
+    hiresDenoise: 0.35,
+  },
+
+  pony_realism: {
+    // Hyper-detailed skin + anatomy — needs higher CFG to prevent oversaturation
+    steps: 35,
+    cfg: 6.5,
+    sampler: "euler_a",
+    clipSkip: 2,
+    hiresFix: true,
+    hiresScale: 1.5,
+    hiresDenoise: 0.35,
+  },
+
+  lustify: {
+    // NSFW-optimized SDXL — strong prompt adherence, explicit detail
+    // Recommended: DPM++ 2M/3M SDE, 30 steps, CFG 4-7 (lower = more realistic)
+    steps: 32,
+    cfg: 6,
+    sampler: "dpmpp_2m_sde",
+    clipSkip: 1,
+    hiresFix: true,
+    hiresScale: 1.4,
+    hiresDenoise: 0.35,
+  },
+
+  damn_pony: {
+    // Illustrious base — diverse styles, strong anatomy
+    // Official: Euler a 20-28 steps CFG 5-7; DAMN! 30-40 steps CFG 3-6
+    // Using DAMN!'s recommendations (more conservative)
+    steps: 36,
+    cfg: 5,
+    sampler: "dpmpp_2m_sde",
+    clipSkip: 1,
+    hiresFix: true,
+    hiresScale: 1.5,
+    hiresDenoise: 0.35,
+  },
+
+  pony_diffusion: {
+    // Fantasy & Creatures — Pony Diffusion V6 XL specifics
+    // Official: Euler a 25 steps, CFG 7-9, clip skip 2
+    steps: 28,
+    cfg: 7.5,
+    sampler: "euler_a",
+    clipSkip: 2,
+    hiresFix: true,
+    hiresScale: 1.5,
+    hiresDenoise: 0.3,
+  },
+}
+
 // Real GPU models — SDXL only (SD 1.5 removed)
 export const GPU_MODELS = [
   {
@@ -46,7 +133,7 @@ export const GPU_MODELS = [
 
 interface ModelSelectorProps {
   selectedModel: string
-  onModelChange: (model: string) => void
+  onModelChange: (model: string, defaults?: { steps: number; cfg: number; sampler: string }) => void
   onPremiumRequired: () => void
   hasAccess: boolean
 }
@@ -59,7 +146,7 @@ export function ModelSelector({ selectedModel, onModelChange, onPremiumRequired,
       onPremiumRequired()
       return
     }
-    onModelChange(model.id)
+    onModelChange(model.id, MODEL_DEFAULTS[model.id])
   }
 
   return (

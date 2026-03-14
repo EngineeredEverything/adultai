@@ -68,7 +68,7 @@ export default function MobileGenerateSheet({
       }}
     >
       <motion.div
-        className="bg-white rounded-t-xl p-4 pb-8"
+        className="bg-background rounded-t-xl p-4 pb-8"
         initial={{ y: "100%" }}
         animate={{ y: 0 }}
         exit={{ y: "100%" }}
@@ -150,7 +150,7 @@ export default function MobileGenerateSheet({
               <Camera className="h-4 w-4" />
             </Button>
 
-            <Button variant="default" size="lg" className="bg-white text-black hover:bg-gray-200 w-full">
+            <Button variant="default" size="lg" className="bg-primary text-primary-foreground hover:bg-primary/90 w-full">
               Generate
             </Button>
           </div> */}

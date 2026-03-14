@@ -55,6 +55,7 @@ interface GenerationFormProps {
   setCount: Dispatch<SetStateAction<number>>;
   selectedModel?: string;
   setSelectedModel?: (model: string) => void;
+  onModelDefaults?: (defaults: { steps: number; cfg: number; sampler: string }) => void;
   selectedStyle?: string;
   setSelectedStyle?: (style: string) => void;
 }
@@ -76,6 +77,7 @@ export default function GenerationForm({
   setCount,
   selectedModel: selectedModelProp = "cyberrealistic_pony",
   setSelectedModel: setSelectedModelProp,
+  onModelDefaults,
   selectedStyle: selectedStyleProp = "none",
   setSelectedStyle: setSelectedStyleProp,
 }: GenerationFormProps) {
@@ -266,7 +268,10 @@ export default function GenerationForm({
 
                 <ModelSelector
                   selectedModel={selectedModel}
-                  onModelChange={setSelectedModel}
+                  onModelChange={(modelId, defaults) => {
+                    setSelectedModel(modelId)
+                    if (defaults && onModelDefaults) onModelDefaults(defaults)
+                  }}
                   onPremiumRequired={() =>
                     handlePremiumRequired(FEATURES.ADVANCED_MODELS)
                   }
@@ -361,7 +366,7 @@ export default function GenerationForm({
                   variant="default"
                   type="submit"
                   size="sm"
-                  className="bg-white text-black hover:bg-gray-200 w-full sm:w-auto disabled:opacity-50"
+                  className="bg-primary text-primary-foreground hover:bg-primary/90 w-full sm:w-auto disabled:opacity-50"
                 >
                   {isGenerating ? "Generating..." : "Generate"}
                 </Button>
