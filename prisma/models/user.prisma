@@ -50,6 +50,17 @@ model User {
   VideoComment        VideoComment[]
   VideoVote           VideoVote[]
   characters          Character[]
+
+  // Creator profile fields
+  bio                 String?
+  coverPhotoUrl       String?
+  avatarUrl           String?
+  username            String?           @unique
+  isCreator           Boolean           @default(false)
+  creatorVerified     Boolean           @default(false)
+  creatorAppliedAt    DateTime?
+  totalEarnings       Int               @default(0)
+  socialLinks         Json?
 }
 
 model Subscription {

@@ -198,13 +198,13 @@ export default function MobileBottomNav({
 
               {/* Navigation Links */}
               <div className="space-y-1">
-                <Link href="/profile" onClick={() => setIsPopoverOpen(false)}>
+                <Link href="/dashboard" onClick={() => setIsPopoverOpen(false)}>
                   <Button
                     variant="ghost"
                     className="w-full justify-start text-sm h-9"
                   >
                     <UserIcon className="h-4 w-4 mr-3" />
-                    Profile
+                    Dashboard
                   </Button>
                 </Link>
 
