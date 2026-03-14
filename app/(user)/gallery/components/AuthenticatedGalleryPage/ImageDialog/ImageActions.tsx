@@ -34,8 +34,11 @@ export function ImageActions({ image, onGenerateVariations, onSetPrompt }: Image
   const [talkResult, setTalkResult] = useState<{ videoUrl?: string | null; audioUrl?: string | null; audioOnly?: boolean; videoId?: string | null } | null>(null)
 
   // img2img state
-  const [editPrompt, setEditPrompt] = useState("")
-  const [strength, setStrength] = useState(0.65)
+  const [editPrompt, setEditPrompt] = useState(image.image.prompt || "")
+  const [editNegative, setEditNegative] = useState("")
+  const [strength, setStrength] = useState(0.5)
+  const [editSteps, setEditSteps] = useState(30)
+  const [showAdvancedEdit, setShowAdvancedEdit] = useState(false)
   const [img2imgLoading, setImg2imgLoading] = useState(false)
   const [img2imgResult, setImg2imgResult] = useState<string | null>(null)
   const [img2imgUpgradeRequired, setImg2imgUpgradeRequired] = useState(false)
@@ -98,17 +101,25 @@ export function ImageActions({ image, onGenerateVariations, onSetPrompt }: Image
 
   // ── img2img ─────────────────────────────────────────────────────────────
   const handleImg2img = async () => {
-    if (!editPrompt.trim()) { toast.error("Describe what to change"); return }
+    if (!editPrompt.trim()) { toast.error("Enter a prompt describing the result you want"); return }
     setImg2imgLoading(true); setImg2imgResult(null); setImg2imgUpgradeRequired(false)
     try {
       const res = await fetch("/api/img2img", {
         method: "POST", headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ imageUrl, prompt: editPrompt.trim(), strength }),
+        body: JSON.stringify({
+          imageUrl,
+          prompt: editPrompt.trim(),
+          negativePrompt: editNegative.trim() || undefined,
+          strength,
+          steps: editSteps,
+          modelId: image.image.modelId || "cyberrealistic_pony",
+        }),
       })
       const data = await res.json()
       if (data.upgradeRequired) { setImg2imgUpgradeRequired(true); return }
       if (!res.ok) throw new Error(data.error || "Failed")
       setImg2imgResult(data.imageUrl)
+      toast.success("Edit complete!")
     } catch (e: any) {
       toast.error("Edit failed", { description: e.message })
     } finally { setImg2imgLoading(false) }
@@ -230,59 +241,136 @@ export function ImageActions({ image, onGenerateVariations, onSetPrompt }: Image
 
       {/* ── Edit / Remix (img2img) panel ── */}
       {activePanel === "img2img" && (
-        <Panel title="Edit / Remix" onClose={() => setActivePanel(null)}>
+        <Panel title="Edit Image" onClose={() => setActivePanel(null)}>
           {img2imgUpgradeRequired ? (
             <div className="text-center py-4 space-y-2">
               <p className="text-xs text-amber-400">GPU API update required for this feature.</p>
-              <p className="text-xs text-gray-500">Deploy the GPU API patch from the workspace to enable img2img.</p>
             </div>
           ) : (
             <>
-              <p className="text-xs text-gray-500 mb-3">
-                Describe what to change — new outfit, background, expression, or style. The character stays, the details change.
-              </p>
-
-              <Textarea value={editPrompt} onChange={(e) => setEditPrompt(e.target.value)}
-                placeholder={'e.g. "wearing a red silk dress" or "in a forest at night" or "smiling seductively"'}
-                rows={2} className="bg-gray-800 border-gray-700 text-sm resize-none focus:border-amber-500/60 mb-3" />
-
-              <div className="mb-3">
-                <div className="flex justify-between text-xs text-gray-400 mb-1">
-                  <span>Change intensity</span>
-                  <span className={
-                    strength <= 0.3 ? "text-blue-400" :
-                    strength <= 0.55 ? "text-green-400" :
-                    strength <= 0.75 ? "text-amber-400" : "text-red-400"
-                  }>{strengthLabel}</span>
-                </div>
-                <Slider value={[strength]} min={0.1} max={0.95} step={0.05}
-                  onValueChange={([v]) => setStrength(v)}
-                  className="[&_.slider-track]:bg-gray-700 [&_.slider-range]:bg-amber-500" />
-                <div className="flex justify-between text-[10px] text-gray-600 mt-0.5">
-                  <span>Subtle</span><span>Moderate</span><span>Heavy</span>
-                </div>
+              {/* Strength presets */}
+              <div className="flex gap-1.5 mb-3">
+                {([
+                  { label: "Touch-up", value: 0.25, desc: "Tiny tweaks only", color: "blue" },
+                  { label: "Refine", value: 0.45, desc: "Keep structure, change details", color: "green" },
+                  { label: "Restyle", value: 0.65, desc: "New look, same subject", color: "amber" },
+                  { label: "Transform", value: 0.85, desc: "Heavy change", color: "red" },
+                ] as const).map(({ label, value, color }) => (
+                  <button
+                    key={label}
+                    onClick={() => setStrength(value)}
+                    className={`flex-1 py-1 text-[10px] rounded-md border transition ${
+                      Math.abs(strength - value) < 0.1
+                        ? color === "blue" ? "border-blue-500 bg-blue-500/20 text-blue-300"
+                          : color === "green" ? "border-green-500 bg-green-500/20 text-green-300"
+                          : color === "amber" ? "border-amber-500 bg-amber-500/20 text-amber-300"
+                          : "border-red-500 bg-red-500/20 text-red-300"
+                        : "border-gray-700 text-gray-500 hover:border-gray-600"
+                    }`}
+                  >
+                    {label}
+                  </button>
+                ))}
               </div>
+
+              {/* Prompt — pre-filled with original */}
+              <label className="block text-xs text-gray-400 mb-1">
+                Prompt <span className="text-gray-600">(edit or keep as-is)</span>
+              </label>
+              <Textarea
+                value={editPrompt}
+                onChange={(e) => setEditPrompt(e.target.value)}
+                placeholder="Describe what you want in the result..."
+                rows={3}
+                className="bg-gray-800/60 border-gray-700 text-sm resize-none focus:border-amber-500/60 mb-3"
+              />
+
+              {/* Advanced toggle */}
+              <button
+                onClick={() => setShowAdvancedEdit(v => !v)}
+                className="text-xs text-gray-500 hover:text-gray-300 mb-2 flex items-center gap-1 transition"
+              >
+                <ChevronDown className={`w-3 h-3 transition-transform ${showAdvancedEdit ? "rotate-180" : ""}`} />
+                Advanced options
+              </button>
+
+              {showAdvancedEdit && (
+                <div className="space-y-3 mb-3 bg-gray-800/40 rounded-lg p-3">
+                  {/* Change strength slider */}
+                  <div>
+                    <div className="flex justify-between text-xs text-gray-400 mb-1">
+                      <span>Change strength</span>
+                      <span className="font-mono">{Math.round(strength * 100)}%</span>
+                    </div>
+                    <Slider value={[strength]} min={0.1} max={0.95} step={0.05}
+                      onValueChange={([v]) => setStrength(v)}
+                      className="[&_.slider-track]:bg-gray-700 [&_.slider-range]:bg-amber-500" />
+                    <div className="flex justify-between text-[10px] text-gray-600 mt-0.5">
+                      <span>Keep original</span><span>Heavily change</span>
+                    </div>
+                  </div>
+
+                  {/* Steps */}
+                  <div>
+                    <div className="flex justify-between text-xs text-gray-400 mb-1">
+                      <span>Steps</span>
+                      <span className="font-mono">{editSteps}</span>
+                    </div>
+                    <Slider value={[editSteps]} min={15} max={50} step={1}
+                      onValueChange={([v]) => setEditSteps(v)}
+                      className="[&_.slider-track]:bg-gray-700 [&_.slider-range]:bg-purple-500" />
+                    <div className="flex justify-between text-[10px] text-gray-600 mt-0.5">
+                      <span>Fast</span><span>Quality</span>
+                    </div>
+                  </div>
+
+                  {/* Negative prompt */}
+                  <div>
+                    <label className="block text-xs text-gray-400 mb-1">Negative prompt <span className="text-gray-600">(optional)</span></label>
+                    <Textarea
+                      value={editNegative}
+                      onChange={(e) => setEditNegative(e.target.value)}
+                      placeholder="What to avoid..."
+                      rows={2}
+                      className="bg-gray-900/60 border-gray-700 text-xs resize-none focus:border-amber-500/60"
+                    />
+                  </div>
+                </div>
+              )}
 
               <Button size="sm" onClick={handleImg2img} disabled={img2imgLoading || !editPrompt.trim()}
                 className="w-full bg-gradient-to-r from-amber-600 to-orange-600 hover:from-amber-500 hover:to-orange-500">
-                {img2imgLoading ? <><Loader2 className="w-3.5 h-3.5 mr-2 animate-spin" />Editing (~30s)</> : <><Wand2 className="w-3.5 h-3.5 mr-2" />Apply Edit</>}
+                {img2imgLoading
+                  ? <><Loader2 className="w-3.5 h-3.5 mr-2 animate-spin" />Editing (~30–45s)</>
+                  : <><Wand2 className="w-3.5 h-3.5 mr-2" />Apply Edit</>}
               </Button>
 
               {img2imgResult && (
                 <div className="mt-3 space-y-2">
-                  <img src={img2imgResult} alt="Edited" className="w-full rounded-lg" />
+                  {/* Side-by-side comparison */}
+                  <div className="grid grid-cols-2 gap-1.5 text-[10px] text-gray-500 text-center">
+                    <span>Original</span><span>Edited</span>
+                  </div>
+                  <div className="grid grid-cols-2 gap-1.5">
+                    <img src={imageUrl} alt="Original" className="w-full rounded-lg object-cover aspect-[2/3]" />
+                    <img src={img2imgResult} alt="Edited" className="w-full rounded-lg object-cover aspect-[2/3]" />
+                  </div>
+
+                  {/* Actions */}
                   <div className="flex gap-2">
                     <a href={img2imgResult} download
-                      className="flex-1 flex items-center justify-center gap-1.5 py-1.5 bg-gray-800 hover:bg-gray-700 rounded-lg transition text-xs text-gray-300">
+                      className="flex-1 flex items-center justify-center gap-1 py-1.5 bg-gray-800 hover:bg-gray-700 rounded-lg transition text-xs text-gray-300">
                       <Download className="w-3.5 h-3.5" /> Download
                     </a>
-                    <button onClick={() => {
-                      if (onSetPrompt && editPrompt) onSetPrompt(editPrompt)
-                      toast.success("Loaded into form for further editing")
-                    }} className="flex-1 py-1.5 bg-gray-800 hover:bg-gray-700 rounded-lg transition text-xs text-gray-300">
-                      Refine further
+                    <button
+                      onClick={() => handleImg2img()}
+                      disabled={img2imgLoading}
+                      className="flex-1 flex items-center justify-center gap-1 py-1.5 bg-gray-800 hover:bg-gray-700 rounded-lg transition text-xs text-gray-300 disabled:opacity-50"
+                    >
+                      <Sparkles className="w-3.5 h-3.5" /> Try again
                     </button>
                   </div>
+
                   <SaveToGalleryButtons id={img2imgResult} type="image" />
                 </div>
               )}
