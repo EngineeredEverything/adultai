@@ -172,7 +172,7 @@ export const MODEL_CONFIGS: Record<string, ModelConfig> = {
     sampler: "euler_a",
     clip_skip: 2,
     hires_fix: true,
-    hires_scale: 1.5,
+    hires_scale: 1.3, // Reduced from 1.5 → 1.3 to prevent VRAM throttle on 2-image batches
     hires_denoise: 0.3,
     hires_steps: 15, // ~55% of base
     face_restore: true,

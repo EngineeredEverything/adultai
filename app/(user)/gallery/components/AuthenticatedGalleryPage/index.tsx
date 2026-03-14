@@ -583,6 +583,8 @@ export default function GalleryPage(props: GalleryPageProps) {
           <GeneratedImagePreview
             images={generatedImages.slice(0, 8)}
             pendingCount={pendingCount}
+            pendingPrompt={isGenerating ? prompt : undefined}
+            pendingModel={isGenerating ? selectedModel : undefined}
             onPublish={(imageId) => {
               // Move image from generated to public gallery
               const publishedImage = generatedImages.find(

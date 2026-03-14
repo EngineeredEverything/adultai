@@ -15,6 +15,8 @@ type ImageItem = SearchImagesResponseSuccessType["images"][number]
 interface GeneratedImagePreviewProps {
   images: SearchImagesResponseSuccessType["images"]
   pendingCount?: number
+  pendingPrompt?: string
+  pendingModel?: string
   onPublish?: (imageId: string) => void
   onSavePrivate?: (imageId: string) => void
   onDelete?: (imageId: string) => void
@@ -23,9 +25,20 @@ interface GeneratedImagePreviewProps {
   onEdit?: (prompt: string) => void
 }
 
+// Human-readable model names
+const MODEL_LABELS: Record<string, string> = {
+  cyberrealistic_pony: "CyberRealistic Pony",
+  pony_realism: "Pony Realism",
+  lustify: "Lustify",
+  damn_pony: "DAMN! v5",
+  pony_diffusion: "Pony Diffusion XL",
+}
+
 export function GeneratedImagePreview({
   images,
   pendingCount = 0,
+  pendingPrompt,
+  pendingModel,
   onPublish,
   onSavePrivate,
   onDelete,
@@ -162,12 +175,32 @@ export function GeneratedImagePreview({
                 exit={{ opacity: 0, scale: 0.9 }}
                 className="relative bg-gray-900 rounded-xl overflow-hidden border border-purple-500/30"
               >
-                <div className="aspect-[4/5] relative flex items-center justify-center bg-gray-800/50">
-                  <div className="text-center">
+                <div className="aspect-[4/5] relative flex flex-col items-center justify-center bg-gray-800/50 p-4">
+                  <div className="text-center mb-3">
                     <Loader2 className="w-8 h-8 animate-spin text-purple-500 mx-auto mb-2" />
-                    <p className="text-sm text-gray-400">Generating...</p>
+                    <p className="text-sm font-medium text-gray-300">
+                      Image {i + 1} of {pendingCount}
+                    </p>
+                    <p className="text-xs text-purple-400 mt-0.5">Generating...</p>
                   </div>
-                  <div className="absolute inset-0 bg-gradient-to-r from-transparent via-white/5 to-transparent animate-pulse" />
+
+                  {/* Model badge */}
+                  {pendingModel && (
+                    <div className="bg-purple-500/20 border border-purple-500/30 rounded-md px-2 py-1 mb-2">
+                      <p className="text-xs text-purple-300 font-medium text-center">
+                        {MODEL_LABELS[pendingModel] || pendingModel}
+                      </p>
+                    </div>
+                  )}
+
+                  {/* Prompt preview */}
+                  {pendingPrompt && (
+                    <p className="text-[10px] text-gray-500 text-center line-clamp-3 leading-relaxed max-w-full">
+                      {pendingPrompt}
+                    </p>
+                  )}
+
+                  <div className="absolute inset-0 bg-gradient-to-r from-transparent via-white/5 to-transparent animate-pulse pointer-events-none" />
                 </div>
               </motion.div>
             ))}
