@@ -347,27 +347,27 @@ export function ImageDialog({
 
   return (
     <Dialog open={isOpen} onOpenChange={onClose}>
-      <DialogContent className="w-full max-w-4xl max-h-[95vh] p-0 overflow-hidden" aria-describedby={undefined}>
+      <DialogContent className="w-full max-w-4xl max-h-[95vh] p-0 overflow-hidden bg-gray-950 text-white border-gray-800 [&>button]:text-gray-400 [&>button]:hover:text-white [&>button]:hover:bg-gray-800 [&>button]:ring-offset-gray-950" aria-describedby={undefined}>
         <DialogTitle className="sr-only">Image Details</DialogTitle>
         <div className="flex flex-col max-h-[95vh]">
           {/* Header */}
-          <div className="flex items-center justify-between p-4 border-b bg-background sticky top-0 z-10">
+          <div className="flex items-center justify-between p-4 border-b border-gray-800 bg-gray-950 sticky top-0 z-10">
             <div className="flex items-center gap-3">
               <Avatar className="h-8 w-8">
                 <AvatarImage src={`/placeholder.svg?height=32&width=32`} />
-                <AvatarFallback>
+                <AvatarFallback className="bg-gray-700 text-white">
                   {image.image.user?.name?.charAt(0) || "U"}
                 </AvatarFallback>
               </Avatar>
               <div>
                 <a
                   href={`/gallery/creator/${image.image.userId}`}
-                  className="font-semibold text-sm hover:text-purple-400 transition-colors"
+                  className="font-semibold text-sm text-white hover:text-purple-400 transition-colors"
                   onClick={(e) => e.stopPropagation()}
                 >
                   {image.image.user?.name || "Unknown User"}
                 </a>
-                <p className="text-xs text-muted-foreground">
+                <p className="text-xs text-gray-400">
                   {new Date(image.image.createdAt).toLocaleDateString()}
                 </p>
               </div>
@@ -398,7 +398,7 @@ export function ImageDialog({
                 variant="ghost"
                 size="sm"
                 onClick={onClose}
-                className="h-8 px-2"
+                className="h-8 px-2 text-gray-300 hover:text-white hover:bg-gray-800"
               >
                 <X className="w-4 h-4" />
               </Button>
@@ -406,12 +406,12 @@ export function ImageDialog({
           </div>
 
           {/* Scrollable Content */}
-          <ScrollArea className="flex-1 max-h-[calc(95vh-69px)]">
+          <ScrollArea className="flex-1 max-h-[calc(95vh-69px)] bg-gray-950">
             <div className="p-4 space-y-6">
               {/* Main Image with votes overlay */}
               <div className="relative w-full max-w-2xl mx-auto">
                 {/* Image container — rounded corners via inner div, not overflow-hidden on outer */}
-                <div className="bg-muted rounded-lg overflow-hidden">
+                <div className="bg-gray-900 rounded-lg overflow-hidden">
                   {image.image.cdnUrl ? (
                     <div
                       className="relative w-full"
@@ -432,7 +432,7 @@ export function ImageDialog({
                     </div>
                   ) : (
                     <div className="w-full h-full flex items-center justify-center p-8">
-                      <p className="text-muted-foreground">Image not available</p>
+                      <p className="text-gray-400">Image not available</p>
                     </div>
                   )}
                 </div>
@@ -506,7 +506,7 @@ export function ImageDialog({
                                     className={cn(
                                       "w-full justify-between",
                                       !field.value?.length &&
-                                        "text-muted-foreground"
+                                        "text-gray-400"
                                     )}
                                     disabled={isLoadingCategories}
                                   >
@@ -547,7 +547,7 @@ export function ImageDialog({
                                           <div className="font-medium">
                                             {category.name}
                                           </div>
-                                          <div className="text-xs text-muted-foreground">
+                                          <div className="text-xs text-gray-400">
                                             {category.imageCount} images
                                           </div>
                                         </div>
@@ -695,7 +695,7 @@ export function ImageDialog({
                 )}
 
                 {/* Comment count */}
-                <div className="flex items-center gap-2 text-muted-foreground py-1">
+                <div className="flex items-center gap-2 text-gray-400 py-1">
                   <MessageCircle className="w-4 h-4" />
                   <span className="text-sm font-medium">{comments.length} comments</span>
                 </div>
@@ -756,20 +756,20 @@ export function ImageDialog({
                               <p className="text-sm font-medium">
                                 {comment.user.name || "Unknown User"}
                               </p>
-                              <p className="text-xs text-muted-foreground">
+                              <p className="text-xs text-gray-400">
                                 {new Date(
                                   comment.createdAt
                                 ).toLocaleDateString()}
                               </p>
                             </div>
-                            <p className="text-sm text-muted-foreground">
+                            <p className="text-sm text-gray-400">
                               {comment.comment}
                             </p>
                           </div>
                         </div>
                       ))
                     ) : (
-                      <div className="text-center py-8 text-muted-foreground">
+                      <div className="text-center py-8 text-gray-400">
                         <MessageCircle className="w-12 h-12 mx-auto mb-2 opacity-50" />
                         <p className="text-sm">No comments yet</p>
                         <p className="text-xs">
@@ -791,12 +791,12 @@ export function ImageDialog({
                       {Array.from({ length: 8 }).map((_, index) => (
                         <div
                           key={index}
-                          className="aspect-square bg-muted rounded-lg animate-pulse"
+                          className="aspect-square bg-gray-800 rounded-lg animate-pulse"
                         />
                       ))}
                     </div>
                   ) : relatedError ? (
-                    <div className="text-center py-8 text-muted-foreground">
+                    <div className="text-center py-8 text-gray-400">
                       <p className="text-sm mb-2">{relatedError}</p>
                       <Button
                         variant="outline"
@@ -812,7 +812,7 @@ export function ImageDialog({
                         {relatedImages.map((relatedImage) => (
                           <div
                             key={relatedImage.image.id}
-                            className="relative aspect-square bg-muted rounded-lg cursor-pointer hover:opacity-80 transition-opacity group overflow-hidden"
+                            className="relative aspect-square bg-gray-800 rounded-lg cursor-pointer hover:opacity-80 transition-opacity group overflow-hidden"
                             onClick={() =>
                               handleRelatedImageClick(relatedImage)
                             }
@@ -835,7 +835,7 @@ export function ImageDialog({
                               </>
                             ) : (
                               <div className="w-full h-full flex items-center justify-center">
-                                <p className="text-xs text-muted-foreground">
+                                <p className="text-xs text-gray-400">
                                   No image
                                 </p>
                               </div>
@@ -845,8 +845,8 @@ export function ImageDialog({
                       </div>
                     </div>
                   ) : (
-                    <div className="text-center py-8 text-muted-foreground">
-                      <div className="w-16 h-16 mx-auto mb-2 bg-muted rounded-lg flex items-center justify-center">
+                    <div className="text-center py-8 text-gray-400">
+                      <div className="w-16 h-16 mx-auto mb-2 bg-gray-800 rounded-lg flex items-center justify-center">
                         <Tag className="w-8 h-8 opacity-50" />
                       </div>
                       <p className="text-sm">No related images found</p>
