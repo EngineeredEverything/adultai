@@ -178,12 +178,12 @@ export function ImageCard({
             <button onClick={(e) => handleVote(e, "UPVOTE")} disabled={isVoting}
               className={`flex items-center gap-1 px-2 py-1 rounded-lg text-xs font-semibold shadow-lg transition-all
                 ${userVote === "UPVOTE" ? "bg-green-500 text-white" : "bg-black/60 hover:bg-green-500 text-white"} disabled:opacity-50`}>
-              <ThumbsUp className="w-3.5 h-3.5" />{upvotes > 0 && <span>{upvotes}</span>}
+              <ThumbsUp className={`w-3.5 h-3.5 transition-all ${userVote === "UPVOTE" ? "fill-white stroke-white" : ""}`} />{upvotes > 0 && <span>{upvotes}</span>}
             </button>
             <button onClick={(e) => handleVote(e, "DOWNVOTE")} disabled={isVoting}
               className={`flex items-center gap-1 px-2 py-1 rounded-lg text-xs font-semibold shadow-lg transition-all
                 ${userVote === "DOWNVOTE" ? "bg-red-500 text-white" : "bg-black/60 hover:bg-red-500 text-white"} disabled:opacity-50`}>
-              <ThumbsDown className="w-3.5 h-3.5" />{downvotes > 0 && <span>{downvotes}</span>}
+              <ThumbsDown className={`w-3.5 h-3.5 transition-all ${userVote === "DOWNVOTE" ? "fill-white stroke-white" : ""}`} />{downvotes > 0 && <span>{downvotes}</span>}
             </button>
           </div>
 
