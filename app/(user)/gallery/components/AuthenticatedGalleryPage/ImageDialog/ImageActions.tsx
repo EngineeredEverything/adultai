@@ -4,7 +4,7 @@ import { useState, useRef } from "react"
 import { useRouter } from "next/navigation"
 import {
   Sparkles, Wand2, Mic, UserPlus, Loader2, Play,
-  Volume2, Film, ArrowUpCircle, Sliders, ChevronDown, Download, X
+  Volume2, Film, ArrowUpCircle, Sliders, ChevronDown, Download, X, Repeat2
 } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { Textarea } from "@/components/ui/textarea"
@@ -14,7 +14,7 @@ import { showAuthToast } from "@/lib/auth-toast"
 import { Globe, Lock, Check, Save } from "lucide-react"
 import type { SearchImagesResponseSuccessType } from "@/types/images"
 
-type Panel = "talk" | "img2img" | "video" | "upscale" | null
+type Panel = "talk" | "img2img" | "video" | "upscale" | "ipAdapter" | null
 
 interface ImageActionsProps {
   image: SearchImagesResponseSuccessType["images"][number]
@@ -42,6 +42,17 @@ export function ImageActions({ image, onGenerateVariations, onSetPrompt }: Image
   const [img2imgLoading, setImg2imgLoading] = useState(false)
   const [img2imgResult, setImg2imgResult] = useState<string | null>(null)
   const [img2imgUpgradeRequired, setImg2imgUpgradeRequired] = useState(false)
+  const [moreOfHerMode, setMoreOfHerMode] = useState(false)
+
+  // IP-Adapter state
+  const [ipAdapterPrompt, setIpAdapterPrompt] = useState(image.image.prompt || "")
+  const [ipAdapterNegative, setIpAdapterNegative] = useState("")
+  const [ipAdapterSteps, setIpAdapterSteps] = useState(30)
+  const [ipAdapterScale, setIpAdapterScale] = useState(0.6)
+  const [showAdvancedIpAdapter, setShowAdvancedIpAdapter] = useState(false)
+  const [ipAdapterLoading, setIpAdapterLoading] = useState(false)
+  const [ipAdapterResult, setIpAdapterResult] = useState<string | null>(null)
+  const [ipAdapterUpgradeRequired, setIpAdapterUpgradeRequired] = useState(false)
 
   // Video state
   const [motionStrength, setMotionStrength] = useState(100)
@@ -161,6 +172,42 @@ export function ImageActions({ image, onGenerateVariations, onSetPrompt }: Image
 
   const strengthLabel = strength <= 0.3 ? "Subtle" : strength <= 0.55 ? "Moderate" : strength <= 0.75 ? "Strong" : "Heavy"
 
+  // ── More of her (low-strength img2img) ──────────────────────────────────
+  const handleMoreOfHer = () => {
+    setEditPrompt(image.image.prompt || "")
+    setEditNegative("")
+    setEditSteps(30)
+    setStrength(0.35)
+    setMoreOfHerMode(true)
+    setActivePanel("img2img")
+  }
+
+  // ── IP-Adapter (same face generation) ────────────────────────────────────
+  const handleIpAdapter = async () => {
+    if (!ipAdapterPrompt.trim()) { toast.error("Enter a prompt"); return }
+    setIpAdapterLoading(true); setIpAdapterResult(null); setIpAdapterUpgradeRequired(false)
+    try {
+      const res = await fetch("/api/ip-adapter", {
+        method: "POST", headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          imageUrl,
+          prompt: ipAdapterPrompt.trim(),
+          negativePrompt: ipAdapterNegative.trim() || undefined,
+          steps: ipAdapterSteps,
+          ipAdapterScale: ipAdapterScale,
+          modelId: image.image.modelId || "cyberrealistic_pony",
+        }),
+      })
+      const data = await res.json()
+      if (data.upgradeRequired) { setIpAdapterUpgradeRequired(true); return }
+      if (!res.ok) throw new Error(data.error || "Failed")
+      setIpAdapterResult(data.imageUrl)
+      toast.success("Face-consistent generation complete!")
+    } catch (e: any) {
+      toast.error("Generation failed", { description: e.message })
+    } finally { setIpAdapterLoading(false) }
+  }
+
   return (
     <div className="rounded-xl border border-gray-800 bg-gray-900/60 overflow-hidden text-sm">
 
@@ -185,6 +232,13 @@ export function ImageActions({ image, onGenerateVariations, onSetPrompt }: Image
         <ActionBtn icon={<Sliders className="w-3.5 h-3.5" />} label="Edit / Remix" color="amber"
           onClick={() => togglePanel("img2img")} active={activePanel === "img2img"}
           loading={img2imgLoading} />
+
+        <ActionBtn icon={<Repeat2 className="w-3.5 h-3.5" />} label="More of her" color="pink"
+          onClick={handleMoreOfHer} disabled={!prompt} />
+
+        <ActionBtn icon={<Sparkles className="w-3.5 h-3.5" />} label="Same Face" color="purple"
+          onClick={() => togglePanel("ipAdapter")} active={activePanel === "ipAdapter"}
+          loading={ipAdapterLoading} />
 
         <ActionBtn icon={<ArrowUpCircle className="w-3.5 h-3.5" />} label="Upscale 2×" color="green"
           onClick={() => { togglePanel("upscale"); handleUpscale(2) }} loading={upscaleLoading === 2} />
@@ -241,13 +295,21 @@ export function ImageActions({ image, onGenerateVariations, onSetPrompt }: Image
 
       {/* ── Edit / Remix (img2img) panel ── */}
       {activePanel === "img2img" && (
-        <Panel title="Edit Image" onClose={() => setActivePanel(null)}>
+        <Panel title={moreOfHerMode ? "More of her" : "Edit Image"} onClose={() => { setActivePanel(null); setMoreOfHerMode(false) }}>
           {img2imgUpgradeRequired ? (
             <div className="text-center py-4 space-y-2">
               <p className="text-xs text-amber-400">GPU API update required for this feature.</p>
             </div>
           ) : (
             <>
+              {moreOfHerMode && (
+                <div className="mb-3 p-2 bg-pink-500/10 border border-pink-500/30 rounded-lg">
+                  <p className="text-xs text-pink-300">
+                    💡 Strength is set to 0.35 to preserve the face. Change only the scene, outfit, or pose in the prompt.
+                  </p>
+                </div>
+              )}
+
               {/* Strength presets */}
               <div className="flex gap-1.5 mb-3">
                 {([
@@ -303,7 +365,7 @@ export function ImageActions({ image, onGenerateVariations, onSetPrompt }: Image
                       <span className="font-mono">{Math.round(strength * 100)}%</span>
                     </div>
                     <Slider value={[strength]} min={0.1} max={0.95} step={0.05}
-                      onValueChange={([v]) => setStrength(v)}
+                      onValueChange={([v]) => { setStrength(v); setMoreOfHerMode(false) }}
                       className="[&_.slider-track]:bg-gray-700 [&_.slider-range]:bg-amber-500" />
                     <div className="flex justify-between text-[10px] text-gray-600 mt-0.5">
                       <span>Keep original</span><span>Heavily change</span>
@@ -492,6 +554,97 @@ export function ImageActions({ image, onGenerateVariations, onSetPrompt }: Image
               <Volume2 className="w-4 h-4 text-pink-400" />
               <span>Voice ready — lip sync not available for this image.</span>
             </div>
+          )}
+        </Panel>
+      )}
+
+      {/* ── Same Face (IP-Adapter) panel ── */}
+      {activePanel === "ipAdapter" && (
+        <Panel title="Generate with this face" onClose={() => setActivePanel(null)}>
+          {ipAdapterUpgradeRequired ? (
+            <div className="text-center py-4 space-y-2">
+              <p className="text-xs text-purple-400">IP-Adapter weights are loading. Try again in a moment.</p>
+            </div>
+          ) : (
+            <>
+              <p className="text-xs text-gray-500 mb-3">
+                AI keeps this person's face and generates a new scene or outfit.
+              </p>
+
+              {/* Prompt */}
+              <label className="block text-xs text-gray-400 mb-1">Prompt</label>
+              <Textarea
+                value={ipAdapterPrompt}
+                onChange={(e) => setIpAdapterPrompt(e.target.value)}
+                placeholder="Describe what you want around this face..."
+                rows={3}
+                className="bg-gray-800/60 border-gray-700 text-sm resize-none focus:border-purple-500/60 mb-3"
+              />
+
+              {/* Advanced toggle */}
+              <button
+                onClick={() => setShowAdvancedIpAdapter(v => !v)}
+                className="text-xs text-gray-500 hover:text-gray-300 mb-2 flex items-center gap-1 transition"
+              >
+                <ChevronDown className={`w-3 h-3 transition-transform ${showAdvancedIpAdapter ? "rotate-180" : ""}`} />
+                Advanced options
+              </button>
+
+              {showAdvancedIpAdapter && (
+                <div className="space-y-3 mb-3 bg-gray-800/40 rounded-lg p-3">
+                  {/* Steps */}
+                  <div>
+                    <div className="flex justify-between text-xs text-gray-400 mb-1">
+                      <span>Generation steps</span>
+                      <span className="font-mono">{ipAdapterSteps}</span>
+                    </div>
+                    <Slider value={[ipAdapterSteps]} min={20} max={40} step={1}
+                      onValueChange={([v]) => setIpAdapterSteps(v)}
+                      className="[&_.slider-track]:bg-gray-700 [&_.slider-range]:bg-purple-500" />
+                  </div>
+
+                  {/* Negative prompt */}
+                  <div>
+                    <label className="text-xs text-gray-400 mb-1 block">Negative prompt (optional)</label>
+                    <Textarea
+                      value={ipAdapterNegative}
+                      onChange={(e) => setIpAdapterNegative(e.target.value)}
+                      placeholder="Things to avoid..."
+                      rows={2}
+                      className="bg-gray-900 border-gray-700 text-sm resize-none focus:border-purple-500/60"
+                    />
+                  </div>
+                </div>
+              )}
+
+              {/* Face Influence slider */}
+              <div className="mb-3">
+                <div className="flex justify-between text-xs text-gray-400 mb-1">
+                  <span>Face influence</span>
+                  <span className="font-mono">{Math.round(ipAdapterScale * 100)}%</span>
+                </div>
+                <Slider value={[ipAdapterScale]} min={0.3} max={1.0} step={0.05}
+                  onValueChange={([v]) => setIpAdapterScale(v)}
+                  className="[&_.slider-track]:bg-gray-700 [&_.slider-range]:bg-purple-500" />
+                <div className="flex justify-between text-[10px] text-gray-600 mt-0.5">
+                  <span>Subtle</span><span>Strong</span>
+                </div>
+              </div>
+
+              <Button size="sm" onClick={handleIpAdapter} disabled={ipAdapterLoading || !ipAdapterPrompt.trim()}
+                className="w-full bg-gradient-to-r from-purple-600 to-pink-600 hover:from-purple-500 hover:to-pink-500">
+                {ipAdapterLoading ? <><Loader2 className="w-3.5 h-3.5 mr-2 animate-spin" />Generating (~30–45s)</> : <>Generate</>}
+              </Button>
+
+              {ipAdapterResult && (
+                <div className="mt-3 space-y-2">
+                  <div className="rounded-lg overflow-hidden bg-black aspect-[9/16] relative">
+                    <img src={ipAdapterResult} alt="Result" className="w-full h-full object-contain" />
+                  </div>
+                  <SaveToGalleryButtons id={ipAdapterResult} type="image" />
+                </div>
+              )}
+            </>
           )}
         </Panel>
       )}
