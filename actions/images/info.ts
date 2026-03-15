@@ -101,11 +101,11 @@ export const getImagesInfoRAW = async (
       let userVoteMap: Map<string, "UPVOTE" | "DOWNVOTE" | null> | undefined
       if (currentUserObj0?.id && validImages.length > 0) {
         const vIds = validImages.map((img) => img.id)
-        const uv0 = await db.vote.findMany({
+        const uv0 = await db.imageVote.findMany({
           where: { userId: currentUserObj0.id, imageId: { in: vIds } },
           select: { imageId: true, voteType: true },
         })
-        userVoteMap = new Map(uv0.map((v) => [v.imageId, v.voteType as "UPVOTE" | "DOWNVOTE"]))
+        userVoteMap = new Map(uv0.map((v: any) => [v.imageId, v.voteType as "UPVOTE" | "DOWNVOTE"]))
       }
 
       const imagesInfo = validImages.map((image) => ({
@@ -121,7 +121,7 @@ export const getImagesInfoRAW = async (
           voteScore: Number(image.voteScore) || 0,
           upvoteCount: Number(image.upvotes) || 0,
           downvoteCount: Number(image.downvotes) || 0,
-          userVote: null,
+          userVote: userVoteMap?.get(image.id) ?? null,
         },
         categories: data.categories ? categoriesMap[image.id] || [] : undefined,
       }))
@@ -178,7 +178,19 @@ export const searchImagesInfoRAW = async (
         return { images: [], count: count ?? 0 }
       }
 
-      const imagesInfo = transformImagesToResponse(images as any)
+      // Batch-fetch current user's votes for these images
+      const currentUserObj1 = await currentUser()
+      let userVoteMap1: Map<string, "UPVOTE" | "DOWNVOTE" | null> | undefined
+      if (currentUserObj1?.id && images.length > 0) {
+        const imageIds1 = (images as any[]).map((img: any) => img.id)
+        const uv1 = await db.imageVote.findMany({
+          where: { userId: currentUserObj1.id, imageId: { in: imageIds1 } },
+          select: { imageId: true, voteType: true },
+        })
+        userVoteMap1 = new Map(uv1.map((v: any) => [v.imageId, v.voteType as "UPVOTE" | "DOWNVOTE"]))
+      }
+
+      const imagesInfo = transformImagesToResponse(images as any, userVoteMap1)
 
       return { images: imagesInfo, count }
     },
@@ -278,6 +290,7 @@ function buildOrderBy(sort?: string): Prisma.GeneratedImageOrderByWithRelationIn
  */
 function transformImagesToResponse(
   images: (Awaited<ReturnType<typeof db.generatedImage.findMany>> extends (infer T)[] ? T & { user: { id: string; name: string | null } | null } : never)[],
+  userVoteMap?: Map<string, "UPVOTE" | "DOWNVOTE" | null>,
 ) {
   const validImages = images.filter((img) => img.user !== null)
   const imagesWithPath = validImages.filter((img) => img.path && img.path.length > 0)
@@ -299,7 +312,7 @@ function transformImagesToResponse(
         voteScore: Number(image.voteScore) || 0,
         upvoteCount: Number(image.upvotes) || 0,
         downvoteCount: Number(image.downvotes) || 0,
-        userVote: null,
+        userVote: userVoteMap?.get(image.id) ?? null,
       },
       categories: undefined,
     }
@@ -424,7 +437,19 @@ async function getFilteredImages(
     return { images: [], count: count ?? 0 }
   }
 
-  const imagesInfo = transformImagesToResponse(images as any)
+  // Batch-fetch current user's votes for these images
+  const currentUserObj2 = await currentUser()
+  let userVoteMap2: Map<string, "UPVOTE" | "DOWNVOTE" | null> | undefined
+  if (currentUserObj2?.id && images.length > 0) {
+    const imageIds2 = (images as any[]).map((img: any) => img.id)
+    const uv2 = await db.imageVote.findMany({
+      where: { userId: currentUserObj2.id, imageId: { in: imageIds2 } },
+      select: { imageId: true, voteType: true },
+    })
+    userVoteMap2 = new Map(uv2.map((v: any) => [v.imageId, v.voteType as "UPVOTE" | "DOWNVOTE"]))
+  }
+
+  const imagesInfo = transformImagesToResponse(images as any, userVoteMap2)
 
   logger.info("Filtered images retrieved with vote filters", {
     resultCount: imagesInfo.length,
