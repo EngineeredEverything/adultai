@@ -568,7 +568,7 @@ export function ImageActions({ image, onGenerateVariations, onSetPrompt }: Image
           ) : (
             <>
               <p className="text-xs text-gray-500 mb-3">
-                AI keeps this person's face and generates a new scene or outfit.
+                AI keeps this person&apos;s face and generates a new scene or outfit.
               </p>
 
               {/* Prompt */}
